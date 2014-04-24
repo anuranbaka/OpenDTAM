@@ -1,0 +1,6 @@
+Apr 22:Begin pseudocode, look at getting Baxter Dataset
+Apr 23:
+Completed high level pseudocode.
+Completed basic data storage spec for cost volume. 
+Pseudocode continues. 
+Spent time looking at example rendering code, postponing usage until later.
