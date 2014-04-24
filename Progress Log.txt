@@ -1,4 +1,6 @@
-Apr 22:Begin pseudocode, look at getting Baxter Dataset
+Apr 22:
+Begin pseudocode, look at getting Baxter Dataset
+
 Apr 23:
 Completed high level pseudocode.
 Completed basic data storage spec for cost volume. 
