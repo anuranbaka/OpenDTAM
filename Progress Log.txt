@@ -7,3 +7,21 @@ Completed basic data storage spec for cost volume.
 Pseudocode continues. 
 Spent time looking at example rendering code, postponing usage until later.
 (Maintenance) Install PTAM, Newest OpenCV, ROS Hydro on new workstation.
+
+Apr 24:
+Level 2 pseudocode (nearly runnable, full idealized interfaces) begins
+Discovered two major issues: 
+1. PTAM is not compatibly licenced with OpenCV
+2. DTAM wants threads to run properly, but OpenCV does not allow 
+    internal threading. 
+Spent most of day trying to figure out how to resolve these issues.
+
+Apr 25:
+Devised new design for program to stay within guidelines
+DTAM will consist of a Mapper and Tracker. These will run as seprate threads
+from the rest of the program. The threads are thin wrappers around 
+the Map and Track classes, which are the internal machinery of DTAM, but without
+any internal driving threads. These classes are the ones that will be in OpenCV
+and it will be the user's responsibility to ensure that they are powered by 
+seperate threads, or by a single thread so fast it avoids dropping frames.
+
