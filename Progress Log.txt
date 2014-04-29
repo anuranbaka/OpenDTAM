@@ -29,5 +29,5 @@ Week 2
 Apr 28:
 Nearly completed level 2 pseudocode on map side. Just need the projection step and a way 
 to automatically detect new keyframes. So overall we're ~ 1 day behind schedule,
-which is okqy because of flexibility built in, but still a bit unnerving.
+which is okay because of flexibility built in, but still a bit unnerving.
 
