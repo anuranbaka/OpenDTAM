@@ -1,0 +1,41 @@
+// Initialization example 1, no auto initialization
+	PTAM ptam(camera,calibration);
+	DTAMMap map(camera,calibration);
+	ptam.waitForFix();
+	
+	inited = 0;
+	while(!inited){
+		framesAdded = 0;
+		[success, frame, pose] = ptam.getFrame();
+		if(!success) continue;
+		map.addKeyframe(frame, pose);
+		for i=1:NUM_FRAMES_FOR_MAP_INIT {
+			[success,frame, pose] = ptam.getFrame();
+			if(!success) break;
+			map.addFrame(frame,pose);
+			framesAdded++;
+		}
+		if (framesAdded=NUM_FRAMES_FOR_MAP_INIT)
+			inited=1;
+	}
+	
+	
+	map.updateCost(); 
+	map.resetIteration();
+	map.converge(); //solve for map
+	DTAMTracker tracker=map.createTracker();
+	map.setTracker(tracker);
+	//map now has a valid keyframe and cost volume
+	while(true){
+		thread{
+			while(true){
+				map.addFrame(); //no args form pulls from camera, updates tracker, and updates cost volume
+			}
+		}
+		thread{
+			while(true){
+				map.converge();
+			}
+		}
+	
+	}
