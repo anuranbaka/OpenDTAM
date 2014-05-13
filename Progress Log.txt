@@ -9,25 +9,71 @@ Spent time looking at example rendering code, postponing usage until later.
 (Maintenance) Install PTAM, Newest OpenCV, ROS Hydro on new workstation.
 
 Apr 24:
-Level 2 pseudocode (nearly runnable, full idealized interfaces) begins
-Discovered two major issues: 
-1. PTAM is not compatibly licenced with OpenCV
-2. DTAM wants threads to run properly, but OpenCV does not allow 
-    internal threading. 
-Spent most of day trying to figure out how to resolve these issues.
+    Level 2 pseudocode (nearly runnable, full idealized interfaces) begins
+    Discovered two major issues: 
+    1. PTAM is not compatibly licenced with OpenCV
+    2. DTAM wants threads to run properly, but OpenCV does not allow 
+        internal threading. 
+    Spent most of day trying to figure out how to resolve these issues.
 
 Apr 25:
-Devised new design for program to stay within guidelines
-DTAM will consist of a Mapper and Tracker. These will run as seprate threads
-from the rest of the program. The threads are thin wrappers around 
-the Map and Track classes, which are the internal machinery of DTAM, but without
-any internal driving threads. These classes are the ones that will be in OpenCV
-and it will be the user's responsibility to ensure that they are powered by 
-seperate threads, or by a single thread so fast it avoids dropping frames.
+    Devised new design for program to stay within guidelines
+    DTAM will consist of a Mapper and Tracker. These will run as seprate threads
+    from the rest of the program. The threads are thin wrappers around 
+    the Map and Track classes, which are the internal machinery of DTAM, but without
+    any internal driving threads. These classes are the ones that will be in OpenCV
+    and it will be the user's responsibility to ensure that they are powered by 
+    seperate threads, or by a single thread so fast it avoids dropping frames.
 
 Week 2
 Apr 28:
-Nearly completed level 2 pseudocode on map side. Just need the projection step and a way 
-to automatically detect new keyframes. So overall we're ~ 1 day behind schedule,
-which is okay because of flexibility built in, but still a bit unnerving.
+    Nearly completed level 2 pseudocode on map side. Just need the projection step and a way 
+    to automatically detect new keyframes. So overall we're ~ 1 day behind schedule,
+    which is okay because of flexibility built in, but still a bit unnerving.
+
+Progress Report 
+End of Week Two (Pseudocode Phase)
+
+    Schedule was to have pseudocode for both tracking and mappig done by end of two weeks. 
+    Initially had a setback of a day on mapping, but tracking was completed a day 
+    faster than expected.
+    
+    Overall, pseudocode was completed, except that reprojection was not explicitly written. On the 
+    other hand, a working Matlab version of the core tracker algorithm was completed, and works on 
+    synthetic data. I have discovered that the ESM tracker appears to be most effective when the 
+    amount of motion is already nearly known for synthetic images. For whatever reason, convergence
+    appears to be much better on real images though.
+    
+    Next three weeks are writing up actual code.
+    
+
+
+DTAM (Dense Tracking and Mapping) GSoC Progress Report, Week 3:
+
+    Since this is my first blog posted progress report, I'll do a quick recap:
+    -Weeks 1 and 2 were writing a pseudocode skeleton of the program, both tracking and mapping.
+    -Pseudocode for tracking turned out to be runnable Matlab, so I have a working implementation of the 
+    tracker core, though of course it still needs to be converted to OpenCV.
+    -Overall schedule was maintained for weeks 1-2.
+    
+    Week 3:
+    -This week was the first "real" coding week, and the first of three assigned to writing the base CPU 
+     implementation of the mapper. The plan was to write reprojection and optimiztion in week 3, 
+     infrastructure and API code in week 4, and compile-test-debug week 5.
+    -Overall, two days were lost due to unexpected "writer's block" on the reprojection algorithm. 
+     This is just barely within the allocated "flex time" in the schedule.
+        Issues stemmed from the initializtion procedure for the cost volume, where it was unclear which
+        depth steps to choose because it is impossible to determine true scale with a monocular system. 
+        As a stop-gap, it was decided to use 64 inverse depth steps starting from half the distance of the
+        nearest estimated point in the initializaiton, and a base scale of the largest motion observed in 
+        first 10 s of the input or 1/10th the distance to the nearest point, whichever is smaller.
+        There remains an issue of how to deal with cells and rows in the cost volume that have never been
+        observed. For now, they are simply left out of the optimization.
+    -The plan for week 4 is to catch up to schedule. By the end of week 4 code should be in a 
+     ready-to-compile state.
+    -Doc. VR pointed out a pair of upcoming works at ICRA, REMODE and SVO, which provide capabilities 
+     addressing the same needs as DTAM and will also be open source. We are looking into a 
+     collaboration, and a way to differentiate our product from theirs.
+     
+
 
