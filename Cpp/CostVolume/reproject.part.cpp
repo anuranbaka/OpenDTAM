@@ -3,11 +3,11 @@ void reproject( const Mat_<double>& src
                 const Matx33d& cameraMatrix,
                 const Matx44d& cameraAffinePoseBase,
                 const Matx44d& cameraAffinePoseAlternate,
-                float e,
+                float invDepth,
                 Mat_<double>& dst,
                 Mat_<double>& mask){//e is inverse depth
            
-    Mat_<double> cA_Apln(Mat_<double>(3,4) << cameraMatrix.inv() << 0,0,e);
+    Mat_<double> cA_Apln(Mat_<double>(3,4) << cameraMatrix.inv() << 0,0,invDepth);
     Mat_<double> cW_A=cameraAffinePoseAlternate.inv();//optimizable
     Mat_<double> & cB_W=cameraAffinePoseBase;
     Mat_<double> & cBpln_B;

@@ -8,8 +8,9 @@ Cost(Mat_<PixelType> baseImage, int rows,int cols,int layers, Mat& cameraMatrix,
     layers(layers),
     cameraMatrix(cameraMatrix),
     pose(cameraPose),
-    container(rows*cols*layers,1,DataType<T>::type, Scalar(0)),
-    hits(rows, cols, DataType<float>::type, Scalar(1))
+    container(rows*cols*layers,1,DataType<T>::type, Scalar(0)),//allocate enough data to hold all of the cost volume
+    container(rows*cols*layers,1,DataType<T>::type, Scalar(0)),//allocate enough data to hold all of the hits info in cost volume
 {
-    data=contatainer.data;
+    data=dataContainer.data;
+    hit=hitContainer.data;
 }
