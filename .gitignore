@@ -1,1 +1,8 @@
+build/
+dtam/
+*.o
+*.out
 *~
+*.kdev*
+TOOLBOX_calib\ 2/
+testims/

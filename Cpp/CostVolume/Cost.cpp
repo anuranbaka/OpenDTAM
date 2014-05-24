@@ -1,16 +1,78 @@
-#include "updateCost.cpp"
-#include "reproject.cpp"
+#include "Cost.h"
+#include "updateCost.part.cpp"
 
-Cost(Mat_<PixelType> baseImage, int rows,int cols,int layers, Mat& cameraMatrix, Mat& cameraPose):
-    baseImage(baseImage);
-    rows(rows),
-    cols(cols),
-    layers(layers),
+#define COST_CPP_DATA_MIN 0.1
+
+template <class T, class PixelType>
+Cost<T,PixelType>::Cost(const cv::Mat_<PixelType>& baseImage, int layers, const cv::Mat& cameraMatrix, const cv::Mat& R, const cv::Mat& Tr):
+baseImage(baseImage),
+rows(baseImage.rows),
+cols(baseImage.cols),
+depth(generateDepths(layers)),
+layers(depth.size()),
+cameraMatrix(cameraMatrix),
+pose(convertPose(R,Tr)),
+dataContainer(cv::Mat(baseImage.rows*baseImage.cols*layers,1,cv::DataType<T>::type, cv::Scalar(COST_CPP_DATA_MIN))),//allocate enough data to hold all of the cost volume
+hitContainer(cv::Mat(baseImage.rows*baseImage.cols*layers,1,cv::DataType<T>::type, cv::Scalar(1))),//allocate enough data to hold all of the hits info in cost volume
+lo(cv::Mat(baseImage.rows,baseImage.cols,cv::DataType<T>::type, cv::Scalar(COST_CPP_DATA_MIN))),
+hi(cv::Mat(baseImage.rows,baseImage.cols,cv::DataType<T>::type, cv::Scalar(COST_CPP_DATA_MIN)))
+{
+    data=(float*)dataContainer.data;
+    hit=(float*)hitContainer.data;
+}
+
+template <class T, class PixelType>
+Cost<T,PixelType>::Cost(const cv::Mat_<PixelType>& baseImage, int layers, const cv::Mat& cameraMatrix, const cv::Matx44d& cameraPose):
+baseImage(baseImage),
+rows(baseImage.rows),
+cols(baseImage.cols),
+depth(generateDepths(layers)),
+layers(depth.size()),
+cameraMatrix(cameraMatrix),
+pose(cameraPose),
+dataContainer(cv::Mat(baseImage.rows*baseImage.cols*layers,1,cv::DataType<T>::type, cv::Scalar(COST_CPP_DATA_MIN))),//allocate enough data to hold all of the cost volume
+hitContainer(cv::Mat(baseImage.rows*baseImage.cols*layers,1,cv::DataType<T>::type, cv::Scalar(1))),//allocate enough data to hold all of the hits info in cost volume
+lo(cv::Mat(baseImage.rows,baseImage.cols,cv::DataType<T>::type, cv::Scalar(COST_CPP_DATA_MIN))),
+hi(cv::Mat(baseImage.rows,baseImage.cols,cv::DataType<T>::type, cv::Scalar(COST_CPP_DATA_MIN)))
+{
+    data=(float*)dataContainer.data;
+    hit=(float*)hitContainer.data;
+}
+
+template <class T, class PixelType>
+Cost<T,PixelType>::Cost(const cv::Mat_<PixelType>& baseImage, const std::vector<T>& depth, const cv::Mat& cameraMatrix, const cv::Mat& R, const cv::Mat& Tr):
+baseImage(baseImage),
+rows(baseImage.rows),
+cols(baseImage.cols),
+depth(depth),
+layers(depth.size()),
+cameraMatrix(cameraMatrix),
+pose(convertPose(R,Tr)),
+dataContainer(cv::Mat(baseImage.rows*baseImage.cols*layers,1,cv::DataType<T>::type, cv::Scalar(COST_CPP_DATA_MIN))),//allocate enough data to hold all of the cost volume
+hitContainer(cv::Mat(baseImage.rows*baseImage.cols*layers,1,cv::DataType<T>::type, cv::Scalar(1))),//allocate enough data to hold all of the hits info in cost volume
+lo(cv::Mat(baseImage.rows,baseImage.cols,cv::DataType<T>::type, cv::Scalar(COST_CPP_DATA_MIN))),
+hi(cv::Mat(baseImage.rows,baseImage.cols,cv::DataType<T>::type, cv::Scalar(COST_CPP_DATA_MIN)))
+{
+    data=(float*)dataContainer.data;
+    hit=(float*)hitContainer.data;
+}
+
+template <class T, class PixelType>
+Cost<T,PixelType>::Cost(const cv::Mat_<PixelType>& baseImage, const std::vector<T>& depth, const cv::Mat& cameraMatrix, const cv::Matx44d& cameraPose):
+    baseImage(baseImage),
+    rows(baseImage.rows),
+    cols(baseImage.cols),
+    layers(depth.size()),
+    depth(depth),
     cameraMatrix(cameraMatrix),
     pose(cameraPose),
-    container(rows*cols*layers,1,DataType<T>::type, Scalar(0)),//allocate enough data to hold all of the cost volume
-    container(rows*cols*layers,1,DataType<T>::type, Scalar(0)),//allocate enough data to hold all of the hits info in cost volume
+    dataContainer(cv::Mat(baseImage.rows*baseImage.cols*layers,1,cv::DataType<T>::type, cv::Scalar(COST_CPP_DATA_MIN))),//allocate enough data to hold all of the cost volume
+    hitContainer(cv::Mat(baseImage.rows*baseImage.cols*layers,1,cv::DataType<T>::type, cv::Scalar(1))),//allocate enough data to hold all of the hits info in cost volume
+    lo(cv::Mat(baseImage.rows,baseImage.cols,cv::DataType<T>::type, cv::Scalar(COST_CPP_DATA_MIN))),
+    hi(cv::Mat(baseImage.rows,baseImage.cols,cv::DataType<T>::type, cv::Scalar(COST_CPP_DATA_MIN)))
 {
-    data=dataContainer.data;
-    hit=hitContainer.data;
+    data=(float*)dataContainer.data;
+    hit=(float*)hitContainer.data;
 }
+
+

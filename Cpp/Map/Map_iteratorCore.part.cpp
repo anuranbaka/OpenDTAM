@@ -1,5 +1,32 @@
 
-//the complex internals of the iterate function
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*//the complex internals of the iterate function
 iteratorCore(D, Q, A, C, G, sigma_q, sigma_d, theta){
 	//lowercase lettes are elements of uppercase letters at a given column
 	
@@ -14,9 +41,9 @@ iteratorCore(D, Q, A, C, G, sigma_q, sigma_d, theta){
 		q.y = q.y/pd
 		
 	//D update
-	div_GQ = div(G'Q)
+	div_Q = div(Q)
 	for all d scalars:
-		d = (d + sigma_d*(div_gq + 1/theta*a))/(1 + sigma_d/theta)
+		d = (d + sigma_d*(g*div_q + 1/theta*a))/(1 + sigma_d/theta)
 	
 	//A update
 	for all a scalars:
@@ -32,7 +59,7 @@ iteratorCore(D, Q, A, C, G, sigma_q, sigma_d, theta){
 // The actual implementation of the Huber norm is a parabola
 // that turns smoothly into a cone at radius epsilon.
 // This is actually the correct form if we want the equation to 
-// be rotation invariant(ish).
+// be rotation invariant.
 // PiFunc(vec) := vec./max(1,sqrt(sum(vec.^2)))
 PiDenom(x,y){
 	return max(1, sqrt(x*x+y*y))
@@ -71,21 +98,4 @@ computeG(){
 //
 //(b-a)*d + (c-b)*e + (0-c)*f
 //(d-0)*a + (e-d)*b + (f-e)*c
-
-// More corrections to the paper:
-// The G and A matrices are usually swapped in the paper, the weighting should come after the
-// gradient, not before.
-// G should thus be two copies of the weights, diag([g;g])
-// so:
-// ||GAd||_e=argmax_{q,||q_2||_2<=1}{<GAd,q>-delta_q(q)-eps/2*||q||_2^2}   (8)
-//
-// dE/dq=GAd-eps*q   (11)
-//
-// dE/dd= A'G'q+1/theta*(d-a)    (12)
-//
-// Eq. starting with q^{n+1}= ... is correct 
-// but next one (the d update) should have "GA'q..."
-// replaced with "A'g'q..."
-// 
-// Also a sign error in the d update, should read:
-// d^{n+1}=(d^n + sigma_d(-A'G*q^{n+1} ...
+*/
