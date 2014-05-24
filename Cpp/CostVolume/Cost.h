@@ -32,6 +32,7 @@ public:
     T* hit;//stores the number of times each cell has been hit by a ray
     const std::vector<T> depth;
     
+    Cost<T,PixelType>& operator=( const Cost<T,PixelType>& other );
     Cost();
     Cost(const cv::Mat_<PixelType>& baseImage, int layers,                  const cv::Mat& cameraMatrix, const cv::Mat& R, const cv::Mat& Tr);// autogenerate default depths
     Cost(const cv::Mat_<PixelType>& baseImage, int layers,                  const cv::Mat& cameraMatrix, const cv::Matx44d& cameraPose);// autogenerate default depths

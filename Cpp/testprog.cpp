@@ -43,7 +43,8 @@ int main( int argc, char** argv )
         
         if(imageNum==0){
             hconcat(R,T,cameraAffinePoseBase);
-            mycost=Cost<float,Vec3f>(image,32, cameraMatrix, R,T);
+            Cost<float,Vec3f> thiscost(image,32, cameraMatrix, R,T);
+            mycost=thiscost;
         }
         
         Mat cameraAffinePoseAlternate,mask;

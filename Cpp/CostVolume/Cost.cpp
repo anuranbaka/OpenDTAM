@@ -75,4 +75,11 @@ Cost<T,PixelType>::Cost(const cv::Mat_<PixelType>& baseImage, const std::vector<
     hit=(float*)hitContainer.data;
 }
 
+template <class T, class PixelType>
+Cost<T,PixelType>::Cost(){};
 
+template <class T, class PixelType>
+Cost<T,PixelType>& Cost<T,PixelType>::operator=( const Cost<T,PixelType>& other ){
+    Cost<T,PixelType> *mycost=new Cost<T,PixelType>(other.baseImage,other.depth,cv::Mat(other.cameraMatrix),other.pose);
+    return *mycost;//HACK:sort of a memory leak I think. Don't know of a better mechanism of defeating the constness problem
+}

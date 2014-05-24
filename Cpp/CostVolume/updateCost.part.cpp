@@ -24,14 +24,14 @@ void Cost<T,PixelType>::updateCost(const cv::Mat_<PixelType>& image,
     
     
 }
-
+/*
 template <class T>
-void Cost<T,Vec3f>::updateCost(const cv::Mat_<PixelType>& image, 
+void Cost<T,cv::Vec3f>::updateCost(const cv::Mat_<cv::Vec3f>& image, 
                                    const cv::Matx44d& currentCameraPose)
 {
     
     for(int n=0; n < depth.size(); ++n){
-        cv::Mat_<PixelType> plane;
+        cv::Mat_<cv::Vec3f> plane;
         cv::Mat_<uchar> mask;
         reproject(image, cameraMatrix, pose, currentCameraPose, depth[n], plane, mask);
         
@@ -47,4 +47,4 @@ void Cost<T,Vec3f>::updateCost(const cv::Mat_<PixelType>& image,
     }
     
     
-}
+}*/
