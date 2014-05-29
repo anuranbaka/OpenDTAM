@@ -40,7 +40,7 @@ void convertAhandaPovRayToStandard(const char * filepath,
 
     while(1){
         cam_pars_file.getline(readlinedata,300);
-        cout<<readlinedata<<endl;
+//         cout<<readlinedata<<endl;
         if ( cam_pars_file.eof())
             break;
 
@@ -63,7 +63,7 @@ void convertAhandaPovRayToStandard(const char * filepath,
             iss.ignore(1,',') ;
             iss >> direction.y;
             iss.ignore(1,',');
-            cout << "direction: "<< direction.x<< ", "<< direction.y << ", "<< direction.z << endl;
+//             cout << "direction: "<< direction.x<< ", "<< direction.y << ", "<< direction.z << endl;
 
         }
 
@@ -105,7 +105,7 @@ void convertAhandaPovRayToStandard(const char * filepath,
             iss.ignore(1,',');
             iss >> posvector.y ;
             iss.ignore(1,',');
-            cout << "position: "<<posvector.x<< ", "<< posvector.y << ", "<< posvector.z << endl;
+//             cout << "position: "<<posvector.x<< ", "<< posvector.y << ", "<< posvector.z << endl;
 
         }
 
@@ -117,9 +117,13 @@ void convertAhandaPovRayToStandard(const char * filepath,
     R.row(2)=Mat(direction).t();
 
     T=-R*Mat(posvector);
+//     cout<<"T: "<<T<<endl<<"pos: "<<Mat(posvector)<<endl;
+   /* cameraMatrix=(Mat_<double>(3,3) << 480,0.0,320.5,
+										    0.0,480.0,240.5,
+										    0.0,0.0,1.0);*/
     cameraMatrix=(Mat_<double>(3,3) << 481.20,0.0,319.5,
-										    0.0,480.0,239.5,
-										    0.0,0.0,1.0);
+                  0.0,480.0,239.5,
+                  0.0,0.0,1.0);
 
 }
 
