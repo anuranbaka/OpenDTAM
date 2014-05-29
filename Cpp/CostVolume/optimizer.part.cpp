@@ -65,9 +65,11 @@ void Cost::initOptimization(){//must be thread safe in allocations(i.e. don't do
     epsilon=.1;
     lambda=.00001;
 }
+
+//This function has no equation, I had to derive it from the references
 void Cost::computeSigmas(){
     float lambda, alpha,gamma,delta,mu,rho,sigma;
-    float L=4.0;
+    float L=4.0;//lower is better(longer steps), but in theory only >=4 is guaranteed to converge
     lambda=1.0/theta;
     alpha=epsilon;
     gamma=lambda;
@@ -78,6 +80,7 @@ void Cost::computeSigmas(){
     sigma=mu/(2.0*delta);
     sigma_d = rho;
     sigma_q = sigma;
+
 
 }
 
@@ -389,8 +392,10 @@ void Cost::optimizeQD(){
 }
 
 void Cost::optimizeA(){ 
+
     theta=theta*.97;
     cout<<"A optimization run: "<<Aruncount++<<endl;
+    cout<<"                           Current Theta: "<<theta<<endl;
     int w=cols;
     int h=rows;
     float* a=(float*)(_a.data);
