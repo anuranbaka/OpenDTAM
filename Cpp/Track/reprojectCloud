@@ -1,0 +1,12 @@
+#include <opencv2/imgproc/imgproc.hpp>
+#include "utils/utils.h"
+using namespace cv;
+using namespace std;
+
+Mat reprojectCloud(Mat im, Mat depth, Mat oldPose, Mat newPose, Mat cameraMatrix){
+    
+    
+    
+    
+    
+}

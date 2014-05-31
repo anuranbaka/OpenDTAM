@@ -1,13 +1,14 @@
 //#ifdef COST_CPP_SUBPARTS
 #include "updateCost.part.hpp"
 
-#include "reproject.hpp"
+#include "CostVolume/utils/reproject.hpp"
 
 //debugs
 #include <iostream>
 #include <algorithm>
 #include <opencv2/highgui/highgui.hpp>
-#include "../tictoc.h"
+#include "tictoc.h"
+#include "graphics.hpp"
 
 //in Cost.cpp
 using namespace std;
@@ -61,15 +62,16 @@ void Cost::updateCostL1(const cv::Mat& image,
                 hdata[coff]=h;
                // std::cout<<ns<<std::endl;
             }
-//             {//debug see the cost
-//                 pdata[i]=cdata[coff]/hdata[coff]*10;
-//                 pdata[i+1]=cdata[coff]/hdata[coff]*10;
-//                 pdata[i+2]=cdata[coff]/hdata[coff]*10;
-//             }
+            {//debug see the cost
+                pdata[i]=cdata[coff]*10;
+                pdata[i+1]=cdata[coff]*10;
+                pdata[i+2]=cdata[coff]*10;
+            }
         }
 //         {//debug
 //         //absdiff(plane,baseImage,plane);
-//         imshow( "Display window", plane);
+           pfShow( "Display window", plane);
+
 //         cvWaitKey(1);
 //         }
     }

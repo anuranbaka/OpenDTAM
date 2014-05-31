@@ -47,7 +47,12 @@ public:
     void optimize();
     void initOptimization();
 
-
+    const cv::Matx44d convertPose(const cv::Mat& R, const cv::Mat& Tr){
+        cv::Mat pose=cv::Mat::eye(4,4, CV_64F);
+        R.copyTo(pose(cv::Range(0,3),cv::Range(0,3)));
+        Tr.copyTo(pose(cv::Range(0,3),cv::Range(3,4)));
+        return cv::Matx44d(pose);
+    }
 
 
 private:
@@ -63,6 +68,9 @@ private:
         imageNum=0;
         QDruncount=0;
         Aruncount=0;
+        thetaStart=1000.0;
+        thetaMin=0.01;
+        running=false;
         initOptimization();
     }
     std::vector<float> generateDepths(int layers){
@@ -72,12 +80,7 @@ private:
             }
         return depths;// generate the depth list, the signature will probably change
     }
-    const cv::Matx44d convertPose(const cv::Mat& R, const cv::Mat& Tr){
-        cv::Mat pose=cv::Mat::eye(4,4, CV_64F);
-        R.copyTo(pose(cv::Range(0,3),cv::Range(0,3)));
-        Tr.copyTo(pose(cv::Range(0,3),cv::Range(3,4)));
-        return cv::Matx44d(pose);
-    }
+
     
     //Utility Functions
     void minv(uchar*/*(float*)*/,cv::Mat& minIndex,cv::Mat& minValue);
@@ -86,8 +89,8 @@ private:
     void minmax();    
 
     //Optimizer functions and data
-    cv::Mat _qx,_qy,_d,_a,_g,_gu,_gd,_gl,_gr,_gbig;
-    float theta,epsilon,lambda,sigma_d,sigma_q;
+    public:cv::Mat _qx,_qy,_d,_a,_g,_gu,_gd,_gl,_gr,_gbig;private:
+    float theta,thetaStart,thetaMin,epsilon,lambda,sigma_d,sigma_q;
     
     void computeSigmas();
     void cacheGValues();
@@ -102,6 +105,9 @@ private:
     //Instrumentation
     int QDruncount;
     int Aruncount;
+    
+    //Thread management
+    bool running;
 };
 
 

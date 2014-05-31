@@ -5,8 +5,10 @@
 
 //Mine
 #include "convertAhandaPovRayToStandard.h"
-#include "CostVolume/reproject.hpp"
+#include "CostVolume/utils/reproject.hpp"
+#include "CostVolume/utils/reprojectCloud.hpp"
 #include "CostVolume/Cost.h"
+#include "graphics.hpp"
 #include "set_affinity.h"
 
 //debug
@@ -15,6 +17,9 @@
 //A test program to make the mapper run
 using namespace cv;
 using namespace std;
+
+int App_main( int argc, char** argv );
+
 
 static void myshow(const string name,const Mat& _mat){
     Mat mat=_mat.clone();
@@ -30,11 +35,18 @@ static void myshow(const string name,const Mat& _mat){
     
 }
 
+int main( int argc, char** argv ){
+//namedWindow("backtrans",CV_WINDOW_OPENGL*0);
+set_affinity(1);
+//cvStartLoop(&App_main,argc, argv);//will crash if used with opengl!
+initGui();
+return App_main(argc, argv);
+}
 
-
-int main( int argc, char** argv )
+int App_main( int argc, char** argv )
 {
-    tic();
+    pthread_setname_np(pthread_self(),"App_main");
+        
     FileStorage fs;
 
 
@@ -59,56 +71,80 @@ int main( int argc, char** argv )
 
     Cost cost(image.clone(),32, cameraMatrix, R,T);
     assert(cost.rows==480);
-
-    for (int imageNum=1;imageNum<=5;imageNum++){
-        char filename[500];
-        Mat cameraMatrix,R,T;
+    
+    vector<Mat> images,Rs,Ts;
+    for(int i=0;i<=50;i++){
+        sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",i);
         convertAhandaPovRayToStandard("/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds",
-                                   imageNum,
-                                   cameraMatrix,
-                                   R,
-                                   T);
-
-//         cout<<"cameraMatrix: "<<cameraMatrix<<"\n";
-//         cout<< "R : "<<R<<"\n";
-//         cout<< "T : "<<T<<"\n";
-        sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",imageNum);
+                                      i,
+                                      cameraMatrix,
+                                      R,
+                                      T);
         Mat image;
-        imread(filename, -1).convertTo(image,CV_32FC3,1.0/65535.0);   // Read the file
-
-
-
-        Mat cameraAffinePoseAlternate,mask;
-        hconcat(R,T,cameraAffinePoseAlternate);
-
-        cost.updateCostL1(image,R,T);
-        if (imageNum==1){
-            set_affinity(1);//Move us to core 1
-            cost.optimize();//Launches the optimizer threads
-        }
-        if (imageNum==4){
-            cost.initOptimization();//jumpstart the optimization with the approximate answer at 4 images
-        }
-//         myshow("qx",abs(cost._qx));
-//         myshow("d",cost._d);
-//         myshow("a",cost._a);
-//         cvWaitKey(1);
-        
-
-        if(! image.data )                              // Check for invalid input
-        {
-            cout <<  "Could not open or find the image" << std::endl ;
-            return -1;
-        }
-
-//         namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display.
-//         imshow( "Display window", cost.baseImage );                   // Show our image inside it.
-//     waitKey(0);                                          // Wait for a keystroke in the window
+        cout<<filename<<endl;
+        imread(filename, -1).convertTo(image,CV_32FC3,1.0/65535.0);
+        images.push_back(image.clone());
+        Rs.push_back(R.clone());
+        Ts.push_back(T.clone());
     }
-    toc();
+    while(1){
+        for (int imageNum=1;imageNum<=50;imageNum++){
+            char filename[500];
+            Mat cameraMatrix,R,T;
+//             convertAhandaPovRayToStandard("/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds",
+//                                     imageNum,
+//                                     cameraMatrix,
+//                                     R,
+//                                     T);
+// 
+//     //         cout<<"cameraMatrix: "<<cameraMatrix<<"\n";
+//     //         cout<< "R : "<<R<<"\n";
+//     //         cout<< "T : "<<T<<"\n";
+//             sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",imageNum);
+//             Mat image;
+//             imread(filename, -1).convertTo(image,CV_32FC3,1.0/65535.0);   // Read the file
+            T=Ts[imageNum];
+            R=Rs[imageNum];
+            image=images[imageNum];
+
+
+            Mat cameraAffinePoseAlternate,mask;
+            hconcat(R,T,cameraAffinePoseAlternate);
+
+            if (cost.imageNum<20){
+            cost.updateCostL1(image,R,T);
+            cout<<"cost"<<imageNum<<"\n";
+            }
+            if (imageNum==1){
+                set_affinity(1);//Move us to core 1
+                cost.optimize();//Launches the optimizer threads
+            }
+//             if (imageNum==4){
+//                 cost.initOptimization();//jumpstart the optimization with the approximate answer at 4 images
+//             }
+
+            const Mat thisPose(cost.convertPose(R,T));
+            
+
+            //imshow("to match",image);
+            reprojectCloud(cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
+
+            if(! image.data )                              // Check for invalid input
+            {
+                cout <<  "Could not open or find the image" << std::endl ;
+                return -1;
+            }
+
+    //         namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display.
+    //         imshow( "Display window", cost.baseImage );                   // Show our image inside it.
+    //     waitKey(0);                                          // Wait for a keystroke in the window
+    usleep(10);
+        }
+    }
     while(1){
         usleep(1000);
     }
+
     return 0;
 }
 

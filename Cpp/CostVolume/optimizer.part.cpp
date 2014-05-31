@@ -3,8 +3,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <iostream>
-#include "../set_affinity.h"
-#include <boost/thread/thread.hpp>
+#include "graphics.hpp"
+#include "set_affinity.h"
 #include "Cost.h"
 //relations: 
 //gwhatever=0.5*(gwhatever+ghere)
@@ -61,7 +61,7 @@ void Cost::initOptimization(){//must be thread safe in allocations(i.e. don't do
     assert(_qx.data==dat);
     _qx=Mat(h,w,CV_32FC1,Scalar(0.0));
     _qy=Mat(h,w,CV_32FC1,Scalar(0.0));
-    theta=1000.0;
+    theta=thetaStart;
     epsilon=.1;
     lambda=.00001;
 }
@@ -132,8 +132,8 @@ void Cost::cacheGValues(){
     //good threshold for edge detectors.
     sqrt(_g,_g);
     
-    exp(-10*_g,_g);
-    _g=1;
+    exp(-3*_g,_g);
+    //_g=1;
     
     //_g=_g*scale_g
     //cache interpreted forms of g, for the "matrix" used in
@@ -238,6 +238,7 @@ static void launch_optimzer_threads(const Cost* cost){
     pthread_create( &threadA, NULL, Cost_optimizeA, (void*) cost);
 }
 static void* Cost_optimizeQD(void* object){
+    pthread_setname_np(pthread_self(),"QDthread");
     Cost* cost = (Cost*)object;
     set_affinity(2);
     while(1){
@@ -245,6 +246,7 @@ static void* Cost_optimizeQD(void* object){
     }
 }
 static void* Cost_optimizeA(void* object){
+    pthread_setname_np(pthread_self(),"Athread");
     set_affinity(3);
     while(1){
         ((Cost*)object)->optimizeA();
@@ -258,7 +260,12 @@ static void* Cost_optimizeA(void* object){
 
 
 void Cost::optimize(){
-    launch_optimzer_threads(this);
+    if(!running){
+        running=true;
+        launch_optimzer_threads(this);
+    }else{
+        cout<<"Already running optimizer!"<<"\n";
+    }
 }
 
 
@@ -312,7 +319,7 @@ void Cost::optimizeQD(){
         point++;
     }
     //last row
-    assert(point%w==0);
+
     pstop=h*w-1;
     for (;point<pstop;point++){
         kxn=(kx[here] + sigma_q*((d[here]-d[right])*gright))/denom;
@@ -382,18 +389,21 @@ void Cost::optimizeQD(){
     pstop++;
     d[here] = (d[here]-sigma_d*(          gup*ky[up]               +gleft*kx[left]                              - a[here]/theta))/denom;
     point++;
-    myshow("qx",abs(_qx));
-    myshow("d",_d);
-    myshow("a",_a);
-    cvWaitKey(1);
-    
+    pfShow("qx",abs(_qx));
+    pfShow("d",_d);
+    pfShow("a",_a);
+
+//     usleep(10);
    
     
 }
 
 void Cost::optimizeA(){ 
-
+    usleep(10);
     theta=theta*.97;
+    if (theta<thetaMin){//done optimizing!
+        theta=thetaStart;
+    }
     cout<<"A optimization run: "<<Aruncount++<<endl;
     cout<<"                           Current Theta: "<<theta<<endl;
     int w=cols;
@@ -405,7 +415,8 @@ void Cost::optimizeA(){
     
     float ds=depthStep;
     // a update
-    
+    pfShow("d",_d);
+    pfShow("a",_a);
     for(st point=0;point<w*h;point++){
         a[point]=aBasic(data+point*l,l,ds,d[point]);
     }

@@ -3,7 +3,7 @@
 #ifdef COST_CPP_SUBPARTS
 #include "Cost.h"
 
-#include "reproject.hpp"
+#include "CostVolume/utils/reproject.hpp"
 
 //debugs
 #include <iostream>
