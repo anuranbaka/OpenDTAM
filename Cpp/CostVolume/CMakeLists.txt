@@ -1,5 +1,5 @@
 include_directories(utils)
-add_library (CostFiles 
+add_library (CostFiles SHARED
                 Cost.cpp 
                 utils/reproject.cpp 
                 optimizer.part.cpp

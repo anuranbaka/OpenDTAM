@@ -3,6 +3,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <iostream>
+#include <unistd.h>
 #include "graphics.hpp"
 #include "set_affinity.h"
 #include "Cost.h"
