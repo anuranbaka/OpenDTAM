@@ -2,6 +2,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <iostream>
 #include <stdio.h>
+#include <unistd.h>
 
 //Mine
 #include "convertAhandaPovRayToStandard.h"

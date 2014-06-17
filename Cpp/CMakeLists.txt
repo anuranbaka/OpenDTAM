@@ -6,7 +6,7 @@ project(dtam)
 #message(STATUS ${CMAKE_MODULE_PATH})
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O3 -g -ggdb")
 
-find_package( OpenCV 2.4.9 REQUIRED )
+find_package( OpenCV 2.4 REQUIRED )
 find_package( Qt5Core REQUIRED)
 
 #message(STATUS ${OpenCV_CONSIDERED_CONFIGS})
@@ -22,6 +22,9 @@ add_subdirectory(CostVolume)
 include_directories(Track)
 add_subdirectory(Track)
 
-add_executable (a.out testprog.cpp convertAhandaPovRayToStandard.cpp graphics.cpp)
+find_package(Boost COMPONENTS system thread)
+include_directories(${Boost_INCLUDE_DIRS})
 
-target_link_libraries( a.out TrackFiles CostFiles ${OpenCV_LIBS} )
+add_executable (a.out testprog.cpp convertAhandaPovRayToStandard.cpp graphics.cpp)
+target_link_libraries( a.out TrackFiles CostFiles ${OpenCV_LIBS} ${Boost_LIBRARIES})
+
