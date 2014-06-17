@@ -69,10 +69,7 @@ void Cost::updateCostL1(const cv::Mat& image,
             }
         }
 //         {//debug
-//         //absdiff(plane,baseImage,plane);
-           pfShow( "Display window", plane);
-
-//         cvWaitKey(1);
+//            pfShow( "Cost Volume Slice", plane);
 //         }
     }
 //     cv::Mat loInd(rows,cols,CV_32SC1);
@@ -146,56 +143,56 @@ void Cost::updateCostL2(const cv::Mat& image,
                 //                 pdata[i+1]=cdata[coff]/hdata[coff]*10;
                 //                 pdata[i+2]=cdata[coff]/hdata[coff]*10;
                 //                 }
-        }
-        //             {//debug
-        //             //absdiff(plane,baseImage,plane);
-        //             cv::Mat tmp;
-        //             lInd.convertTo(tmp,CV_32FC3,1./255.);
-        //             imshow( "Display window", tmp);
-        //             //std::cout<<"Depth: "<<depth[n]<<std::endl;
-        //             cvWaitKey(1);
-        //             }
-    }
-}
-else if (image.type()==CV_32FC1){
-    for(int n=0; n < depth.size(); ++n){
-        cv::Mat_<float> _img(image);
-        cv::Mat_<float> plane;
-        cv::Mat_<uchar> mask;
-        reproject(_img, cameraMatrix, pose, currentCameraPose, depth[n], plane, mask);
-        size_t end=image.rows*image.cols;
-        size_t lstep=layers;
-        float* pdata=(float*)(plane.data);
-        float* idata=(float*)(baseImage.data);
-        float* cdata=((float*)data)+n;
-        float* hdata=((float*)hit)+n;
-        char*  mdata=(char*)(mask.data);
-        
-        //size_t moff=0;
-        for (size_t i=0, moff=0,coff=0;  i<end;  moff++, i++, coff+=lstep){
-            //std::cout<<mdata[moff]<<std::endl;
-            if(mdata[moff]){
-                float v1=pdata[i]-idata[i];
-                cdata[coff]+=v1*v1;
-                hdata[coff]++;
-                //                    {//debug see the cost
-                //                        pdata[i]=cdata[coff]*10;
-                //                    }
-                // std::cout<<cdata[coff]<<std::endl;
+            }
+            //             {//debug
+            //             //absdiff(plane,baseImage,plane);
+            //             cv::Mat tmp;
+            //             lInd.convertTo(tmp,CV_32FC3,1./255.);
+            //             imshow( "Display window", tmp);
+            //             //std::cout<<"Depth: "<<depth[n]<<std::endl;
+            //             cvWaitKey(1);
+            //             }
         }
     }
-    //            {//debug
-    //                //absdiff(plane,baseImage,plane);
-    //                imshow( "Display window", plane);
-    //                std::cout<<"Depth: "<<depth[n]<<std::endl;
-    //                cvWaitKey(0);
-    //            }
-}
-}
-else{
-    std::cout<<"Error, Unsupported Type!"<<std::endl;
-    assert(false);
-}
+    else if (image.type()==CV_32FC1){
+        for(int n=0; n < depth.size(); ++n){
+            cv::Mat_<float> _img(image);
+            cv::Mat_<float> plane;
+            cv::Mat_<uchar> mask;
+            reproject(_img, cameraMatrix, pose, currentCameraPose, depth[n], plane, mask);
+            size_t end=image.rows*image.cols;
+            size_t lstep=layers;
+            float* pdata=(float*)(plane.data);
+            float* idata=(float*)(baseImage.data);
+            float* cdata=((float*)data)+n;
+            float* hdata=((float*)hit)+n;
+            char*  mdata=(char*)(mask.data);
+            
+            //size_t moff=0;
+            for (size_t i=0, moff=0,coff=0;  i<end;  moff++, i++, coff+=lstep){
+                //std::cout<<mdata[moff]<<std::endl;
+                if(mdata[moff]){
+                    float v1=pdata[i]-idata[i];
+                    cdata[coff]+=v1*v1;
+                    hdata[coff]++;
+                    //                    {//debug see the cost
+                    //                        pdata[i]=cdata[coff]*10;
+                    //                    }
+                    // std::cout<<cdata[coff]<<std::endl;
+                }
+            }   
+        //            {//debug
+        //                //absdiff(plane,baseImage,plane);
+        //                imshow( "Display window", plane);
+        //                std::cout<<"Depth: "<<depth[n]<<std::endl;
+        //                cvWaitKey(0);
+        //            }
+        }
+    }
+    else{
+        std::cout<<"Error, Unsupported Type!"<<std::endl;
+        assert(false);
+    }
 }
 
 

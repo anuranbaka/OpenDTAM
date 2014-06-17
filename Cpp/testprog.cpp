@@ -10,6 +10,8 @@
 #include "CostVolume/Cost.h"
 #include "graphics.hpp"
 #include "set_affinity.h"
+#include "Track/Track.hpp"
+#include "utils/utils.h"
 
 //debug
 #include "tictoc.h"
@@ -70,6 +72,7 @@ int App_main( int argc, char** argv )
     hconcat(R,T,cameraAffinePoseBase);
 
     Cost cost(image.clone(),32, cameraMatrix, R,T);
+    Track tracker(cost);
     assert(cost.rows==480);
     
     vector<Mat> images,Rs,Ts;
@@ -111,23 +114,38 @@ int App_main( int argc, char** argv )
             Mat cameraAffinePoseAlternate,mask;
             hconcat(R,T,cameraAffinePoseAlternate);
 
-            if (cost.imageNum<20){
+            if (cost.imageNum<2){
             cost.updateCostL1(image,R,T);
-            cout<<"cost"<<imageNum<<"\n";
             }
-            if (imageNum==1){
-                set_affinity(1);//Move us to core 1
+            if (cost.imageNum==1){ 
                 cost.optimize();//Launches the optimizer threads
             }
-//             if (imageNum==4){
-//                 cost.initOptimization();//jumpstart the optimization with the approximate answer at 4 images
-//             }
-
             const Mat thisPose(cost.convertPose(R,T));
+            //cost.initOptimization();//jumpstart the optimization with the approximate answer at 4 images
             
+//             reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
+            //Test out the Tracker
+            {
+                Mat tp;
+                RTToLie(R,T,tp); 
+                tracker.depth=abs(cost._a*cost.depthStep);
+                tracker.addFrame(image);
+                //tracker.pose=tracker.basePose;
+                tracker.align();
+                Mat p=tracker.pose;
+                cout << "True Pose: "<< tp << endl;
+                cout << "Recovered Pose: "<< p << endl;
+                cout << "Pose Error: "<< p-tp << endl;
+            }
+            
+            
+            if (imageNum==4){
+                //cost.initOptimization();//jumpstart the optimization with the approximate answer at 4 images
+                usleep(1000000);
+                tracker.pose=tracker.basePose;
+            }
 
-            //imshow("to match",image);
-            reprojectCloud(cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
+            
 
             if(! image.data )                              // Check for invalid input
             {

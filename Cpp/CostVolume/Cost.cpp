@@ -75,5 +75,17 @@ hi(cv::Mat(baseImage.rows,baseImage.cols,cv::DataType<float>::type, cv::Scalar(C
     init();
 }
 
+const cv::Mat Cost::depthMap(){
+    //Returns the best available depth map
+    // Code should not rely on the particular mapping of true 
+    // internal data to true inverse depth, as this may change.
+    // Currently depth is just a constant multiple of the index, so
+    // infinite depth is always represented. This is likely to change.
+    if(stableDepth.data){
+        exit(0);
+        return stableDepth*depthStep;
+    }
+    return _d*depthStep;
+}
 
 

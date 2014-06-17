@@ -15,9 +15,13 @@ find_package( Qt5Core REQUIRED)
 
 set(BASEPATH "${CMAKE_SOURCE_DIR}")
 include_directories("${BASEPATH}")
+
 include_directories(CostVolume)
 add_subdirectory(CostVolume)
 
+include_directories(Track)
+add_subdirectory(Track)
+
 add_executable (a.out testprog.cpp convertAhandaPovRayToStandard.cpp graphics.cpp)
 
-target_link_libraries( a.out CostFiles ${OpenCV_LIBS} )
+target_link_libraries( a.out TrackFiles CostFiles ${OpenCV_LIBS} )

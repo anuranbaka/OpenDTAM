@@ -1,4 +1,5 @@
 ///This file finds the special weighted divergence and gradient used in the optimizer
+///Thie code in this file is not used, but a reference for understanding.
 ///The output after gradient is the "k" space(my own name, not used by the paper)
 ///It is like the gradient, but weirdly weighted by the g function.
 ///The average of the g function at the two ends of each gradient spring is the influence 
@@ -6,7 +7,7 @@
 ///The input space to the gradient is the depth image space "d"
 ///
 ///The functions here provide these on a pointwise basis.
-///The weighted gradient (used in Eq. 11):
+///The weighted gradient (used in Eq. 11 (ish because of bugs in the paper) ):
 ///k_x[here] =                     0*d[left] + -0.5*(g[here]+g[right])*d[here] + 0.5*(g[here]+g[right])*d[right]
 ///k_x[left] = -.5*(g[left]+g[here])*d[left] +  0.5*(g[left]+g[here]) *d[here] +                      0*d[right]
 ///

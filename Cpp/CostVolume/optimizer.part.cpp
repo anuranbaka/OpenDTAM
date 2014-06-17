@@ -26,7 +26,8 @@ typedef size_t st;
 #define gleft gl[here]
 #define gright gr[here]
 
-
+#define QUIET_DTAM 
+#include "quiet.hpp"
 
 void myshow(const string name,const Mat& _mat){
     Mat mat=_mat.clone();
@@ -46,6 +47,8 @@ void myshow(const string name,const Mat& _mat){
 
 
 void Cost::initOptimization(){//must be thread safe in allocations(i.e. don't do any after first time!)
+    static int calls=1;
+    assert(calls++<=2);
     int w=cols;
     int h=rows;
     cacheGValues();
@@ -54,13 +57,12 @@ void Cost::initOptimization(){//must be thread safe in allocations(i.e. don't do
     minv(data,loInd,loVal);
     loInd.convertTo(_a,CV_32FC1);
 //     _a=_a*depthStep;
-    _d=_a.clone();
+    _a.copyTo(_d);
+    
     _qx.create(h,w,CV_32FC1);
-    uchar* dat=_qx.data;
-    _qx=1;
-    assert(_qx.data==dat);
-    _qx=Mat(h,w,CV_32FC1,Scalar(0.0));
-    _qy=Mat(h,w,CV_32FC1,Scalar(0.0));
+    _qx*=0.0;
+    _qy.create(h,w,CV_32FC1);
+    _qy*=0.0;
     theta=thetaStart;
     epsilon=.1;
     lambda=.00001;
@@ -393,15 +395,20 @@ void Cost::optimizeQD(){
     pfShow("d",_d);
     pfShow("a",_a);
 
-//     usleep(10);
+    usleep(1);
    
     
 }
 
 void Cost::optimizeA(){ 
-    usleep(10);
+    static uchar* aptr=_a.data;
+    assert(aptr==_a.data);//_a is read across threads, so needs to never be de/reallocated
+    //usleep(1);
     theta=theta*.97;
     if (theta<thetaMin){//done optimizing!
+        stableDepth=_d.clone();//always choose more regularized version
+        _qx=0.0;
+        _qy=0.0;
         theta=thetaStart;
     }
     cout<<"A optimization run: "<<Aruncount++<<endl;

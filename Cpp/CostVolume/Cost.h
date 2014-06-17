@@ -46,6 +46,8 @@ public:
     void updateCostL2(const cv::Mat& image, const cv::Mat& R, const cv::Mat& Tr);
     void optimize();
     void initOptimization();
+    
+    const cv::Mat depthMap(); //return the best available depth map
 
     const cv::Matx44d convertPose(const cv::Mat& R, const cv::Mat& Tr){
         cv::Mat pose=cv::Mat::eye(4,4, CV_64F);
@@ -90,6 +92,7 @@ private:
 
     //Optimizer functions and data
     public:cv::Mat _qx,_qy,_d,_a,_g,_gu,_gd,_gl,_gr,_gbig;private:
+    cv::Mat stableDepth;
     float theta,thetaStart,thetaMin,epsilon,lambda,sigma_d,sigma_q;
     
     void computeSigmas();

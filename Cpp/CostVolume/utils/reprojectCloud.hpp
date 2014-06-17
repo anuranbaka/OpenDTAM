@@ -3,6 +3,6 @@
 #include <opencv2/core/core.hpp>
 
 
-cv::Mat reprojectCloud(const cv::Mat im, const cv::Mat _depth,const cv::Mat _oldPose, const cv::Mat _newPose, const cv::Mat _cameraMatrix);
+cv::Mat reprojectCloud(const cv::Mat comparison,const cv::Mat im, const cv::Mat _depth,const cv::Mat _oldPose, const cv::Mat _newPose, const cv::Mat _cameraMatrix);
 
 #endif
