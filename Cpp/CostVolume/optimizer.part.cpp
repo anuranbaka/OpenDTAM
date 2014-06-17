@@ -48,8 +48,7 @@ void myshow(const string name,const Mat& _mat){
 
 
 void Cost::initOptimization(){//must be thread safe in allocations(i.e. don't do any after first time!)
-    static int calls=1;
-    assert(calls++<=2);
+
     int w=cols;
     int h=rows;
     cacheGValues();
@@ -180,10 +179,13 @@ inline float Cost::aBasic(float* data,float l,float ds,float d){
     
     float mv=afunc(data,theta,d,ds,0,lambda); 
     v=mv;
+    static uchar* aptr=_a.data;
+    assert(aptr==_a.data);//_a is read across threads, so needs to never be de/reallocated
     vnext=afunc(data,theta,d,ds,1,lambda);
     for(int a=2;a<l;a++){
         vlast=v;
         v=vnext;
+        assert(aptr==_a.data);//_a is read across threads, so needs to never be de/reallocated
         vnext=afunc(data,theta,d,ds,a,lambda);
         if(v<mv){
             A=vlast;
@@ -274,8 +276,8 @@ void Cost::optimize(){
 
 
 void Cost::optimizeQD(){
-    static uchar* aptr=_d.data;
-    assert(aptr==_d.data);//_d is read across threads, so needs to never be de/reallocated
+    static uchar* dptr=_d.data;
+    assert(dptr==_d.data);//_d is read across threads, so needs to never be de/reallocated
     int w=cols;
     int h=rows;
     cout<< "QD optimization run:"<<QDruncount++<<"\n";

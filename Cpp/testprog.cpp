@@ -122,7 +122,7 @@ int App_main( int argc, char** argv )
                 cost.optimize();//Launches the optimizer threads
             }
             const Mat thisPose(cost.convertPose(R,T));
-            //cost.initOptimization();//jumpstart the optimization with the approximate answer at 4 images
+            cost.initOptimization();//jumpstart the optimization with the approximate answer at 4 images
             
 //             reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
             //Test out the Tracker
