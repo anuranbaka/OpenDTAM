@@ -274,6 +274,8 @@ void Cost::optimize(){
 
 
 void Cost::optimizeQD(){
+    static uchar* aptr=_d.data;
+    assert(aptr==_d.data);//_d is read across threads, so needs to never be de/reallocated
     int w=cols;
     int h=rows;
     cout<< "QD optimization run:"<<QDruncount++<<"\n";
