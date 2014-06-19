@@ -34,7 +34,7 @@ void pfShow(const string name,const Mat& _mat,int defaultscale, Vec2d autoscale)
     assert(nameShow.size()==ready);
     
     Gmux.unlock();
-    while(nameShow.size()>5){
+    while(nameShow.size()>5||pausing){
         usleep(100);
     }
 
@@ -45,7 +45,7 @@ void pfWindow(const string name,int prop){
     props.push(prop);
 
     Gmux.unlock();
-    while(nameWin.size()>5){
+    while(nameWin.size()>5||pausing){
         usleep(100);
     }
 }
@@ -64,11 +64,7 @@ void* guiLoop(void*){
     pthread_setname_np(pthread_self(),"Graphics");
     Mat mat;
     while(1){
-        if(CV_XADD(&pausing,-1)>=1){//deal with pauses
-            namedWindow("d",CV_WINDOW_KEEPRATIO);
-            cout<<"Paused"<<endl;
-            waitKey();
-        }
+        
         if (props.size()>0){//deal with new windows
             Gmux.lock();
             string name=take(nameWin);
@@ -94,8 +90,8 @@ void* guiLoop(void*){
 
                 
                 mat.convertTo(mat,CV_MAKETYPE(CV_8U,mat.channels()), 255.0);//use 8 bit so we can have the nice mouse over
-                cout<<name<<": view scale: "<<max-min<<endl;
-                cout<<name<<": min: "<<min<<"  max: "<< max<<endl;
+//                 cout<<name<<": view scale: "<<max-min<<endl;
+//                 cout<<name<<": min: "<<min<<"  max: "<< max<<endl;
             }else if (autoscale[0]!=autoscale[1]){
                 double scale= 1.0/(autoscale[1]-autoscale[0]);
                 mat.convertTo(mat,CV_MAKETYPE(mat.type(),mat.channels()),scale,-autoscale[0]*scale);
@@ -105,6 +101,17 @@ void* guiLoop(void*){
             }
             imshow( name, mat);
            
+        }else if(pausing){
+            if(CV_XADD(&pausing,-1)>=1){//deal with pauses
+                namedWindow("control",CV_WINDOW_KEEPRATIO);
+                cout<<"Paused"<<endl;
+                while(waitKey()!=' ');
+                if(pausing<0){
+                    pausing=0;
+                }
+            }else{
+                pausing=0;
+            }
         }
         waitKey(1);
 //         usleep(100);

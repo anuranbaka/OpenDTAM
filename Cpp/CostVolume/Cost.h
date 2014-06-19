@@ -78,6 +78,8 @@ private:
         thetaMin=0.01;
         running=false;
         initOptimization();
+        epsilon=.1;
+        lambda=.00001;
 
 
     }

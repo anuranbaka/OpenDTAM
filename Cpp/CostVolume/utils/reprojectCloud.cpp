@@ -78,7 +78,7 @@ using namespace cv;
 using namespace std;
 
 Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const Mat _oldPose, const Mat _newPose, const Mat _cameraMatrix){
-    tic();
+
     Mat im=_im;
     Mat_<float> depth=_depth;
     Mat oldPose=make4x4(_oldPose);
@@ -93,8 +93,9 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
 //     cout<<oldPose<<endl;
 
     proj=cameraMatrix*newPose*oldPose.inv()*cameraMatrix.inv();
-    cout<<"realMapping:"<<endl;
-    cout<<proj<<endl;
+//     cout<<"True Mapping:"<<endl;
+//     cout<<proj<<endl;
+    
 //     cout<<proj*(Mat_<double>(4,1)<<5,3,1,4)<<endl;
 //     cout<<(_cameraMatrix.inv()*(Mat_<double>(3,1)<<5,3,1))/.25<<endl;
 //     cout<<newPose*oldPose.inv()*(Mat_<double>(4,1)<<-2.614297589359934,  -1.970833333333333,4,1)<<endl;
@@ -112,7 +113,7 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
     tmp.col(1).copyTo(proj.col(2));
     tmp.col(0).copyTo(proj.col(3));
     proj=proj.rowRange(0,3).clone();
-    cout<<"Proj: "<<"\n"<< proj<< endl;
+//     cout<<"Proj: "<<"\n"<< proj<< endl;
 
     
 //      //Check if conversions are rounded or truncated
@@ -131,7 +132,7 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
     }
 
     perspectiveTransform(xyin,xyout,proj);
-    tic();
+
     Mat xy;
     xyout.convertTo(xy,CV_32SC2);//rounds! 
     int* xyd=(int *)(xy.data);
@@ -160,36 +161,58 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
     xyLayers[1].reshape(1,im.rows);
     Mat pullback;
     Mat occluded(im.rows,im.cols,CV_8UC1);
-    Mat depthPullback;
-    pfShow("zmap",zmap);
+//     Mat depthPullback;
+//     pfShow("zmap",zmap);
+//     
+//     remap( zmap, depthPullback, xyLayers[0], xyLayers[1], CV_INTER_NN, BORDER_CONSTANT, Scalar(0,0, 0) );
+//     
+//     //do a depth test
+//     Mat zthr,zdiff;
+//     absdiff(depthPullback,depth,zdiff);
+//     zthr=(zdiff<.001);
+//     cvtColor(zthr,zthr,CV_GRAY2BGR,3);
+//     zthr.convertTo(zthr,CV_32FC3,1/255.0);
     
-    remap( zmap, depthPullback, xyLayers[0], xyLayers[1], CV_INTER_NN, BORDER_CONSTANT, Scalar(0,0, 0) );
-    Mat tmp2;
-    absdiff(depthPullback,depth,tmp);
-    tmp2=(tmp<.0001);
-    cvtColor(tmp2,tmp2,CV_GRAY2BGR,3);
-    tmp2.convertTo(tmp2,CV_32FC3);
-    pfShow("Occlusion",tmp);
     
-    remap( comparison, pullback, xyLayers[0], xyLayers[1], CV_INTER_NN, BORDER_CONSTANT, Scalar(0,0, 0) );
-    pullback=pullback.mul(tmp2);
+//     pfShow("Occlusion",zdiff);
     
-    toc();
-    tic();
-    Mat im2;
-    remap( im, im2, xmap, ymap, CV_INTER_NN, BORDER_CONSTANT, Scalar(0,0, 0) );
-    
-    toc();
+//     remap( comparison, pullback, xyLayers[0], xyLayers[1], CV_INTER_NN, BORDER_CONSTANT, Scalar(0,0, 0) );
+//     Mat photoerr,pthr;
+//     absdiff(im,pullback,photoerr);
+// 
+//     cvtColor(photoerr,photoerr,CV_BGR2GRAY);
+//     pthr=photoerr>.1;
+//     cvtColor(pthr,pthr,CV_GRAY2RGB);
+//     pthr.convertTo(pthr,CV_32FC3,1/255.0);
+//     
+// //     pullback.convertTo(pullback,CV_32FC3,1/255.0);
+// //     assert(
+//     pfShow("photo Error",photoerr);
+//     
+//     
+//     Mat confidence;
+//     sqrt(pthr,confidence);
+//     confidence=Scalar(1,1,1)-confidence;
+//     pullback=pullback.mul(confidence).mul(zthr);
+//     pfShow("Stabilized Projection",pullback,0,Vec2d(0,1));
 
-    pfShow("backtrans",im2);
-    absdiff(im2,comparison,tmp);
-
-    Mat(im2!=0).convertTo(tmp2,CV_32FC3);
-    pfShow("diff",tmp.mul(tmp2));
-    pfShow("pullback",pullback);
-    tic();
+    static Mat fwdp=im.clone();
+    remap( im, fwdp, xmap, ymap, CV_INTER_NN, BORDER_CONSTANT,Scalar(0,0,0));
+//     medianBlur(fwdp,fwdp,5);
+//     remap( im, fwdp, xmap, ymap, CV_INTER_NN, BORDER_TRANSPARENT);
     
-    toc();
+    
+
+    pfShow("Forward Projection",fwdp,0,Vec2d(0,1));
+//     absdiff(fwdp,comparison,zdiff);
+    pfShow("Actual Image",comparison);
+   
+    
+
+    
+//     pfShow("diff",zdiff.mul(fwdp));
+    
+
 
     return xyout;
     

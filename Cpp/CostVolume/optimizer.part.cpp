@@ -65,8 +65,7 @@ void Cost::initOptimization(){//must be thread safe in allocations(i.e. don't do
     _qy.create(h,w,CV_32FC1);
     _qy*=0.0;
     theta=thetaStart;
-    epsilon=.1;
-    lambda=.00001;
+
 }
 
 //This function has no equation, I had to derive it from the references
@@ -136,7 +135,7 @@ void Cost::cacheGValues(){
     sqrt(_g,_g);
     
     exp(-3*_g,_g);
-    _g=1;
+//     _g=1;
     
     //_g=_g*scale_g
     //cache interpreted forms of g, for the "matrix" used in
@@ -172,6 +171,7 @@ void Cost::cacheGValues(){
 
 static inline float afunc(float* data,float theta,float d,float ds,int a,float lambda){
     return 1.0/(2.0*theta)*ds*ds*(d-a)*(d-a) + data[a]*lambda;//Literal implementation of Eq.14, note the datastep^2 factor to scale correctly
+//     return 1.0/(2.0*theta)*(d-a)*(d-a) + data[a]*lambda;//forget the ds^2 factor for better numerical behavior
 }
 
 inline float Cost::aBasic(float* data,float l,float ds,float d,float& value){
@@ -403,9 +403,11 @@ void Cost::optimizeQD(){
     pstop++;
     d[here] = (d[here]-sigma_d*(          gup*ky[up]               +gleft*kx[left]                              - a[here]/theta))/denom;
     point++;
-    pfShow("qx",abs(_qx));
+    
+    //debug
+//     pfShow("qx",abs(_qx));
     pfShow("d",_d);
-    pfShow("a",_a);
+//     pfShow("a",_a);
     assert(aptr==_a.data);
 
     usleep(1);
@@ -421,8 +423,8 @@ void Cost::optimizeA(){
     //usleep(1);
     theta=theta*.97;
     if (theta<thetaMin){//done optimizing!
-        //running=false;
-        initOptimization();
+        running=false;
+//         initOptimization();
         stableDepth=_d.clone();//always choose more regularized version
         _qx=0.0;
         _qy=0.0;
@@ -447,19 +449,19 @@ void Cost::optimizeA(){
         a[point]=aBasic(data+point*l,l,ds,d[point],blank);
     }
     
-    
-    //debug: show the energies
-    Mat acost(rows,cols,CV_32FC1);
-    float* ap=acost.ptr<float>(0);
-    for(st point=0;point<w*h;point++){
-        aBasic(data+point*l,l,ds,d[point],ap[point]);
-    }
-    pfShow("A Energy: ", acost,0,Vec2d(0,1e-6));
-    float Ed=sum(acost)[0];
-    float Ee=sum(_qx.mul(_qx)/2*epsilon)[0];
-    
-    cout<<"Data Energy: "<<Ed<<endl;
-    cout<<"Elastic Energy: "<<Ee<<endl;
-    cout<<"Total Energy: "<<Ed+Ee<<endl;
+
+//     //debug: show the energies
+//     Mat acost(rows,cols,CV_32FC1);
+//     float* ap=acost.ptr<float>(0);
+//     for(st point=0;point<w*h;point++){
+//         aBasic(data+point*l,l,ds,d[point],ap[point]);
+//     }
+//     pfShow("A Energy: ", acost,0,Vec2d(0,1e-6));
+//     float Ed=sum(acost)[0];
+//     float Ee=sum(_qx.mul(_qx)/2*epsilon)[0];
+//     
+//     cout<<"Data Energy: "<<Ed<<endl;
+//     cout<<"Elastic Energy: "<<Ee<<endl;
+//     cout<<"Total Energy: "<<Ed+Ee<<endl;
 }
 

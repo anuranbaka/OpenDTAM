@@ -49,7 +49,7 @@ int main( int argc, char** argv ){
 
 int App_main( int argc, char** argv )
 {
-    gpause();
+
     pthread_setname_np(pthread_self(),"App_main");
         
     FileStorage fs;
@@ -131,16 +131,18 @@ int App_main( int argc, char** argv )
             Mat cameraAffinePoseAlternate,mask;
             hconcat(R,T,cameraAffinePoseAlternate);
 
-            if (cost.imageNum<3){
+            if (cost.imageNum<2){
             cost.updateCostL1(image,R,T);
             }
-            if (cost.imageNum==2){ 
+            if (cost.imageNum==1){ 
                 cost.optimize();//Launches the optimizer threads
+            }
+            const Mat thisPose(cost.convertPose(R,T));
+            
+            reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
+            if (cost.imageNum==1){ 
                 gpause();
             }
-//             const Mat thisPose(cost.convertPose(R,T));
-//             
-// //             reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
 //             //Test out the Tracker
 //             {
 //                 Mat tp;
@@ -157,11 +159,11 @@ int App_main( int argc, char** argv )
 //             }
             
             
-            if (cost.imageNum==2){
-                cost.initOptimization();//jumpstart the optimization with the approximate answer at a few images
-                usleep(1000000);
-                tracker.pose=tracker.basePose;
-            }
+//             if (cost.imageNum==2){
+//                 cost.initOptimization();//jumpstart the optimization with the approximate answer at a few images
+//                 usleep(1000000);
+//                 tracker.pose=tracker.basePose;
+//             }
 
             
 
