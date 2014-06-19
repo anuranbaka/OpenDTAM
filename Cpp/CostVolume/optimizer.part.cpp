@@ -4,6 +4,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <iostream>
 #include <unistd.h>
+#include <cmath>
 #include "graphics.hpp"
 #include "set_affinity.h"
 #include "Cost.h"
@@ -171,7 +172,8 @@ void Cost::cacheGValues(){
 
 static inline float afunc(float* data,float theta,float d,float ds,int a,float lambda){
     return 1.0/(2.0*theta)*ds*ds*(d-a)*(d-a) + data[a]*lambda;//Literal implementation of Eq.14, note the datastep^2 factor to scale correctly
-//     return 1.0/(2.0*theta)*(d-a)*(d-a) + data[a]*lambda;//forget the ds^2 factor for better numerical behavior
+//     return 1.0/(2.0*theta)*(d-a)*(d-a) + data[a]*lambda;//forget the ds^2 factor for better numerical behavior(sometimes)
+//     return std::abs(1.0/(2.0*theta)*ds*ds*(d-a)) + data[a]*lambda;//L1 Version
 }
 
 inline float Cost::aBasic(float* data,float l,float ds,float d,float& value){
@@ -319,8 +321,8 @@ void Cost::optimizeQD(){
             kyn=(ky[here] + sigma_q*((d[here]-d[down])*gdown))/denom;
             nm=sqrt(kxn*kxn+kyn*kyn);
             pd=std::max(1.0f,nm);
-            kx[here]=kxn;///pd;
-            ky[here]=kyn;///pd;
+            kx[here]=kxn/pd;
+            ky[here]=kyn/pd;
             //kx[here]=d[here]-d[right];
         }
         //last col
@@ -329,7 +331,7 @@ void Cost::optimizeQD(){
         nm=sqrt(kxn*kxn+kyn*kyn);
         pd=max(1.0f,nm);
         kx[here]=0;
-        ky[here]=kyn;///pd;
+        ky[here]=kyn/pd;
         point++;
     }
     //last row
@@ -340,7 +342,7 @@ void Cost::optimizeQD(){
         kyn=0;
         nm=sqrt(kxn*kxn+kyn*kyn);
         pd=max(1.0f,nm);
-        kx[here]=kxn;///pd;
+        kx[here]=kxn/pd;
         ky[here]=0;
     }
     //last col,row
@@ -421,7 +423,10 @@ void Cost::optimizeQD(){
 void Cost::optimizeA(){ 
     assert(aptr==_a.data);//_a is read across threads, so needs to never be de/reallocated
     //usleep(1);
-    theta=theta*.97;
+    theta=theta*thetaStep;
+    if (QDruncount>1000){
+        thetaStep=.97;
+    }
     if (theta<thetaMin){//done optimizing!
         running=false;
 //         initOptimization();

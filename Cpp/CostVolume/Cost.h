@@ -74,13 +74,13 @@ private:
         imageNum=0;
         QDruncount=0;
         Aruncount=0;
-        thetaStart=200.0;
+        thetaStart=500.0;
         thetaMin=0.01;
         running=false;
         initOptimization();
         epsilon=.1;
-        lambda=.00001;
-
+        lambda=.000001;
+        thetaStep=.999;
 
     }
     std::vector<float> generateDepths(int layers){
@@ -103,7 +103,7 @@ private:
     uchar* aptr;
     uchar* dptr;
     cv::Mat stableDepth;
-    float theta,thetaStart,thetaMin,epsilon,lambda,sigma_d,sigma_q;
+    float theta,thetaStart,thetaStep,thetaMin,epsilon,lambda,sigma_d,sigma_q;
     
     void computeSigmas();
     void cacheGValues();
