@@ -4,9 +4,11 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <iostream>
 #include <unistd.h>
+#include <cmath>
 #include "graphics.hpp"
 #include "set_affinity.h"
 #include "Cost.h"
+
 //relations: 
 //gwhatever=0.5*(gwhatever+ghere)
 //gright,gdown are negated
@@ -134,8 +136,9 @@ void Cost::cacheGValues(){
     //good threshold for edge detectors.
     sqrt(_g,_g);
     
-    exp(-3*_g,_g);
-//     _g=1;
+//     exp(-3*_g,_g);//medium edges
+//     exp(-10*_g,_g);//very hard edges
+    _g=1;//soft edges
     
     //_g=_g*scale_g
     //cache interpreted forms of g, for the "matrix" used in
@@ -170,7 +173,8 @@ void Cost::cacheGValues(){
 }*/
 
 static inline float afunc(float* data,float theta,float d,float ds,int a,float lambda){
-    return 1.0/(2.0*theta)*ds*ds*(d-a)*(d-a) + data[a]*lambda;//Literal implementation of Eq.14, note the datastep^2 factor to scale correctly
+//     return 1.0/(2.0*theta)*ds*ds*(d-a)*(d-a) + data[a]*lambda;//Literal implementation of Eq.14, note the datastep^2 factor to scale correctly
+    return std::abs(1.0/(2.0*theta)*ds*ds*(d-a)) + data[a]*lambda;
 //     return 1.0/(2.0*theta)*(d-a)*(d-a) + data[a]*lambda;//forget the ds^2 factor for better numerical behavior
 }
 
