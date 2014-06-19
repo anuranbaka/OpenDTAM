@@ -64,15 +64,15 @@ void Cost::updateCostL1(const cv::Mat& image,
                 
                // std::cout<<ns<<std::endl;
             }
-//             {//debug see the cost
-//                 pdata[i]=cdata[coff];
-//                 pdata[i+1]=cdata[coff];
-//                 pdata[i+2]=cdata[coff];
-//             }
+            {//debug see the cost
+                pdata[i]=cdata[coff];
+                pdata[i+1]=cdata[coff];
+                pdata[i+2]=cdata[coff];
+            }
         }
-//         {//debug
-//            pfShow( "Cost Volume Slice", plane,0,cv::Vec2d(0,.5));
-//         }
+        {//debug
+           pfShow( "Cost Volume Slice", plane,0,cv::Vec2d(0,.5));
+        }
     }
 //     cv::Mat loInd(rows,cols,CV_32SC1);
 //     cv::Mat loVal(rows,cols,CV_32FC1);

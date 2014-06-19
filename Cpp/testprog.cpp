@@ -131,38 +131,38 @@ int App_main( int argc, char** argv )
             Mat cameraAffinePoseAlternate,mask;
             hconcat(R,T,cameraAffinePoseAlternate);
 
-            if (cost.imageNum<2){
+            if (cost.imageNum<20){
             cost.updateCostL1(image,R,T);
             }
-            if (cost.imageNum==1){ 
-                cost.optimize();//Launches the optimizer threads
-            }
-            const Mat thisPose(cost.convertPose(R,T));
-            
-//             reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
-            
-            
-            if(imageNum==1){
-                tracker.pose=tracker.basePose.clone();
-            }
-            //Test out the Tracker
-            {
-                Mat tp;
-                RTToLie(R,T,tp); 
-                //tracker.pose=tp.clone();//Give the answer
-                tracker.depth=abs(cost.depthMap());
-
-                tracker.addFrame(image);
-
-                tracker.align();
-                Mat p=tracker.pose;
-                cout << "True Pose: "<< tp << endl;
-                cout << "Recovered Pose: "<< p << endl;
-                cout << "Pose Error: "<< p-tp << endl;
-            }
-            if (cost.imageNum==1){ 
-                gpause();
-            }
+//             if (cost.imageNum==1){ 
+//                 cost.optimize();//Launches the optimizer threads
+//             }
+//             const Mat thisPose(cost.convertPose(R,T));
+//             
+// //             reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
+//             
+//             
+//             if(imageNum==1){
+//                 tracker.pose=tracker.basePose.clone();
+//             }
+//             //Test out the Tracker
+//             {
+//                 Mat tp;
+//                 RTToLie(R,T,tp); 
+//                 //tracker.pose=tp.clone();//Give the answer
+//                 tracker.depth=abs(cost.depthMap());
+// 
+//                 tracker.addFrame(image);
+// 
+//                 tracker.align();
+//                 Mat p=tracker.pose;
+//                 cout << "True Pose: "<< tp << endl;
+//                 cout << "Recovered Pose: "<< p << endl;
+//                 cout << "Pose Error: "<< p-tp << endl;
+//             }
+//             if (cost.imageNum==1){ 
+//                 gpause();
+//             }
             
 //             if (cost.imageNum==2){
 //                 cost.initOptimization();//jumpstart the optimization with the approximate answer at a few images
