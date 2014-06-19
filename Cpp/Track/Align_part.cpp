@@ -9,6 +9,7 @@ using namespace cv;
 using namespace std;
 #include "utils/utils.h"
 #include "graphics.hpp"
+#include "Track.hpp"
 #include "stdio.h"
 
 //debug
@@ -103,7 +104,12 @@ static void getGradientInterleave(const Mat& image,Mat & grad){
     merge(src,2,grad);
     
 }
-
+void Mask(const Mat& in,const Mat& m,Mat& out){
+    Mat tmp;
+    
+    m.convertTo(tmp,in.type());
+    out=out.mul(tmp/255);
+}
 void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 load/stores of image
                           const Mat& d,
                           const Mat& _I,
@@ -167,14 +173,29 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
         Mat dst[2]={I,gradI};
         
         mixChannels(src,1,dst,2,from_to,3);// extract the image and the resampled gradient //(Mem cost: min 3 load, 3 store :6)
-        pfShow("After iteration",I);
+        
 
         double min; 
         double max;
         cv::minMaxIdx(I, &min, &max);
         if(cv::countNonZero(I)<rows*cols*.2){
             cout<<"TRACKING FAILURE, REBASING"<<endl;
-            pose=basePose;
+            pose=basePose.clone();
+            cout << "True Pose: "<< pose << endl;
+            cout << "Base Pose: "<< basePose << endl;
+            
+            LieSub(pose,basePose).copyTo(_p);// the Lie parameters 
+            align_level_largedef_gray_forward( T,//Total Mem cost ~185 load/stores of image
+                                               d,
+                                              _I,
+                                               cameraMatrix,//Mat_<double>
+                                               _p,                //Mat_<double>
+                                               mode,
+                                               threshold,
+                                               3
+            );
+            gpause();
+            return;
         }
         
     }
@@ -184,6 +205,20 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
     absdiff(T,I,fit);
     Mat mask=(fit<threshold);
     Mat err=T-I;
+    
+    //debug
+    {
+        if(I.rows==480){
+            Mask(I,fit<.05,I);
+            pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
+        }else{
+            pfShow("After Iteration",I,0,Vec2d(0,1));
+        }
+    }
+    
+    gpause();
+    
+    
     
     // Build Jacobians:
     Mat Jsmall;
@@ -262,7 +297,7 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
 //     cout<<"H: "<<"\n"<< Hss<< endl;
 //     cout<<"Hinv: "<<"\n"<< Hinv<< endl;
 //     cout<<"dp: "<<"\n"<< dp<< endl;
-    _p+=dp;
+    _p.colRange(0,numParams)+=dp;
     
 
 }

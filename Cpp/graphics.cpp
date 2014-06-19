@@ -19,7 +19,12 @@ static volatile int pausing=0;
 void gpause(){
     CV_XADD(&pausing,1);
 }
+void gcheck(){
 
+    while(CV_XADD(&pausing,0)){
+        usleep(100);
+    }
+}
 
 void pfShow(const string name,const Mat& _mat,int defaultscale, Vec2d autoscale){
     if (defaultscale==1){
@@ -102,16 +107,14 @@ void* guiLoop(void*){
             imshow( name, mat);
            
         }else if(pausing){
-            if(CV_XADD(&pausing,-1)>=1){//deal with pauses
-                namedWindow("control",CV_WINDOW_KEEPRATIO);
-                cout<<"Paused"<<endl;
-                while(waitKey()!=' ');
-                if(pausing<0){
-                    pausing=0;
-                }
-            }else{
-                pausing=0;
-            }
+            namedWindow("control",CV_WINDOW_KEEPRATIO);
+            cout<<"Paused"<<endl;
+            while(waitKey()!=' ');
+            
+            CV_XADD(&pausing,-1);
+        }
+        if(pausing<0){
+            pausing=0;
         }
         waitKey(1);
 //         usleep(100);

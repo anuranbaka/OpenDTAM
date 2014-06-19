@@ -7,4 +7,5 @@ void pfWindow(const std::string name,int prop);
 void* guiLoop(void*);
 void initGui();
 void gpause();
+void gcheck();
 #endif

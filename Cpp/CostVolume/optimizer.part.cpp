@@ -408,10 +408,10 @@ void Cost::optimizeQD(){
     
     //debug
 //     pfShow("qx",abs(_qx));
-    pfShow("d",_d);
+//     pfShow("d",_d);
 //     pfShow("a",_a);
     assert(aptr==_a.data);
-
+    gcheck();
     usleep(1);
     
 
@@ -429,10 +429,12 @@ void Cost::optimizeA(){
     }
     if (theta<thetaMin){//done optimizing!
         running=false;
+        gpause();
 //         initOptimization();
         stableDepth=_d.clone();//always choose more regularized version
         _qx=0.0;
         _qy=0.0;
+        _d=stableDepth.clone();//QD might be running, return the depth to it
         theta=thetaStart;
     }
     cout<<"A optimization run: "<<Aruncount++<<endl;
@@ -445,10 +447,10 @@ void Cost::optimizeA(){
     int l=layers;
     
     float ds=depthStep;
-    // a update
-    pfShow("d",_d);
-    pfShow("a",_a);
 
+//     pfShow("d",_d);
+    pfShow("a",_a);
+    // a update
     for(st point=0;point<w*h;point++){
         float blank;
         a[point]=aBasic(data+point*l,l,ds,d[point],blank);

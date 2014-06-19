@@ -139,25 +139,30 @@ int App_main( int argc, char** argv )
             }
             const Mat thisPose(cost.convertPose(R,T));
             
-            reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
+//             reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
+            
+            
+            if(imageNum==1){
+                tracker.pose=tracker.basePose.clone();
+            }
+            //Test out the Tracker
+            {
+                Mat tp;
+                RTToLie(R,T,tp); 
+                //tracker.pose=tp.clone();//Give the answer
+                tracker.depth=abs(cost.depthMap());
+
+                tracker.addFrame(image);
+
+                tracker.align();
+                Mat p=tracker.pose;
+                cout << "True Pose: "<< tp << endl;
+                cout << "Recovered Pose: "<< p << endl;
+                cout << "Pose Error: "<< p-tp << endl;
+            }
             if (cost.imageNum==1){ 
                 gpause();
             }
-//             //Test out the Tracker
-//             {
-//                 Mat tp;
-//                 RTToLie(R,T,tp); 
-//                 tracker.depth=abs(cost.depthMap());
-// 
-//                 tracker.addFrame(image);
-//                 //tracker.pose=tracker.basePose;
-//                 tracker.align();
-//                 Mat p=tracker.pose;
-//                 cout << "True Pose: "<< tp << endl;
-//                 cout << "Recovered Pose: "<< p << endl;
-//                 cout << "Pose Error: "<< p-tp << endl;
-//             }
-            
             
 //             if (cost.imageNum==2){
 //                 cost.initOptimization();//jumpstart the optimization with the approximate answer at a few images

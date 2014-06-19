@@ -84,7 +84,7 @@ const cv::Mat Cost::depthMap(){
     if(stableDepth.data){
         return stableDepth*depthStep;
     }
-    return _d*depthStep;
+    return _a*depthStep;
 }
 
 
