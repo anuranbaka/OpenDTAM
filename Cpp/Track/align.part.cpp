@@ -108,7 +108,7 @@ void Track::align(){
 void Track::align_gray(Mat& base, Mat& depth, Mat& input){
     tic();
     int levels=6; // 6 levels on a 640x480 image is 20x15
-    
+    int endlevel=6;
 
     Mat p=LieSub(pose,basePose);// the Lie parameters 
     cout<<"pose: "<<p<<endl;
@@ -124,7 +124,7 @@ void Track::align_gray(Mat& base, Mat& depth, Mat& input){
 //         p=func2D(base, depth, input, cameraMatrix, p, scale);
 //     }
 
-    for (; level<3; level++){
+    for (; level<levels && level<endlevel; level++){
         int iters=1;
         for(int i=0;i<iters;i++){
         align_level_largedef_gray_forward(makeGray(basePyr[level]),//Total Mem cost ~185 load/stores of image

@@ -13,8 +13,11 @@ find_package( Qt5Core REQUIRED)
 
 
 
+
 set(BASEPATH "${CMAKE_SOURCE_DIR}")
 include_directories("${BASEPATH}")
+
+#add_library(GraphicsLib SHARED graphics.cpp)#must be in own library so we can link against it.
 
 include_directories(CostVolume)
 add_subdirectory(CostVolume)
@@ -26,5 +29,5 @@ find_package(Boost COMPONENTS system thread)
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable (a.out testprog.cpp convertAhandaPovRayToStandard.cpp graphics.cpp)
-target_link_libraries( a.out TrackFiles CostFiles ${OpenCV_LIBS} ${Boost_LIBRARIES})
+target_link_libraries( a.out  TrackFiles CostFiles ${OpenCV_LIBS} ${Boost_LIBRARIES})
 

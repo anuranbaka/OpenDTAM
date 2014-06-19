@@ -16,6 +16,7 @@
 
 //debug
 #include "tictoc.h"
+const static bool valgrind=0;
 
 //A test program to make the mapper run
 using namespace cv;
@@ -39,15 +40,16 @@ static void myshow(const string name,const Mat& _mat){
 }
 
 int main( int argc, char** argv ){
-//namedWindow("backtrans",CV_WINDOW_OPENGL*0);
-set_affinity(1);
-//cvStartLoop(&App_main,argc, argv);//will crash if used with opengl!
-initGui();
-return App_main(argc, argv);
+    //namedWindow("backtrans",CV_WINDOW_OPENGL*0);
+    set_affinity(1);
+    //cvStartLoop(&App_main,argc, argv);//will crash if used with opengl!
+    initGui();
+    return App_main(argc, argv);
 }
 
 int App_main( int argc, char** argv )
 {
+    gpause();
     pthread_setname_np(pthread_self(),"App_main");
         
     FileStorage fs;
@@ -68,14 +70,21 @@ int App_main( int argc, char** argv )
 //     cout<< "T : "<<T<<"\n";
     sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",imageNum);
     Mat image;
-    imread(filename,-1).convertTo(image,CV_32FC3,1.0/65535.0);   // Read the file
+    
 
+    if (!valgrind){
+        imread(filename,-1).convertTo(image,CV_32FC3,1.0/65535.0);   // Read the file
+    }else{
+        image.create(480,640,CV_32FC3);
+        image=0.5;
+    }
+    
     hconcat(R,T,cameraAffinePoseBase);
-
+   
     Cost cost(image.clone(),32, cameraMatrix, R,T);
     Track tracker(cost);
     assert(cost.rows==480);
-    
+
     vector<Mat> images,Rs,Ts;
     for(int i=0;i<=50;i++){
         sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",i);
@@ -86,10 +95,17 @@ int App_main( int argc, char** argv )
                                       T);
         Mat image;
         cout<<filename<<endl;
-        imread(filename, -1).convertTo(image,CV_32FC3,1.0/65535.0);
+
+        if (!valgrind){
+            imread(filename, -1).convertTo(image,CV_32FC3,1.0/65535.0);
+        }else{
+            image.create(480,640,CV_32FC3);
+            image=0.5;
+        }
         images.push_back(image.clone());
         Rs.push_back(R.clone());
         Ts.push_back(T.clone());
+
     }
     while(1){
         for (int imageNum=1;imageNum<=50;imageNum++){
@@ -115,33 +131,34 @@ int App_main( int argc, char** argv )
             Mat cameraAffinePoseAlternate,mask;
             hconcat(R,T,cameraAffinePoseAlternate);
 
-            if (cost.imageNum<2){
+            if (cost.imageNum<3){
             cost.updateCostL1(image,R,T);
             }
-            if (cost.imageNum==1){ 
+            if (cost.imageNum==2){ 
                 cost.optimize();//Launches the optimizer threads
+                gpause();
             }
-            const Mat thisPose(cost.convertPose(R,T));
-            cost.initOptimization();//jumpstart the optimization with the approximate answer at 4 images
+//             const Mat thisPose(cost.convertPose(R,T));
+//             
+// //             reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
+//             //Test out the Tracker
+//             {
+//                 Mat tp;
+//                 RTToLie(R,T,tp); 
+//                 tracker.depth=abs(cost.depthMap());
+// 
+//                 tracker.addFrame(image);
+//                 //tracker.pose=tracker.basePose;
+//                 tracker.align();
+//                 Mat p=tracker.pose;
+//                 cout << "True Pose: "<< tp << endl;
+//                 cout << "Recovered Pose: "<< p << endl;
+//                 cout << "Pose Error: "<< p-tp << endl;
+//             }
             
-//             reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
-            //Test out the Tracker
-            {
-                Mat tp;
-                RTToLie(R,T,tp); 
-                tracker.depth=abs(cost._a*cost.depthStep);
-                tracker.addFrame(image);
-                //tracker.pose=tracker.basePose;
-                tracker.align();
-                Mat p=tracker.pose;
-                cout << "True Pose: "<< tp << endl;
-                cout << "Recovered Pose: "<< p << endl;
-                cout << "Pose Error: "<< p-tp << endl;
-            }
             
-            
-            if (imageNum==4){
-                //cost.initOptimization();//jumpstart the optimization with the approximate answer at 4 images
+            if (cost.imageNum==2){
+                cost.initOptimization();//jumpstart the optimization with the approximate answer at a few images
                 usleep(1000000);
                 tracker.pose=tracker.basePose;
             }

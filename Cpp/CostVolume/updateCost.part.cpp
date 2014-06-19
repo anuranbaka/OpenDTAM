@@ -34,23 +34,23 @@ void Cost::updateCostL1(const cv::Mat& image,
         cv::Mat_<cv::Vec3f> plane;
         cv::Mat_<uchar> mask;
         reproject(cv::Mat_<cv::Vec3f>(image), cameraMatrix, pose, currentCameraPose, depth[n], plane, mask);
+
         size_t end=image.rows*image.cols*image.channels();
         size_t lstep=layers;
         float* pdata=(float*)(plane.data);
-        float* idata=(float*)(baseImage.data);
+        const float* idata=(float*)(baseImage.data);
         float* cdata=data+n;
         float* hdata=hit+n;
-        float* ldata=(float*)(newLo.data);
+        //float* ldata=(float*)(newLo.data);
 
         
         float* xdata=(float*)(newHi.data);
         char*  mdata=(char*)(mask.data);
-        
+        //hdata and cdata aligned
+        //pdata and idata aligned
         //size_t moff=0;
         for (size_t i=0, moff=0,coff=0,p=0;  i<end; p++, moff+=3, i+=3, coff+=lstep){
-            if (n==0){
-                ldata[p]=255.0;
-            }
+
             //std::cout<<mdata[moff]<<std::endl;
             if(mdata[moff]){
                 float v1=fastabs(pdata[i]-idata[i]);
@@ -58,18 +58,20 @@ void Cost::updateCostL1(const cv::Mat& image,
                 float v3=fastabs(pdata[i+2]-idata[i+2]);
                 float h=hdata[coff]+1;
                 float ns=cdata[coff]*(1-1/h)+(v1+v2+v3)/h;
-                cdata[coff]=ns;
+                
                 hdata[coff]=h;
+                cdata[coff]=ns;
+                
                // std::cout<<ns<<std::endl;
             }
-            {//debug see the cost
-                pdata[i]=cdata[coff]*10;
-                pdata[i+1]=cdata[coff]*10;
-                pdata[i+2]=cdata[coff]*10;
-            }
+//             {//debug see the cost
+//                 pdata[i]=cdata[coff];
+//                 pdata[i+1]=cdata[coff];
+//                 pdata[i+2]=cdata[coff];
+//             }
         }
 //         {//debug
-//            pfShow( "Cost Volume Slice", plane);
+//            pfShow( "Cost Volume Slice", plane,0,cv::Vec2d(0,.5));
 //         }
     }
 //     cv::Mat loInd(rows,cols,CV_32SC1);

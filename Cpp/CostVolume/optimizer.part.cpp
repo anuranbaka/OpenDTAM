@@ -27,7 +27,7 @@ typedef size_t st;
 #define gleft gl[here]
 #define gright gr[here]
 
-#define QUIET_DTAM 
+#define QUIET_DTAM 0
 #include "quiet.hpp"
 
 void myshow(const string name,const Mat& _mat){
@@ -56,7 +56,8 @@ void Cost::initOptimization(){//must be thread safe in allocations(i.e. don't do
     cv::Mat loVal(rows,cols,CV_32FC1);
     minv(data,loInd,loVal);
     loInd.convertTo(_a,CV_32FC1);
-//     _a=_a*depthStep;
+    assert(aptr==_a.data);
+    
     _a.copyTo(_d);
     
     _qx.create(h,w,CV_32FC1);
@@ -135,7 +136,7 @@ void Cost::cacheGValues(){
     sqrt(_g,_g);
     
     exp(-3*_g,_g);
-    //_g=1;
+    _g=1;
     
     //_g=_g*scale_g
     //cache interpreted forms of g, for the "matrix" used in
@@ -173,19 +174,16 @@ static inline float afunc(float* data,float theta,float d,float ds,int a,float l
     return 1.0/(2.0*theta)*ds*ds*(d-a)*(d-a) + data[a]*lambda;//Literal implementation of Eq.14, note the datastep^2 factor to scale correctly
 }
 
-inline float Cost::aBasic(float* data,float l,float ds,float d){
+inline float Cost::aBasic(float* data,float l,float ds,float d,float& value){
     int mi=0;
     float vlast,vnext,v,A,B,C;
     
     float mv=afunc(data,theta,d,ds,0,lambda); 
     v=mv;
-    static uchar* aptr=_a.data;
-    assert(aptr==_a.data);//_a is read across threads, so needs to never be de/reallocated
     vnext=afunc(data,theta,d,ds,1,lambda);
     for(int a=2;a<l;a++){
         vlast=v;
         v=vnext;
-        assert(aptr==_a.data);//_a is read across threads, so needs to never be de/reallocated
         vnext=afunc(data,theta,d,ds,a,lambda);
         if(v<mv){
             A=vlast;
@@ -196,16 +194,23 @@ inline float Cost::aBasic(float* data,float l,float ds,float d){
     }
     
     if(vnext<mv){//last was best
+        value=vnext;
         return (float)l-1;
     }
     
     
     if(mi==0){//first was best
+        value=mv;
         return (float)mi;
     }
     
     B=mv*(1.0-1.0e-8);//avoid divide by zero, since B is already <= others, make < others
     float delt=(A-C)/(A-2*B+C)*.5;
+    //value=A/2*(delt)*(delt-1)-B*(delt+1)*(delt-1)+C/2*(delt+1)*(delt);
+    value=B-(A-C)*delt/4;
+    //B-(A-C)*(A-C)/(A-2*B+C)/8
+   // B+(C-A)*delt/2+(A-2*B+C)*delt*delt/2
+    
     //cout<<"A"<<A<<" B"<<B<<" C"<<C<<" Ret:"<<delt+float(mi)<<endl;
     //assert(fabs(delt)<=.5);
     return delt+float(mi);
@@ -246,15 +251,16 @@ static void* Cost_optimizeQD(void* object){
     pthread_setname_np(pthread_self(),"QDthread");
     Cost* cost = (Cost*)object;
     set_affinity(2);
-    while(1){
+    while(cost->running){
         cost->optimizeQD();
     }
 }
 static void* Cost_optimizeA(void* object){
     pthread_setname_np(pthread_self(),"Athread");
+    Cost* cost = (Cost*)object;
     set_affinity(3);
-    while(1){
-        ((Cost*)object)->optimizeA();
+    while(cost->running){
+        cost->optimizeA();
     }
 }
 
@@ -288,6 +294,7 @@ void Cost::optimizeQD(){
     float* ky=(float*)(_qy.data);
     float* d=(float*)(_d.data);
     float* a=(float*)(_a.data);
+    assert(aptr==_a.data);
     float* g=(float*)(_g.data);
     float* gd=(float*)(_gd.data);
     float* gu=(float*)(_gu.data);
@@ -399,18 +406,23 @@ void Cost::optimizeQD(){
     pfShow("qx",abs(_qx));
     pfShow("d",_d);
     pfShow("a",_a);
+    assert(aptr==_a.data);
 
     usleep(1);
-   
+    
+
+        
+
     
 }
 
 void Cost::optimizeA(){ 
-    static uchar* aptr=_a.data;
     assert(aptr==_a.data);//_a is read across threads, so needs to never be de/reallocated
     //usleep(1);
     theta=theta*.97;
     if (theta<thetaMin){//done optimizing!
+        //running=false;
+        initOptimization();
         stableDepth=_d.clone();//always choose more regularized version
         _qx=0.0;
         _qy=0.0;
@@ -429,8 +441,25 @@ void Cost::optimizeA(){
     // a update
     pfShow("d",_d);
     pfShow("a",_a);
+
     for(st point=0;point<w*h;point++){
-        a[point]=aBasic(data+point*l,l,ds,d[point]);
+        float blank;
+        a[point]=aBasic(data+point*l,l,ds,d[point],blank);
     }
+    
+    
+    //debug: show the energies
+    Mat acost(rows,cols,CV_32FC1);
+    float* ap=acost.ptr<float>(0);
+    for(st point=0;point<w*h;point++){
+        aBasic(data+point*l,l,ds,d[point],ap[point]);
+    }
+    pfShow("A Energy: ", acost,0,Vec2d(0,1e-6));
+    float Ed=sum(acost)[0];
+    float Ee=sum(_qx.mul(_qx)/2*epsilon)[0];
+    
+    cout<<"Data Energy: "<<Ed<<endl;
+    cout<<"Elastic Energy: "<<Ee<<endl;
+    cout<<"Total Energy: "<<Ed+Ee<<endl;
 }
 

@@ -67,13 +67,19 @@ private:
         depthStep=((depth.back()-depth[0])/layers);
         data=(float*)dataContainer.data;
         hit=(float*)hitContainer.data;
+        _a.create(rows,cols,CV_32FC1);
+        aptr=_a.data;
+        _d.create(rows,cols,CV_32FC1);
+        dptr=_d.data;
         imageNum=0;
         QDruncount=0;
         Aruncount=0;
-        thetaStart=1000.0;
+        thetaStart=200.0;
         thetaMin=0.01;
         running=false;
         initOptimization();
+
+
     }
     std::vector<float> generateDepths(int layers){
         std::vector<float> depths;
@@ -92,6 +98,8 @@ private:
 
     //Optimizer functions and data
     public:cv::Mat _qx,_qy,_d,_a,_g,_gu,_gd,_gl,_gr,_gbig;private:
+    uchar* aptr;
+    uchar* dptr;
     cv::Mat stableDepth;
     float theta,thetaStart,thetaMin,epsilon,lambda,sigma_d,sigma_q;
     
@@ -101,7 +109,7 @@ private:
         //Q update
     public: void optimizeQD();private://NOT PUBLIC!!! JUST NEED TO ACCESS FROM A STATIC CALL. DO NOT USE!
         //A update
-    float aBasic(float* data,float l,float ds,float d);
+    float aBasic(float* data,float l,float ds,float d,float& value);
     public: void optimizeA();private://NOT PUBLIC!!! JUST NEED TO ACCESS FROM A STATIC CALL. DO NOT USE!
     
     
@@ -110,7 +118,8 @@ private:
     int Aruncount;
     
     //Thread management
-    bool running;
+    public:
+        volatile bool running;
 };
 
 
