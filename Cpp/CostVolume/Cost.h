@@ -74,12 +74,12 @@ private:
         imageNum=0;
         QDruncount=0;
         Aruncount=0;
-        thetaStart=1000.0;
+        thetaStart=200.0;
         thetaMin=0.01;
         running=false;
         initOptimization();
-        epsilon=1;
-        lambda=.0000001;
+        epsilon=.1;
+        lambda=.00001;
 
 
     }
