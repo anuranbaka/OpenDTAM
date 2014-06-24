@@ -82,6 +82,7 @@ int App_main( int argc, char** argv )
     hconcat(R,T,cameraAffinePoseBase);
    
     Cost cost(image.clone(),32, cameraMatrix, R,T);
+    Cost cost2(image.clone(),32, cameraMatrix, R,T);
     Track tracker(cost);
     assert(cost.rows==480);
 
@@ -107,10 +108,13 @@ int App_main( int argc, char** argv )
         Ts.push_back(T.clone());
 
     }
+    
+    
     while(1){
-        for (int imageNum=1;imageNum<=50;imageNum++){
+        for (int imageNum=2;imageNum<=50;imageNum++){
+            
             char filename[500];
-            Mat cameraMatrix,R,T;
+            Mat R,T;
 //             convertAhandaPovRayToStandard("/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds",
 //                                     imageNum,
 //                                     cameraMatrix,
@@ -130,36 +134,58 @@ int App_main( int argc, char** argv )
 
             Mat cameraAffinePoseAlternate,mask;
             hconcat(R,T,cameraAffinePoseAlternate);
-
-            if (cost.imageNum<20){
-            cost.updateCostL1(image,R,T);
+            cout<<R<<endl;
+            if (cost.imageNum<3){
+                cost.updateCostL1(image,R,T);
             }
-//             if (cost.imageNum==1){ 
-//                 cost.optimize();//Launches the optimizer threads
-//             }
-//             const Mat thisPose(cost.convertPose(R,T));
-//             
-// //             reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
-//             
-//             
-//             if(imageNum==1){
-//                 tracker.pose=tracker.basePose.clone();
-//             }
-//             //Test out the Tracker
-//             {
-//                 Mat tp;
-//                 RTToLie(R,T,tp); 
-//                 //tracker.pose=tp.clone();//Give the answer
-//                 tracker.depth=abs(cost.depthMap());
-// 
-//                 tracker.addFrame(image);
-// 
-//                 tracker.align();
-//                 Mat p=tracker.pose;
-//                 cout << "True Pose: "<< tp << endl;
-//                 cout << "Recovered Pose: "<< p << endl;
-//                 cout << "Pose Error: "<< p-tp << endl;
-//             }
+            if (cost.imageNum==1){ 
+                cost.initOptimization();
+                cost.optimize();//Launches the optimizer threads
+                //while(cost.running){usleep(1000);};
+            }
+
+            
+            const Mat thisPose(cost.convertPose(R,T));
+            
+//             reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
+            
+            
+            if(imageNum==1){
+                tracker.pose=tracker.basePose.clone();
+            }
+            //Test out the Tracker
+            {
+                Mat tp;
+                RTToLie(R,T,tp); 
+                //tracker.pose=tp.clone();//Give the answer
+                tracker.depth=abs(cost.depthMap());
+
+                tracker.addFrame(image);
+
+                tracker.align();      
+                Mat p=tracker.pose;
+                cout << "True Pose: "<< tp << endl;
+                cout << "Recovered Pose: "<< p << endl;
+                cout << "Pose Error: "<< p-tp << endl;
+                
+                Mat R2,T2;
+                LieToRT(p, R2, T2);
+                
+                if (imageNum==2&&cost2.imageNum==0){
+                    cost2=Cost(image.clone(),32, cameraMatrix, R2,T2);
+                    gpause();
+                    
+                }
+                if (cost2.imageNum<2){
+                    cost2.updateCostL1(image,R2,T2);
+                }
+                if (cost2.imageNum==1){ 
+                    cost2.initOptimization();
+                    cost2.optimize();//Launches the optimizer threads
+                }
+                
+            }
+            
 //             if (cost.imageNum==1){ 
 //                 gpause();
 //             }

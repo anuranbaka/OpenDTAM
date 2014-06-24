@@ -108,6 +108,7 @@ void Track::align(){
 void Track::align_gray(Mat& base, Mat& depth, Mat& input){
     tic();
     int levels=6; // 6 levels on a 640x480 image is 20x15
+    int startlevel=0;
     int endlevel=6;
 
     Mat p=LieSub(pose,basePose);// the Lie parameters 
@@ -119,21 +120,22 @@ void Track::align_gray(Mat& base, Mat& depth, Mat& input){
     float scale=1.0;
     int i=0;
     
-    int level=0;
+    int level=startlevel;
 //     for (; level<LEVELS_2D; level++){
 //         p=func2D(base, depth, input, cameraMatrix, p, scale);
 //     }
 
     for (; level<levels && level<endlevel; level++){
-        int iters=1;
+        int iters=10;
         for(int i=0;i<iters;i++){
+            float thr=level>4?.05:.2;
         align_level_largedef_gray_forward(makeGray(basePyr[level]),//Total Mem cost ~185 load/stores of image
                                             depthPyr[level],
                                             makeGray(inPyr[level]),
                                             cameraMatrixPyr[level],//Mat_<double>
                                             p,                //Mat_<double>
                                           CV_DTAM_FWD,
-                                            0.2,
+                                            thr,
                                             6);
         }
     }

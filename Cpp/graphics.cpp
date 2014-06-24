@@ -18,6 +18,7 @@ static volatile int pausing=0;
 
 void gpause(){
     CV_XADD(&pausing,1);
+    gcheck();
 }
 void gcheck(){
 

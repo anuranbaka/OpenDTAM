@@ -164,7 +164,7 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
         Mat packed;
         merge(toMerge,3,packed); //(Mem cost: min 3 load, 3 store :6)
         Mat pulledBack;
-        pfShow("Before iteration",_I);
+        
         remap( packed, pulledBack, baseMap,Mat(), CV_INTER_LINEAR );//(Mem cost:?? 5load, 3 store:8)
         gradI.create(r,c,CV_32FC2);
 
@@ -174,10 +174,6 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
         
         mixChannels(src,1,dst,2,from_to,3);// extract the image and the resampled gradient //(Mem cost: min 3 load, 3 store :6)
         
-
-        double min; 
-        double max;
-        cv::minMaxIdx(I, &min, &max);
         if(cv::countNonZero(I)<rows*cols*.2){
             cout<<"TRACKING FAILURE, REBASING"<<endl;
             pose=basePose.clone();
@@ -194,7 +190,7 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
                                                threshold,
                                                3
             );
-            gpause();
+            //gpause();
             return;
         }
         
@@ -206,17 +202,19 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
     Mat mask=(fit<threshold);
     Mat err=T-I;
     
-    //debug
-    {
-        if(I.rows==480){
-            Mask(I,fit<.05,I);
-            pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
-        }else{
-            pfShow("After Iteration",I,0,Vec2d(0,1));
-        }
-    }
+//     //debug
+//     {
+//         pfShow("Before iteration",_I);
+//         if(I.rows==480){
+//             Mask(I,fit<.05,I);
+//             pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
+//         }else{
+//             pfShow("After Iteration",I,0,Vec2d(0,1));
+//         }
+//         gpause();
+//     }
     
-    gpause();
+   
     
     
     

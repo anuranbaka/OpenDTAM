@@ -133,9 +133,11 @@ void Cost::cacheGValues(){
     //the paper doesn't specify the values of the exponent or multiplier,
     // so I have chosen them to have a knee at 10% gradient, since this is a 
     //good threshold for edge detectors.
+//     _g=2-_g;
     sqrt(_g,_g);
     
     exp(-3*_g,_g);
+//     _g=_g+epsilon;
 //     _g=1;
     
     //_g=_g*scale_g
@@ -148,7 +150,7 @@ void Cost::cacheGValues(){
         gl[here]= 0.5*(g[left ]+ g[here]);
         gr[here]=-0.5*(g[right]+g[here]);
     }
-    
+    pfShow("g",_g,0,Vec2d(0,1));
     
 }
 /*inline float Cost::aBasic(float* data,float l,float ds,float d){
@@ -284,8 +286,6 @@ void Cost::optimize(){
 
 
 void Cost::optimizeQD(){
-    static uchar* dptr=_d.data;
-    assert(dptr==_d.data);//_d is read across threads, so needs to never be de/reallocated
     int w=cols;
     int h=rows;
     cout<< "QD optimization run:"<<QDruncount++<<"\n";
@@ -446,9 +446,9 @@ void Cost::optimizeA(){
 //  Mat C=dataContainer/hitContainer;
     int l=layers;
     
-    float ds=depthStep;
+    float ds=depthStep; 
 
-//     pfShow("d",_d);
+    pfShow("d",_d);
     pfShow("a",_a);
     // a update
     for(st point=0;point<w*h;point++){

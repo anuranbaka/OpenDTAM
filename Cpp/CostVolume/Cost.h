@@ -14,7 +14,7 @@
 //
 // The cost volume doesn't support updating by a different camera than the one that took the
 // keyframe, because that would violate a bunch of assumptions for DTAM
-#define COST_H_DEFAULT_NEAR .01
+#define COST_H_DEFAULT_NEAR .015
 
 
 class Cost{
@@ -23,10 +23,12 @@ public:
     cv::Mat_<cv::Vec3f> baseImage;
     cv::Mat lo;
     cv::Mat hi;
-    const int rows;
+    int rows;
     int cols;
     int layers;
     std::vector<float> depth;
+    float near;
+    float far;
     float depthStep;
     cv::Matx33d cameraMatrix;
     cv::Matx44d pose;//the affine transform representing the world -> camera frame transformation
@@ -34,11 +36,14 @@ public:
     float* hit;//stores the number of times each cell has been hit by a ray
     int imageNum;
 
-    //Cost(){};
-    Cost(const cv::Mat& baseImage, int layers,                  const cv::Mat& cameraMatrix, const cv::Mat& R, const cv::Mat& Tr);// autogenerate default depths
-    Cost(const cv::Mat& baseImage, int layers,                  const cv::Mat& cameraMatrix, const cv::Matx44d& cameraPose);// autogenerate default depths
+
+    Cost();//DANGER: only use for copying to later
+    Cost(const cv::Mat& baseImage, int layers,                      const cv::Mat& cameraMatrix, const cv::Mat& R, const cv::Mat& Tr);// autogenerate default depths
+    Cost(const cv::Mat& baseImage, int layers,                      const cv::Mat& cameraMatrix, const cv::Matx44d& cameraPose);// autogenerate default depths
     Cost(const cv::Mat& baseImage, const std::vector<float>& depth, const cv::Mat& cameraMatrix, const cv::Mat& R, const cv::Mat& Tr);//use given depths
     Cost(const cv::Mat& baseImage, const std::vector<float>& depth, const cv::Mat& cameraMatrix, const cv::Matx44d& cameraPose);//use given depths
+    
+
 
     void updateCostL1(const cv::Mat& image, const cv::Matx44d& currentCameraPose);
     void updateCostL1(const cv::Mat& image, const cv::Mat& R, const cv::Mat& Tr);
@@ -53,6 +58,7 @@ public:
         cv::Mat pose=cv::Mat::eye(4,4, CV_64F);
         R.copyTo(pose(cv::Range(0,3),cv::Range(0,3)));
         Tr.copyTo(pose(cv::Range(0,3),cv::Range(3,4)));
+            
         return cv::Matx44d(pose);
     }
 
@@ -64,7 +70,10 @@ private:
 
     //Initializer functions
     void init(){
+        assert(baseImage.data);//make sure not trying to init an imageless object
         depthStep=((depth.back()-depth[0])/layers);
+        near = depth.back();
+        far  = depth.front();
         data=(float*)dataContainer.data;
         hit=(float*)hitContainer.data;
         _a.create(rows,cols,CV_32FC1);
@@ -80,7 +89,7 @@ private:
         initOptimization();
         epsilon=.1;
         lambda=.000001;
-        thetaStep=.999;
+        thetaStep=.99;
 
     }
     std::vector<float> generateDepths(int layers){

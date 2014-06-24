@@ -72,6 +72,7 @@ void Cost::updateCostL1(const cv::Mat& image,
         }
         {//debug
            pfShow( "Cost Volume Slice", plane,0,cv::Vec2d(0,.5));
+          // gpause();
         }
     }
 //     cv::Mat loInd(rows,cols,CV_32SC1);
