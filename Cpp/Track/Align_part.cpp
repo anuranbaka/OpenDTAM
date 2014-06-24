@@ -202,17 +202,19 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
     Mat mask=(fit<threshold);
     Mat err=T-I;
     
-//     //debug
-//     {
-//         pfShow("Before iteration",_I);
+    //debug
+    {
+        pfShow("Before iteration",_I);
 //         if(I.rows==480){
 //             Mask(I,fit<.05,I);
 //             pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
-//         }else{
-//             pfShow("After Iteration",I,0,Vec2d(0,1));
+// //             gpause();
 //         }
-//         gpause();
-//     }
+//         else{
+            pfShow("After Iteration",I,0,Vec2d(0,1));
+//         }
+        
+    }
     
    
     
@@ -294,7 +296,7 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
 //     cout<<"Je: \n"<<Jsmall*err<<endl;
 //     cout<<"H: "<<"\n"<< Hss<< endl;
 //     cout<<"Hinv: "<<"\n"<< Hinv<< endl;
-//     cout<<"dp: "<<"\n"<< dp<< endl;
+    cout<<"dp: "<<"\n"<< dp<< endl;
     _p.colRange(0,numParams)+=dp;
     
 

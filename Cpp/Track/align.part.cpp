@@ -7,7 +7,7 @@
  *
  */
 
-#include "Track_align.h"
+
 #include "Track.hpp"
 #include "Align_part.cpp"
 #include "tictoc.h"
@@ -52,7 +52,7 @@
 //
 using namespace cv;
 using namespace std;
-#define LEVELS_2D 0
+#define LEVELS_2D 2
 
 void createPyramid(const Mat& image,vector<Mat>& pyramid,int& levels){
     
@@ -107,7 +107,7 @@ void Track::align(){
 
 void Track::align_gray(Mat& base, Mat& depth, Mat& input){
     tic();
-    int levels=6; // 6 levels on a 640x480 image is 20x15
+    int levels=7; // 6 levels on a 640x480 image is 20x15
     int startlevel=0;
     int endlevel=6;
 
@@ -116,27 +116,41 @@ void Track::align_gray(Mat& base, Mat& depth, Mat& input){
 
     vector<Mat> basePyr,depthPyr,inPyr,cameraMatrixPyr;
     createPyramids(base,depth,input,cameraMatrix,basePyr,depthPyr,inPyr,cameraMatrixPyr,levels);
-
+    
+    vector<Mat> lfPyr;
+    createPyramid(lastFrame,lfPyr,levels);
+    
+    
     float scale=1.0;
     int i=0;
     
     int level=startlevel;
-//     for (; level<LEVELS_2D; level++){
-//         p=func2D(base, depth, input, cameraMatrix, p, scale);
-//     }
-
-    for (; level<levels && level<endlevel; level++){
-        int iters=10;
-        for(int i=0;i<iters;i++){
-            float thr=level>4?.05:.2;
-        align_level_largedef_gray_forward(makeGray(basePyr[level]),//Total Mem cost ~185 load/stores of image
-                                            depthPyr[level],
-                                            makeGray(inPyr[level]),
-                                            cameraMatrixPyr[level],//Mat_<double>
-                                            p,                //Mat_<double>
+    Mat p2d=Mat::zeros(1,6,CV_64FC1);
+    for (; level<LEVELS_2D; level++){
+        //HACK: use 3d alignment with depth disabled for 2D. ESM would be much better, but I'm lazy right now.
+        align_level_largedef_gray_forward(makeGray(lfPyr[level]),//Total Mem cost ~185 load/stores of image
+                                          depthPyr[level]*0.0,
+                                          makeGray(inPyr[level]),
+                                          cameraMatrixPyr[level],//Mat_<double>
+                                          p2d,                //Mat_<double>
                                           CV_DTAM_FWD,
-                                            thr,
-                                            6);
+                                          1,
+                                          3);
+    }
+    p=LieAdd(p2d,p);
+    
+    for (; level<levels && level<endlevel; level++){
+        int iters=3;
+        for(int i=0;i<iters;i++){
+            float thr=(levels-level)>=2?.05:.2; //more stringent matching on last two levels 
+            align_level_largedef_gray_forward(makeGray(basePyr[level]),//Total Mem cost ~185 load/stores of image
+                                                depthPyr[level],
+                                                makeGray(inPyr[level]),
+                                                cameraMatrixPyr[level],//Mat_<double>
+                                                p,                //Mat_<double>
+                                            CV_DTAM_FWD,
+                                                thr,
+                                                6);
         }
     }
     

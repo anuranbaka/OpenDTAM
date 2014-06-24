@@ -448,8 +448,8 @@ void Cost::optimizeA(){
     
     float ds=depthStep; 
 
-    pfShow("d",_d);
-    pfShow("a",_a);
+    pfShow("d",_d,0,Vec2d(0,layers));
+    pfShow("a",_a,0,Vec2d(0,layers));
     // a update
     for(st point=0;point<w*h;point++){
         float blank;
