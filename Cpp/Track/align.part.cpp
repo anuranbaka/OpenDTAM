@@ -107,9 +107,9 @@ void Track::align(){
 
 void Track::align_gray(Mat& base, Mat& depth, Mat& input){
     tic();
-    int levels=7; // 6 levels on a 640x480 image is 20x15
+    int levels=6; // 6 levels on a 640x480 image is 20x15
     int startlevel=0;
-    int endlevel=6;
+    int endlevel=4;
 
     Mat p=LieSub(pose,basePose);// the Lie parameters 
     cout<<"pose: "<<p<<endl;
@@ -127,30 +127,41 @@ void Track::align_gray(Mat& base, Mat& depth, Mat& input){
     int level=startlevel;
     Mat p2d=Mat::zeros(1,6,CV_64FC1);
     for (; level<LEVELS_2D; level++){
-        //HACK: use 3d alignment with depth disabled for 2D. ESM would be much better, but I'm lazy right now.
-        align_level_largedef_gray_forward(makeGray(lfPyr[level]),//Total Mem cost ~185 load/stores of image
-                                          depthPyr[level]*0.0,
-                                          makeGray(inPyr[level]),
-                                          cameraMatrixPyr[level],//Mat_<double>
-                                          p2d,                //Mat_<double>
-                                          CV_DTAM_FWD,
-                                          1,
-                                          3);
-    }
-    p=LieAdd(p2d,p);
-    
-    for (; level<levels && level<endlevel; level++){
-        int iters=3;
+        int iters=1;
         for(int i=0;i<iters;i++){
-            float thr=(levels-level)>=2?.05:.2; //more stringent matching on last two levels 
-            align_level_largedef_gray_forward(makeGray(basePyr[level]),//Total Mem cost ~185 load/stores of image
-                                                depthPyr[level],
+            //HACK: use 3d alignment with depth disabled for 2D. ESM would be much better, but I'm lazy right now.
+            align_level_largedef_gray_forward(  makeGray(lfPyr[level]),//Total Mem cost ~185 load/stores of image
+                                                depthPyr[level]*0.0,
                                                 makeGray(inPyr[level]),
                                                 cameraMatrixPyr[level],//Mat_<double>
-                                                p,                //Mat_<double>
-                                            CV_DTAM_FWD,
-                                                thr,
-                                                6);
+                                                p2d,                //Mat_<double>
+                                                CV_DTAM_FWD,
+                                                1,
+                                                3);
+            if(tocq()>.01)
+                break;
+        }
+    }
+    p=LieAdd(p2d,p);
+//     cout<<"3D iteration:"<<endl;
+    for (level=startlevel; level<levels && level<endlevel; level++){
+        int iters=3;
+        for(int i=0;i<iters;i++){
+            float thr = (levels-level)>=2 ? .05 : .2; //more stringent matching on last two levels 
+            bool improved;
+            improved = align_level_largedef_gray_forward(   makeGray(basePyr[level]),//Total Mem cost ~185 load/stores of image
+                                                            depthPyr[level],
+                                                            makeGray(inPyr[level]),
+                                                            cameraMatrixPyr[level],//Mat_<double>
+                                                            p,                //Mat_<double>
+                                                            CV_DTAM_FWD,
+                                                            thr,
+                                                            6);
+            if(tocq()>.03)
+                break;
+//             if(!improved){
+//                 break;
+//             }
         }
     }
     
@@ -158,6 +169,7 @@ void Track::align_gray(Mat& base, Mat& depth, Mat& input){
     static int runs=0;
     //assert(runs++<2);
     toc();
+    cout<<"levels complete:"<<level+1<<endl;
 }
 
 // See reprojectCloud.cpp for explanation of the form 

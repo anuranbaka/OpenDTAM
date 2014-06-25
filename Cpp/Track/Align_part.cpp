@@ -54,13 +54,13 @@ Mat paramsToProjection(const Mat & p,const Mat& _cameraMatrix){
     proj=proj.rowRange(0,3);
     return proj;
 }
+
 static Mat&  makeGray(Mat& image){
     if (image.channels()!=1) {
         cvtColor(image, image, CV_BGR2GRAY);
     }
     return image;
 }
-
 
 static void getGradient(const Mat& image,Mat & grad){
     //Image gradients for alignment
@@ -80,8 +80,8 @@ static void getGradient(const Mat& image,Mat & grad){
     Scharr( gray, grad_x, CV_32FC1, 1, 0, 1.0/26.0, 0, BORDER_REPLICATE );
     Mat grad_y(image.rows,image.cols,CV_32FC1,grad.row(1).data);
     Scharr( gray, grad_y, CV_32FC1, 0, 1, 1.0/26.0, 0, BORDER_REPLICATE);
-    
 }
+
 static void getGradientInterleave(const Mat& image,Mat & grad){
     //Image gradients for alignment
     //Note that these gradients have theoretical problems under the sudden 
@@ -102,15 +102,16 @@ static void getGradientInterleave(const Mat& image,Mat & grad){
     Scharr( gray, gradY, CV_32FC1, 0, 1, 1.0/26.0, 0, BORDER_REPLICATE);
     Mat src [2]={gradY,gradX};
     merge(src,2,grad);
-    
 }
-void Mask(const Mat& in,const Mat& m,Mat& out){
+
+static void Mask(const Mat& in,const Mat& m,Mat& out){
     Mat tmp;
     
     m.convertTo(tmp,in.type());
     out=out.mul(tmp/255);
 }
-void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 load/stores of image
+
+bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 load/stores of image
                           const Mat& d,
                           const Mat& _I,
                           const Mat& cameraMatrix,//Mat_<double>
@@ -147,7 +148,6 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
     {
         Mat tmp=_p.clone();
         Mat baseProj=paramsToProjection(_p,cameraMatrix);
-//         cout<<"BP: \n"<<baseProj<<endl;
         perspectiveTransform(idMap3,baseMap,baseProj);
         assert(baseMap.type()==CV_32FC2);
     }
@@ -165,7 +165,7 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
         merge(toMerge,3,packed); //(Mem cost: min 3 load, 3 store :6)
         Mat pulledBack;
         
-        remap( packed, pulledBack, baseMap,Mat(), CV_INTER_LINEAR );//(Mem cost:?? 5load, 3 store:8)
+        remap( packed, pulledBack, baseMap,Mat(), CV_INTER_LINEAR, BORDER_CONSTANT,0.0 );//(Mem cost:?? 5load, 3 store:8)
         gradI.create(r,c,CV_32FC2);
 
         int from_to[] = { 0,0, 1,1, 2,2 };
@@ -181,17 +181,16 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
             cout << "Base Pose: "<< basePose << endl;
             
             LieSub(pose,basePose).copyTo(_p);// the Lie parameters 
-            align_level_largedef_gray_forward( T,//Total Mem cost ~185 load/stores of image
-                                               d,
-                                              _I,
-                                               cameraMatrix,//Mat_<double>
-                                               _p,                //Mat_<double>
-                                               mode,
-                                               threshold,
-                                               3
-            );
+            bool improved = align_level_largedef_gray_forward(  T,//Total Mem cost ~185 load/stores of image
+                                                                d,
+                                                                _I,
+                                                                cameraMatrix,//Mat_<double>
+                                                                _p,                //Mat_<double>
+                                                                mode,
+                                                                threshold,
+                                                                3);
             //gpause();
-            return;
+            return improved;
         }
         
     }
@@ -199,22 +198,24 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
     // Calculate the differences and build mask for operations (Mem cost ~ 8)
     Mat fit;
     absdiff(T,I,fit);
-    Mat mask=(fit<threshold);
+    Mat mask=(fit<threshold)&(I>0);
     Mat err=T-I;
     
-    //debug
-    {
-        pfShow("Before iteration",_I);
-//         if(I.rows==480){
-//             Mask(I,fit<.05,I);
-//             pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
-// //             gpause();
+//     //debug
+//     {
+//         if (numParams==6){
+//         pfShow("Before iteration",_I);
+// //         if(I.rows==480){
+// //             Mask(I,fit<.05,I);
+// //             pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
+// // //             gpause();
+// //         }
+// //         else{
+//             pfShow("After Iteration",I,0,Vec2d(0,1));
+//             pfShow("To match",T);
+// //         }
 //         }
-//         else{
-            pfShow("After Iteration",I,0,Vec2d(0,1));
-//         }
-        
-    }
+//     }
     
    
     
@@ -296,10 +297,34 @@ void Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
 //     cout<<"Je: \n"<<Jsmall*err<<endl;
 //     cout<<"H: "<<"\n"<< Hss<< endl;
 //     cout<<"Hinv: "<<"\n"<< Hinv<< endl;
-    cout<<"dp: "<<"\n"<< dp<< endl;
-    _p.colRange(0,numParams)+=dp;
+//     cout<<"dp: "<<"\n"<< dp<< endl;
     
-
+    
+    //Check amount of motion
+    {
+        
+    }
+    
+    //Check error
+    //For the pixels that are within threshold, the average error should go down (Expensive!)
+//     {
+//         Mat tmp=_p.clone();
+//         tmp.colRange(0,numParams)+=dp;
+//         Mat newMap,newBack;
+//         Mat newProj=paramsToProjection(tmp,cameraMatrix);
+//         perspectiveTransform(idMap3,newMap,newProj);
+//         remap( _I, newBack, newMap, Mat(), CV_INTER_LINEAR, BORDER_CONSTANT,-1.0/0.0 );
+//         Mat newFit;
+//         absdiff(T,newBack,newFit);
+//         Mat fitDiff;
+//         subtract(fit,newFit,fitDiff,mask & (newBack>0));
+//         double deltaErr=sum(fitDiff)[0];
+//         cout<<"Delta Err: "<< deltaErr<<endl;
+//         if (deltaErr<0)
+//             return false;
+//     }
+    _p.colRange(0,numParams)+=dp;
+    return true;
 }
 
 

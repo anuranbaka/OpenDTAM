@@ -81,7 +81,7 @@ int App_main( int argc, char** argv )
     
     hconcat(R,T,cameraAffinePoseBase);
    
-    Cost cost(image.clone(),128, cameraMatrix, R,T);
+    Cost cost(image.clone(),32, cameraMatrix, R,T);
     Cost cost2(image.clone(),32, cameraMatrix, R,T);
     Track tracker(cost);
     assert(cost.rows==480);
