@@ -86,7 +86,8 @@ private:
         Aruncount=0;
         thetaStart=500.0;
         thetaMin=0.01;
-        running=false;
+        running_a=running_qd=false;
+        initOptimization();
 
         epsilon=.1;
         lambda=.000001;
@@ -130,7 +131,7 @@ private:
     
     //Thread management
     public:
-        volatile bool running;
+        volatile bool running_a, running_qd;
 };
 
 
