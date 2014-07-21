@@ -55,18 +55,17 @@ void Cost::initOptimization(){//must be thread safe in allocations(i.e. don't do
     cacheGValues();
     cv::Mat loInd(rows,cols,CV_32SC1);
     cv::Mat loVal(rows,cols,CV_32FC1);
+
     minv(data,loInd,loVal);
+    
     loInd.convertTo(_a,CV_32FC1);
     assert(aptr==_a.data);
-    
     _a.copyTo(_d);
-    
     _qx.create(h,w,CV_32FC1);
-    _qx*=0.0;
+    _qx=0.0;
     _qy.create(h,w,CV_32FC1);
-    _qy*=0.0;
+    _qy=0.0;
     theta=thetaStart;
-
 }
 
 //This function has no equation, I had to derive it from the references
@@ -98,6 +97,7 @@ void Cost::cacheGValues(){
     _gd.create(h,w,CV_32FC1);
     _gl.create(h,w,CV_32FC1);
     _gr.create(h,w,CV_32FC1);
+    
     float* b=(float*)(baseImage.data);
     float* g=(float*)(_g.data);
     float* gd=(float*)(_gd.data);
@@ -106,10 +106,11 @@ void Cost::cacheGValues(){
     float* gr=(float*)(_gr.data);
     Mat im_gray;
     cvtColor(baseImage,im_gray,CV_RGB2GRAY);
-    
+
     //first get derivatives, but use the kind that we need for our purposes, rather than the built in scharr or sobel derivatives. We will do this by getting the absolute value of the differences to each side of the the current pixel and then taking the max along each direction. The 
     Mat gx,gy,g1,g2;
     Mat kernel=(Mat_<float>(1,3)<<0.0,-1.0,1.0);
+    
     filter2D(im_gray,g1,-1,kernel);
     
     kernel=(Mat_<float>(1,3)<<-1.0,1.0,0.0);
@@ -129,6 +130,7 @@ void Cost::cacheGValues(){
     
     _g=gx+gy;//Getting lazy, just do L1 norm
     
+    toc();
     //The g function (Eq. 5)
     //the paper doesn't specify the values of the exponent or multiplier,
     // so I have chosen them to have a knee at 10% gradient, since this is a 
@@ -141,6 +143,7 @@ void Cost::cacheGValues(){
 //     _g=1;
     
     //_g=_g*scale_g
+
     //cache interpreted forms of g, for the "matrix" used in
     //section 2.2.3
     st end=w*h;
@@ -150,6 +153,7 @@ void Cost::cacheGValues(){
         gl[here]= 0.5*(g[left ]+ g[here]);
         gr[here]=-0.5*(g[right]+g[here]);
     }
+
     pfShow("g",_g,0,Vec2d(0,1));
     
 }
@@ -257,6 +261,8 @@ static void* Cost_optimizeQD(void* object){
     set_affinity(2);
     while(cost->running){
         cost->optimizeQD();
+        if(allDie)
+                    return 0;
     }
 }
 static void* Cost_optimizeA(void* object){
@@ -265,14 +271,10 @@ static void* Cost_optimizeA(void* object){
     set_affinity(3);
     while(cost->running){
         cost->optimizeA();
+        if(allDie)
+                    return 0;
     }
 }
-
-
-
-
-
-
 
 void Cost::optimize(){
     if(!running){
@@ -283,7 +285,19 @@ void Cost::optimize(){
     }
 }
 
-
+static void __attribute__ ((noinline)) qcore(
+    const float denom,
+    st point, 
+    const st pstop, 
+    float* kx,
+    float* ky,
+    const float* d,
+    const float* gd,
+    const float* gu,
+    const float* gl,
+    const float* gr,
+    const float& sigma_q,
+    const unsigned& w);
 
 void Cost::optimizeQD(){
     int w=cols;
@@ -305,26 +319,41 @@ void Cost::optimizeQD(){
     computeSigmas();
     assert(sigma_q!=0.0);
     assert(sigma_d!=0.0);
-    Mat _dold=_d.clone();
-    //q update
+    
+    //q update ((4 read,1 write)*2 = 8 read, 2 write)
+tic();
     denom=1+sigma_q*epsilon;
     float nm,pd,kxn,kyn;
     point=0;
     for(st i=1;i<h;i++){
         assert(point%w==0);
         pstop=i*w-1;
-        for (;point<pstop;point++){
-            //Unnumbered Eq.s at end of section 2.2.3
-            //Sign is flipped due to caching a negative value
-            //cout<<sigma_q<<endl;
-            kxn=(kx[here] + sigma_q*((d[here]-d[right])*gright))/denom;
-            kyn=(ky[here] + sigma_q*((d[here]-d[down])*gdown))/denom;
-            nm=sqrt(kxn*kxn+kyn*kyn);
-            pd=std::max(1.0f,nm);
-            kx[here]=kxn/pd;
-            ky[here]=kyn/pd;
-            //kx[here]=d[here]-d[right];
-        }
+        
+        qcore(
+            denom,
+            point, 
+             pstop, 
+             kx,
+             ky,
+            d,
+            gd,
+            gu,
+            gl,
+            gr,
+            sigma_q,
+             w);point=pstop;
+//         for (;point<pstop;point++){
+//             //Unnumbered Eq.s at end of section 2.2.3
+//             //Sign is flipped due to caching a negative value
+//             //cout<<sigma_q<<endl;
+//             kxn=(kx[here] + sigma_q*((d[here]-d[right])*gright))/denom;
+//             kyn=(ky[here] + sigma_q*((d[here]-d[down])*gdown))/denom;
+//             nm=sqrt(kxn*kxn+kyn*kyn);
+//             pd=std::max(1.0f,nm);
+//             kx[here]=kxn/pd;
+//             ky[here]=kyn/pd;
+//             //kx[here]=d[here]-d[right];
+//         }
         //last col
         kxn=0;
         kyn=(ky[here] + sigma_q*((d[here]-d[down])*gdown))/denom;
@@ -348,9 +377,9 @@ void Cost::optimizeQD(){
     //last col,row
     kx[here]=0;
     ky[here]=0;
+toc();
 
-
-    //d update
+    //d update (10 read,1 write per point)
     denom=1+sigma_d/theta;
 
     //top left
@@ -405,7 +434,7 @@ void Cost::optimizeQD(){
     pstop++;
     d[here] = (d[here]-sigma_d*(          gup*ky[up]               +gleft*kx[left]                              - a[here]/theta))/denom;
     point++;
-    
+
     //debug
 //     pfShow("qx",abs(_qx));
 //     pfShow("d",_d);
@@ -448,14 +477,14 @@ void Cost::optimizeA(){
     
     float ds=depthStep; 
 
-    pfShow("d",_d,0,Vec2d(0,layers));
-    pfShow("a",_a,0,Vec2d(0,layers));
+    
     // a update
     for(st point=0;point<w*h;point++){
         float blank;
         a[point]=aBasic(data+point*l,l,ds,d[point],blank);
     }
-    
+    pfShow("d",_d,0,Vec2d(0,layers));
+    pfShow("a",_a,0,Vec2d(0,layers));
 
 //     //debug: show the energies
 //     Mat acost(rows,cols,CV_32FC1);
@@ -472,3 +501,34 @@ void Cost::optimizeA(){
 //     cout<<"Total Energy: "<<Ed+Ee<<endl;
 }
 
+
+
+
+static void __attribute__ ((noinline)) qcore(
+    const float denom,
+    st point, 
+    const st pstop, 
+    float* kx,
+    float* ky,
+    const float* d,
+    const float* gd,
+    const float* gu,
+    const float* gl,
+    const float* gr,
+    const float& sigma_q,
+    const unsigned& w){
+    float nm,pd,kxn,kyn;
+    for (;point<pstop;point++){
+        //Unnumbered Eq.s at end of section 2.2.3
+        //Sign is flipped due to caching a negative value
+        //cout<<sigma_q<<endl;
+        kxn=(kx[here] + sigma_q*((d[here]-d[right])*gright))/denom;
+        kyn=(ky[here] + sigma_q*((d[here]-d[down])*gdown))/denom;
+        nm=sqrt(kxn*kxn+kyn*kyn);
+        pd=std::max(1.0f,nm);
+        kx[here]=kxn/pd;
+        ky[here]=kyn/pd;
+        //kx[here]=d[here]-d[right];
+    }
+    
+}

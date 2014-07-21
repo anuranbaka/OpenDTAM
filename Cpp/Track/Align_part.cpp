@@ -7,7 +7,7 @@
 #include <opencv2/opencv.hpp>
 using namespace cv;
 using namespace std;
-#include "utils/utils.h"
+#include "utils/utils.hpp"
 #include "graphics.hpp"
 #include "Track.hpp"
 #include "stdio.h"
@@ -24,14 +24,14 @@ static void getGradient(const Mat& image,Mat & grad);
 
 
 
-Mat& reprojectWithDepth(const Mat& T,
-                        const Mat& d,
-                        const Mat& I,
-                        const Mat& cameraMatrix,//Mat_<double>
-                        const Mat& _p,          //Mat_<double>
-                        int mode){
-    
-}
+//Mat& reprojectWithDepth(const Mat& T,
+//                        const Mat& d,
+//                        const Mat& I,
+//                        const Mat& cameraMatrix,//Mat_<double>
+//                        const Mat& _p,          //Mat_<double>
+//                        int mode){
+//
+//}
 
 Mat paramsToProjection(const Mat & p,const Mat& _cameraMatrix){
     //Build the base transform
@@ -63,6 +63,26 @@ static Mat&  makeGray(Mat& image){
 }
 
 static void getGradient(const Mat& image,Mat & grad){
+    //Image gradients for alignment
+    //Note that these gradients have theoretical problems under the sudden 
+    // changes model of images. It might be wise to blur the images before 
+    // alignment, to avoid sudden changes, but that makes occlusion more 
+    // problematic.
+    grad.create(2,image.rows*image.cols,CV_32FC1);
+    Mat gray;
+    if (image.type()==CV_32FC1) {
+        gray=image;
+    }else {
+        cvtColor(image, gray, CV_BGR2GRAY);
+        gray.convertTo(gray,CV_32FC1);
+    }
+    Mat grad_x(image.rows,image.cols,CV_32FC1,grad.row(0).data);
+    Scharr( gray, grad_x, CV_32FC1, 1, 0, 1.0/26.0, 0, BORDER_REPLICATE );
+    Mat grad_y(image.rows,image.cols,CV_32FC1,grad.row(1).data);
+    Scharr( gray, grad_y, CV_32FC1, 0, 1, 1.0/26.0, 0, BORDER_REPLICATE);
+}
+
+static void getGradient_8(const Mat& image,Mat & grad){
     //Image gradients for alignment
     //Note that these gradients have theoretical problems under the sudden 
     // changes model of images. It might be wise to blur the images before 
@@ -326,7 +346,6 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
     _p.colRange(0,numParams)+=dp;
     return true;
 }
-
 
 
 

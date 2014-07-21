@@ -15,7 +15,7 @@ static queue<string> nameWin;
 static boost::mutex Gmux; 
 static volatile int ready=0;
 static volatile int pausing=0;
-
+int allDie=0;
 void gpause(){
     CV_XADD(&pausing,1);
     gcheck();
@@ -24,6 +24,8 @@ void gcheck(){
 
     while(CV_XADD(&pausing,0)){
         usleep(100);
+        if(allDie)
+                    return;
     }
 }
 
@@ -42,6 +44,8 @@ void pfShow(const string name,const Mat& _mat,int defaultscale, Vec2d autoscale)
     Gmux.unlock();
     while(nameShow.size()>5||pausing){
         usleep(100);
+        if(allDie)
+                    return;
     }
 
 }
@@ -53,6 +57,8 @@ void pfWindow(const string name,int prop){
     Gmux.unlock();
     while(nameWin.size()>5||pausing){
         usleep(100);
+        if(allDie)
+                    return;
     }
 }
 template <class T>
@@ -70,7 +76,8 @@ void* guiLoop(void*){
     pthread_setname_np(pthread_self(),"Graphics");
     Mat mat;
     while(1){
-        
+        if(allDie)
+            return 0;
         if (props.size()>0){//deal with new windows
             Gmux.lock();
             string name=take(nameWin);

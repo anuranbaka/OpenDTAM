@@ -1,0 +1,39 @@
+What the DTAM does:
+DTAM has many tasks and sorts them to decide which to do next:
+
+
+Level 1
+1. Keep the ESM chain aligned
+2. Make sure there is a valid depth map to align against
+
+Level 2
+1. Improve the quality of the current depth map(doesn't seem to help tracking!)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1. Keep frames aligned in 2D
+    1. Align newest frames first when possible 
+2. Feed hungry maps
+    1. Feed newest maps first
+    
+
+
+
+
+A frame marked for map consumption but unalignable causes a failure.

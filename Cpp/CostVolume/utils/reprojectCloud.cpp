@@ -1,7 +1,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <iostream>
-#include "utils/utils.h"
+#include "utils/utils.hpp"
 #include "reprojectCloud.hpp"
 
 //debug

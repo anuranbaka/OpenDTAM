@@ -8,6 +8,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O3 -g -ggdb")
 
 find_package( OpenCV 2.4 REQUIRED )
 find_package( Qt5Core REQUIRED)
+find_package(CUDA REQUIRED)
 
 #message(STATUS ${OpenCV_CONSIDERED_CONFIGS})
 
@@ -15,7 +16,7 @@ find_package( Qt5Core REQUIRED)
 
 
 set(BASEPATH "${CMAKE_SOURCE_DIR}")
-include_directories("${BASEPATH}")
+include_directories("${BASEPATH}" ${CUDA_INCLUDE_DIRS})
 
 #add_library(GraphicsLib SHARED graphics.cpp)#must be in own library so we can link against it.
 

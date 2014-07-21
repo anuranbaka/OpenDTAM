@@ -3,16 +3,19 @@
 
 #include "CostVolume/utils/reproject.hpp"
 
+
 //debugs
 #include <iostream>
 #include <algorithm>
 #include <opencv2/highgui/highgui.hpp>
 #include "tictoc.h"
 #include "graphics.hpp"
+// #define DTAM_COST_DEBUG
+
 
 //in Cost.cpp
 using namespace std;
-inline float fastabs(float foo){
+static inline float fastabs(const float& foo){
     return fabs(foo);
 }
 
@@ -30,14 +33,18 @@ void Cost::updateCostL1(const cv::Mat& image,
     cv::Mat newHi(rows,cols,CV_32FC1,0);
     for(int n=0; n < depth.size(); ++n){
         
-        
+       // tic();
         cv::Mat_<cv::Vec3f> plane;
         cv::Mat_<uchar> mask;
-        reproject(cv::Mat_<cv::Vec3f>(image), cameraMatrix, pose, currentCameraPose, depth[n], plane, mask);
-
+        reproject(cv::Mat_<cv::Vec3f>(image), cameraMatrix, pose, currentCameraPose, depth[n], plane, mask);//could be as fast as .00614 using resize instead. Currently runs at .0156s, or about twice as long
         size_t end=image.rows*image.cols*image.channels();
         size_t lstep=layers;
-        float* pdata=(float*)(plane.data);
+        #ifdef DTAM_COST_DEBUG
+        float* pdata;
+#else
+        const float* pdata;
+#endif
+        pdata=(float*)(plane.data);
         const float* idata=(float*)(baseImage.data);
         float* cdata=data+n;
         float* hdata=hit+n;
@@ -49,7 +56,9 @@ void Cost::updateCostL1(const cv::Mat& image,
         //hdata and cdata aligned
         //pdata and idata aligned
         //size_t moff=0;
-        for (size_t i=0, moff=0,coff=0,p=0;  i<end; p++, moff+=3, i+=3, coff+=lstep){
+        //toc();
+        //tic();
+        for (size_t i=0, moff=0,coff=0,p=0;  i<end; p++, moff+=3, i+=3, coff+=lstep){//.0055 - .0060 s 
 
             //std::cout<<mdata[moff]<<std::endl;
             if(mdata[moff]){
@@ -64,17 +73,23 @@ void Cost::updateCostL1(const cv::Mat& image,
                 
                // std::cout<<ns<<std::endl;
             }
+#ifdef DTAM_COST_DEBUG
             {//debug see the cost
                 pdata[i]=cdata[coff];
                 pdata[i+1]=cdata[coff];
                 pdata[i+2]=cdata[coff];
             }
+#endif
         }
+#ifdef DTAM_COST_DEBUG
         {//debug
            pfShow( "Cost Volume Slice", plane,0,cv::Vec2d(0,.5));
           // gpause();
         }
+#endif
+        //toc();
     }
+    
 //     cv::Mat loInd(rows,cols,CV_32SC1);
 //     cv::Mat loVal(rows,cols,CV_32FC1);
 //     minv(data,loInd,loVal);
@@ -87,8 +102,7 @@ void Cost::updateCostL1(const cv::Mat& image,
 }
 
 
-void Cost::updateCostL1(const cv::Mat& image,
-                                         const cv::Matx44d& currentCameraPose);
+
 
 
 void Cost::updateCostL2(const cv::Mat& image,

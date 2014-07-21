@@ -8,4 +8,5 @@ void* guiLoop(void*);
 void initGui();
 void gpause();
 void gcheck();
+extern int allDie;
 #endif

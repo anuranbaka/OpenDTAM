@@ -2,6 +2,7 @@
 #define COST_H
 #include <opencv2/core/core.hpp>
 #include <vector>
+#include "tictoc.h"
 // The cost volume. Conceptually arranged as an image plane, corresponding
 // to the keyframe, lying on top of the actual cost volume, a 3D two channel matrix storing
 // the total cost of all rays that have passed through a voxel, and the number of rays that
@@ -86,11 +87,10 @@ private:
         thetaStart=500.0;
         thetaMin=0.01;
         running=false;
-        initOptimization();
+        
         epsilon=.1;
         lambda=.000001;
         thetaStep=.99;
-
     }
     std::vector<float> generateDepths(int layers){
         std::vector<float> depths;

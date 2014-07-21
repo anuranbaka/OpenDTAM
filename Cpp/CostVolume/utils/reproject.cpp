@@ -38,11 +38,10 @@ void reproject( const Mat& src,
 //    cout<<"warpmat: "<<cBpln_Apln<<endl;
 //    }
 
-    warpPerspective(src, dst, cBpln_Apln, src.size() ,INTER_LINEAR,BORDER_CONSTANT,Scalar(-1.0e100,-1.0e100,-1.0e100));
-    
+    warpPerspective(src, dst, cBpln_Apln, src.size() ,INTER_NEAREST,BORDER_CONSTANT,Scalar(-1.0e100,-1.0e100,-1.0e100));//.013 s for nearest, .021 for linear
 
 
-    mask = (dst >0);
+    mask = (dst >0);//0.00247 s 
 }
 
 /*

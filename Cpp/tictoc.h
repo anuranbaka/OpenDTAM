@@ -25,6 +25,7 @@ static double toc() {
 
     time_t end_time=time(0);
     std::cout<<"Elapsed time is "<<elapsed<<" seconds."<<std::endl;
+    return elapsed;
 }
 static double tocq() {
     struct timespec tv2;
@@ -38,6 +39,7 @@ static double tocq() {
     double elapsed= (sec + 1.0e-9 * nsec);
     
     time_t end_time=time(0);
+    return elapsed;
 }
 
 #endif //TIC_TOC

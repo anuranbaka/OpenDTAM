@@ -105,11 +105,16 @@ void Track::align(){
     align_gray(baseImage, depth, thisFrame);
 };
 
-void Track::align_gray(Mat& base, Mat& depth, Mat& input){
+void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
+    Mat input,base,lastFrameGray;
+    input=makeGray(_input);
+    base=makeGray(_base);
+    lastFrameGray=makeGray(lastFrame)  ;
+    
     tic();
     int levels=6; // 6 levels on a 640x480 image is 20x15
     int startlevel=0;
-    int endlevel=4;
+    int endlevel=6;
 
     Mat p=LieSub(pose,basePose);// the Lie parameters 
     cout<<"pose: "<<p<<endl;
@@ -118,7 +123,7 @@ void Track::align_gray(Mat& base, Mat& depth, Mat& input){
     createPyramids(base,depth,input,cameraMatrix,basePyr,depthPyr,inPyr,cameraMatrixPyr,levels);
     
     vector<Mat> lfPyr;
-    createPyramid(lastFrame,lfPyr,levels);
+    createPyramid(lastFrameGray,lfPyr,levels);
     
     
     float scale=1.0;
@@ -130,9 +135,9 @@ void Track::align_gray(Mat& base, Mat& depth, Mat& input){
         int iters=1;
         for(int i=0;i<iters;i++){
             //HACK: use 3d alignment with depth disabled for 2D. ESM would be much better, but I'm lazy right now.
-            align_level_largedef_gray_forward(  makeGray(lfPyr[level]),//Total Mem cost ~185 load/stores of image
+            align_level_largedef_gray_forward(  lfPyr[level],//Total Mem cost ~185 load/stores of image
                                                 depthPyr[level]*0.0,
-                                                makeGray(inPyr[level]),
+                                                inPyr[level],
                                                 cameraMatrixPyr[level],//Mat_<double>
                                                 p2d,                //Mat_<double>
                                                 CV_DTAM_FWD,
@@ -145,31 +150,34 @@ void Track::align_gray(Mat& base, Mat& depth, Mat& input){
     p=LieAdd(p2d,p);
 //     cout<<"3D iteration:"<<endl;
     for (level=startlevel; level<levels && level<endlevel; level++){
-        int iters=3;
+        int iters=1;
         for(int i=0;i<iters;i++){
             float thr = (levels-level)>=2 ? .05 : .2; //more stringent matching on last two levels 
             bool improved;
-            improved = align_level_largedef_gray_forward(   makeGray(basePyr[level]),//Total Mem cost ~185 load/stores of image
+            improved = align_level_largedef_gray_forward(   basePyr[level],//Total Mem cost ~185 load/stores of image
                                                             depthPyr[level],
-                                                            makeGray(inPyr[level]),
+                                                            inPyr[level],
                                                             cameraMatrixPyr[level],//Mat_<double>
                                                             p,                //Mat_<double>
                                                             CV_DTAM_FWD,
                                                             thr,
                                                             6);
-            if(tocq()>.03)
-                break;
+            if(tocq()>.5){
+                cout<<"completed up to level: "<<level-startlevel+1<<"   iter: "<<i+1<<endl;
+                goto loopend;//olny sactioned use of goto, the double break
+            }
 //             if(!improved){
 //                 break;
 //             }
         }
     }
+    loopend:
     
     pose=LieAdd(p,basePose);
     static int runs=0;
     //assert(runs++<2);
     toc();
-    cout<<"levels complete:"<<level+1<<endl;
+    
 }
 
 // See reprojectCloud.cpp for explanation of the form 
