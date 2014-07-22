@@ -8,6 +8,7 @@
 
 
 #include <opencv2/gpu/gpu.hpp>
+
 typedef  int FrameID;
 
 class CostVolume
@@ -41,6 +42,14 @@ public:
     CostVolume(cv::Mat image, FrameID _fid, int _layers, float _near, float _far,
             cv::Mat R, cv::Mat T, cv::Mat _cameraMatrix, float initialCost=3.0, float initialWeight=.001);
 
+    //HACK: remove this function in release
+    cv::Mat downloadOldStyle( int layer){
+        cv::Mat cost;
+        cv::gpu::GpuMat tmp=dataContainer.rowRange(layer,layer+1);
+        tmp.download(cost);
+        cost=cost.reshape(0,rows);
+        return cost;
+    }
 
 private:
     void solveProjection(const cv::Mat& R, const cv::Mat& T);

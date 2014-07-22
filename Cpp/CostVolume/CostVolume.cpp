@@ -5,39 +5,52 @@
 
 #include "CostVolume.hpp"
 #include <opencv2/core/operations.hpp>
+#include <opencv2/gpu/stream_accessor.hpp>
+#include <opencv2/gpu/device/common.hpp>
 
 #include "utils/utils.hpp"
 #include "utils/tinyMat.hpp"
-#include <cuda_runtime.h>
 #include <iostream>
+
 
 using namespace std;
 using namespace cv;
 using namespace gpu;
 
-#define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, CV_Func)
 
-void ___cudaSafeCall(cudaError_t err, const char* file, const int line, const char* func = "")
-{
-    if (cudaSuccess != err)
-        cv::gpu::error(cudaGetErrorString(err), file, line, func);
-}
+
 namespace cv { namespace gpu { namespace device { namespace dtam_updateCost{
     struct m33{
             float data[9];
+        };
+        struct m34{
+            float data[12];
         };
     void loadConstants(int h_layers, int h_layerStep, float3* h_base,
             float* h_hdata, float* h_cdata, float* h_lo, float* h_hi, uint* h_loInd,
             uint h_rows, uint h_cols, cudaTextureObject_t h_tex);
     void updateCostColCaller(int cols,int rows, int y, m33 sliceToIm);
+    void passThroughCaller(int cols,int rows);
+    void perspCaller(int cols,int rows,m34 persp);
+    void volumeProjectCaller(int cols,int rows,m34 p);
 }}}}
 
 void CostVolume::solveProjection(const cv::Mat& R, const cv::Mat& T) {
     Mat P;
     RTToP(R, T, P);
-
+    cout<<cameraMatrix<<endl;
     projection.create(4, 4, CV_64FC1);
-    projection(Range(0, 2), Range(0, 2)) = cameraMatrix.rowRange(0, 2);
+    projection=0.0;
+    projection(Range(0, 2), Range(0, 3)) += cameraMatrix.rowRange(0, 2);
+
+    projection.at<double>(2,3)=1.0;
+    projection.at<double>(3,2)=1.0;
+    cout<<"Augmented Camera Matrix:\n"<<projection<<endl;
+    projection=projection*P;
+    
+    cout<<projection<<endl;
+    
+   // exit(0);
 }
 
 void CostVolume::checkInputs(const cv::Mat& R, const cv::Mat& T,
@@ -89,7 +102,7 @@ public:
             Stream::Null()) {
         refcount=&ref_count;
         ref_count=1;
-
+        Mat im2=image.clone();
         assert(image.isContinuous());
         assert(image.type()==CV_8UC4);
 
@@ -101,14 +114,14 @@ public:
         texDesc.filterMode       = cudaFilterModeLinear;
         texDesc.readMode         = cudaReadModeNormalizedFloat;
         texDesc.normalizedCoords = 0;
-        cudaChannelFormatDesc channelDesc =
+        cudaChannelFormatDesc channelDesc = //{8, 8, 8, 8, cudaChannelFormatKindUnsigned};
                        cudaCreateChannelDesc(8, 8, 8, 8, cudaChannelFormatKindUnsigned);
         //Fill Memory
         if(!cuArray){
-            cudaMallocArray(&cuArray, &channelDesc, image.cols, image.rows);
+            cudaSafeCall(cudaMallocArray(&cuArray, &channelDesc, image.cols, image.rows));
         }
-        cudaMemcpyToArrayAsync(cuArray, 0, 0, image.datastart, image.dataend-image.datastart,
-                                  cudaMemcpyHostToDevice, 0/*StreamAccessor::getStream(cvStream)*/);
+        cudaSafeCall(cudaMemcpyToArray(cuArray, 0, 0, im2.datastart, im2.dataend-im2.datastart,
+                                  cudaMemcpyHostToDevice/*,StreamAccessor::getStream(cvStream)*/));
 
         // Specify texture memory location
         struct cudaResourceDesc resDesc;
@@ -119,6 +132,8 @@ public:
         // Create texture object
         cudaSafeCall(cudaCreateTextureObject(&texObj, &resDesc, &texDesc, NULL));
         cudaSafeCall(cudaDeviceSynchronize());
+       
+        
     }
 
     ArrayTexture& operator = (const ArrayTexture& tex) {
@@ -151,6 +166,42 @@ public:
 
 };
 
+cudaArray* cuArray;
+
+cudaTextureObject_t simpleTex(Mat image){
+    Mat im2=image.clone();
+    assert(image.isContinuous());
+    assert(image.type()==CV_8UC4);
+    
+    //Describe texture
+    struct cudaTextureDesc texDesc;
+    memset(&texDesc, 0, sizeof(texDesc));
+    texDesc.addressMode[0]   = cudaAddressModeClamp;
+    texDesc.addressMode[1]   = cudaAddressModeClamp;
+    texDesc.filterMode       = cudaFilterModeLinear;
+    texDesc.readMode         = cudaReadModeNormalizedFloat;
+    texDesc.normalizedCoords = 0;
+    cudaChannelFormatDesc channelDesc = //{8, 8, 8, 8, cudaChannelFormatKindUnsigned};
+    cudaCreateChannelDesc<uchar4>();
+    //Fill Memory
+    cudaSafeCall(cudaMallocArray(&cuArray, &channelDesc, image.cols, image.rows));
+    cudaSafeCall(cudaMemcpyToArray(cuArray, 0, 0, im2.datastart, im2.dataend-im2.datastart,
+                                   cudaMemcpyHostToDevice/*,StreamAccessor::getStream(cvStream)*/));
+    
+    // Specify texture memory location
+    struct cudaResourceDesc resDesc;
+    memset(&resDesc, 0, sizeof(resDesc));
+    resDesc.resType = cudaResourceTypeArray;
+    resDesc.res.array.array = cuArray;
+    
+    cudaTextureObject_t texObj;
+    // Create texture object
+    cudaSafeCall(cudaCreateTextureObject(&texObj, &resDesc, &texDesc, NULL));
+    return texObj;
+}
+
+
+
 void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, const cv::Mat& T,const cv::gpu::Stream& cvStream){
     using namespace cv::gpu::device::dtam_updateCost;
     // 0  1  2  3
@@ -171,7 +222,9 @@ void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, con
 
 
     //change input image to a texture
-    ArrayTexture tex(image, cvStream);
+    //ArrayTexture tex(image, cvStream);
+    cudaTextureObject_t texObj = simpleTex(image);
+    cudaSafeCall( cudaDeviceSynchronize() );
 
     //find projection matrix from cost volume to image (3x4)
     Mat viewMatrixImage;
@@ -179,27 +232,33 @@ void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, con
     Mat cameraMatrixTex(3,4,CV_64FC1);
     cameraMatrixTex=0.0;
     cameraMatrix.copyTo(cameraMatrixTex(Range(0,3),Range(0,3)));
-    cameraMatrixTex(Range(0,2), Range(2,3)) += 0.5;//add 0.5 to x,y out
+    cameraMatrixTex(Range(0,2), Range(2,3)) += 0.5;//add 0.5 to x,y out //removing causes crash
 
     Mat imFromWorld=cameraMatrixTex*viewMatrixImage;//3x4
     Mat imFromCV=imFromWorld*projection.inv();
-
+    //imFromCV.colRange(2,3)/=depthStep;
     //load up the constant stuff
     loadConstants(layers, rows*cols, (float3*) (baseImage.data),
             hits,  data, (float*) (lo.data), (float*) (hi.data), (uint*) (loInd.data),
-            rows, cols,tex.texObj);
+            rows, cols,texObj);
     //for each slice
     for(int y=0; y<rows; y++){
         //find projection from slice to image (3x3)
         double *p = (double*)imFromCV.data;
         m33 sliceToIm={  p[0], p[2], p[3]+y*p[1],
-                              p[4], p[6], p[7]+y*p[5],
-                              p[8], p[10], p[11]+y*p[9]};
+                         p[4], p[6], p[7]+y*p[5],
+                         p[8], p[10], p[11]+y*p[9]};
 
 
 
-        //kernel updates slice (1 block?)
-        updateCostColCaller(cols,1, y, sliceToIm);
+//        //kernel updates slice (1 block?)
+//        updateCostColCaller(cols,1, y, sliceToIm);
+//        passThroughCaller(cols,rows);
+        m34 persp;
+        for(int i=0;i<12;i++)
+            persp.data[i]=p[i];
+//        perspCaller(cols,rows,persp);
+        volumeProjectCaller(cols,rows,persp);
 //        cudaSafeCall( cudaDeviceSynchronize() );
             //per thread:
                 //find projection from column to image (3x2)

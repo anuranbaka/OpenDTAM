@@ -31,13 +31,18 @@ int App_main( int argc, char** argv );
 
 
 int main( int argc, char** argv ){
-    //namedWindow("backtrans",CV_WINDOW_OPENGL*0);
+
 //    set_affinity(1);
 //    //cvStartLoop(&App_main,argc, argv);//will crash if used with opengl!
-//    initGui();
+    initGui();
     return App_main(argc, argv);
 }
-
+void myExit(){
+    sleep(1);
+    allDie=1;
+    sleep(1);
+    exit(0);
+}
 
 int App_main( int argc, char** argv )
 {
@@ -76,7 +81,6 @@ int App_main( int argc, char** argv )
     Cost cost(image.clone(),32, cameraMatrix, R,T);
     Mat tmp;
     image.convertTo(tmp,CV_8UC4, 255.0);
-    cout<<T<<endl;
     CostVolume cv(tmp,(FrameID)1,32,0.015,0.0,R,T,cameraMatrix);
 
     Track tracker(cost);
@@ -110,7 +114,7 @@ int App_main( int argc, char** argv )
         for (int imageNum=1;imageNum<=50;imageNum++){
             if(imageNum==2){
                 cudaDeviceSynchronize();
-                cudaProfilerStart();
+            //    cudaProfilerStart();
             }
             char filename[500];
             Mat R,T;
@@ -129,8 +133,8 @@ int App_main( int argc, char** argv )
             T=Ts[imageNum];
             R=Rs[imageNum];
             image=images[imageNum];
-
-
+           
+            //cost.updateCostL1(image,R,T);//dbg
             Mat cameraAffinePoseAlternate,mask;
             hconcat(R,T,cameraAffinePoseAlternate);
             cv::gpu::CudaMem cimg(image.rows,image.cols,CV_8UC4);
@@ -139,7 +143,13 @@ int App_main( int argc, char** argv )
             cvtColor(image,tmp,CV_RGB2RGBA);
             const Mat& tmp2=cimg;
             tmp.convertTo(tmp2,CV_8UC4,255.0);
+
             cv.updateCost(cimg, R, T);
+            cudaDeviceSynchronize();
+            
+            Mat ret=cv.downloadOldStyle(0);
+            pfShow("cost slice",ret/*,0,cv::Vec2d(0,5)*/);
+           // myExit();
 //
 //            if (cost.imageNum<3){
 //                tic();
@@ -220,6 +230,8 @@ int App_main( int argc, char** argv )
 //    //         imshow( "Display window", cost.baseImage );                   // Show our image inside it.
 //    //     waitKey(0);                                          // Wait for a keystroke in the window
 //    usleep(10);
+
+            //cout<<cv.downloadOldStyle(5);
         }
 //        allDie=1;
 //        sleep(10);
@@ -229,7 +241,7 @@ int App_main( int argc, char** argv )
         usleep(1000);
     }
 end:
-cudaProfilerStop();
+//cudaProfilerStop();
     return 0;
 }
 

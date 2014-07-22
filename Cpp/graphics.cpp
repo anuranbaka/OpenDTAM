@@ -76,8 +76,6 @@ void* guiLoop(void*){
     pthread_setname_np(pthread_self(),"Graphics");
     Mat mat;
     while(1){
-        if(allDie)
-            return 0;
         if (props.size()>0){//deal with new windows
             Gmux.lock();
             string name=take(nameWin);
@@ -125,6 +123,8 @@ void* guiLoop(void*){
             pausing=0;
         }
         waitKey(1);
+        if(allDie)
+            return 0;
 //         usleep(100);
     }
     return NULL;

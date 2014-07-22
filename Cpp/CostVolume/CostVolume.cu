@@ -14,6 +14,9 @@ namespace cv { namespace gpu { namespace device {
     struct m33{
         float data [9];
     };
+    struct m34{
+                float data[12];
+            };
 //__constant__ float sliceToIm[3 * 3];
 __constant__ uint  rows;
 __constant__ uint  cols;
@@ -137,6 +140,83 @@ __global__ void updateCostCol(m33 c_sliceToIm,unsigned int yoff)
     lo[offset]=minv;
     hi[offset]=maxv;
     loInd[offset]=mini;
+}
+__global__ void passThrough();
+void passThroughCaller(int cols,int rows){
+   dim3 dimBlock(64,4);
+   dim3 dimGrid((cols  + dimBlock.x - 1) / dimBlock.x,
+                (rows + dimBlock.y - 1) / dimBlock.y);
+   passThrough<<<dimGrid, dimBlock>>>();
+}
+
+__global__ void passThrough()
+{
+
+
+    unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+
+
+
+    float4 c = tex2D<float4>(tex, x, y);
+    cdata[x+y*cols]=c.x;
+}
+
+__global__ void persp(m34 p);
+void perspCaller(int cols,int rows,m34 p){
+   dim3 dimBlock(64,4);
+   dim3 dimGrid((cols  + dimBlock.x - 1) / dimBlock.x,
+                (rows + dimBlock.y - 1) / dimBlock.y);
+   persp<<<dimGrid, dimBlock>>>(p);
+}
+__global__ void persp(m34 p)
+{
+    unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+    float xf=x;
+    float yf=y;
+
+    float wi = p.data[8]*xf + p.data[9]*yf + p.data[10]*0 + p.data[11];
+    float xi = (p.data[0]*xf + p.data[1]*yf + p.data[2] *0 + p.data[3])/wi;
+    float yi = (p.data[4]*xf + p.data[5]*yf + p.data[6] *0 + p.data[7])/wi;
+
+
+
+    float4 c = tex2D<float4>(tex, xi, yi);
+    cdata[x+y*cols]=c.x;
+}
+
+__global__ void volumeProject(m34 p);
+void volumeProjectCaller(int cols,int rows,m34 p){
+   dim3 dimBlock(64,4);
+   dim3 dimGrid((cols  + dimBlock.x - 1) / dimBlock.x,
+                (rows + dimBlock.y - 1) / dimBlock.y);
+   volumeProject<<<dimGrid, dimBlock>>>(p);
+}
+
+
+__global__ void volumeProject(m34 p)
+{
+    unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+    float xf=x;
+    float yf=y;
+
+    float wi = p.data[8]*xf + p.data[9]*yf + p.data[10]*0 + p.data[11];
+    float xi = (p.data[0]*xf + p.data[1]*yf + p.data[2] *0 + p.data[3]);
+    float yi = (p.data[4]*xf + p.data[5]*yf + p.data[6] *0 + p.data[7]);
+
+    for(unsigned int z=0;z<layers;z++){
+        float wiz = wi+p.data[10]*z;
+        float xiz = xi+p.data[2] *z;
+        float yiz = yi+p.data[6] *z;
+        float4 c = tex2D<float4>(tex, xiz/wiz, yiz/wiz);
+        cdata[x+y*640]=c.x;
+    }
+
+
+
 }
 
 }}}}
