@@ -157,7 +157,7 @@ void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, con
     imFromCV.colRange(2,3)*=depthStep;
     //load up the constant stuff
     loadConstants(layers, rows*cols, (float3*) (baseImage.data),
-            hits,  data, (float*) (lo.data), (float*) (hi.data), (uint*) (loInd.data),
+            hits,  data, (float*) (lo.data), (float*) (hi.data), (float*) (loInd.data),
             rows, cols,texObj);
     //for each slice
     for(int y=0; y<rows; y++){
@@ -193,7 +193,9 @@ void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, con
 //    volumeProjectCaller(cols,rows,persp);
 //    simpleCostCaller(cols,rows,persp);
 //    globalWeightedCostCaller(cols,rows,persp,.3);
-    globalWeightedBoundsCostCaller(cols,rows,persp,.3);
+    float w=count+++0.1;//fun parse
+    w/=(w+1); 
+    globalWeightedBoundsCostCaller(cols,rows,persp,w);
 
 }
 

@@ -17,7 +17,7 @@ __constant__ float* hdata;
 __constant__ float* cdata;
 __constant__ float* lo;
 __constant__ float* hi;
-__constant__ uint* loInd;
+__constant__ float* loInd;
 __constant__ /*const __restrict__*/ float3* base;
 __constant__ cudaTextureObject_t tex;
 
@@ -26,7 +26,7 @@ __global__ void updateCostCol(m33 sliceToIm, unsigned int yoff);
 #define SEND(type,sym) cudaMemcpyToSymbol(sym, &h_ ## sym, sizeof(type));
 
 void loadConstants(int h_layers, int h_layerStep, float3* h_base,
-        float* h_hdata, float* h_cdata, float* h_lo, float* h_hi, uint* h_loInd,
+        float* h_hdata, float* h_cdata, float* h_lo, float* h_hi, float* h_loInd,
         uint h_rows, uint h_cols, cudaTextureObject_t h_tex) {
 //    cudaMemcpyToSymbol(c_sliceToIm, h_CVToIm, 3*4*sizeof(float));
     cudaMemcpyToSymbol(layers, &h_layers, sizeof(int));
@@ -36,7 +36,7 @@ void loadConstants(int h_layers, int h_layerStep, float3* h_base,
     assert(h_lo);
     cudaSafeCall(cudaMemcpyToSymbol(lo, &h_lo, sizeof(float*)));
     cudaMemcpyToSymbol(hi, &h_hi, sizeof(float*));
-    cudaMemcpyToSymbol(loInd, &h_loInd, sizeof(uint*));
+    cudaMemcpyToSymbol(loInd, &h_loInd, sizeof(float*));
     SEND(uint,cols);
     SEND(uint,rows);
     SEND(float3*,base);
@@ -294,7 +294,7 @@ __global__ void globalWeightedBoundsCost(m34 p,float weight)
     float xi = (p.data[0]*xf + p.data[1]*yf + p.data[3]);
     float yi = (p.data[4]*xf + p.data[5]*yf + p.data[7]);
     float minv=1000.0,maxv=0.0;
-    unsigned int mini=0;
+    float mini=0;
     for(unsigned int z=0;z<layers;z++){
         float c0=cdata[offset+z*layerStep];
         float wiz = wi+p.data[10]*z;

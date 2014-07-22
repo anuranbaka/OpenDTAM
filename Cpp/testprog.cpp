@@ -148,8 +148,10 @@ int App_main( int argc, char** argv )
             cudaDeviceSynchronize();
             
             Mat ret=cv.downloadOldStyle(5);
-            cv.lo.download(ret);
-            pfShow("cost slice",ret/*,0,cv::Vec2d(0,5)*/);
+            cv.loInd.download(ret);
+            cout<<ret.type();
+            pfShow("cost slice",ret,0,cv::Vec2d(0,32));
+            gpause();
            
 //
 //            if (cost.imageNum<3){
