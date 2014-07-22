@@ -192,7 +192,8 @@ void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, con
 //    perspCaller(cols,rows,persp);
 //    volumeProjectCaller(cols,rows,persp);
 //    simpleCostCaller(cols,rows,persp);
-    globalWeightedCostCaller(cols,rows,persp,.3);
+//    globalWeightedCostCaller(cols,rows,persp,.3);
+    globalWeightedBoundsCostCaller(cols,rows,persp,.3);
 
 }
 
