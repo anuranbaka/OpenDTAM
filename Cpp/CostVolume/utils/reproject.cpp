@@ -33,10 +33,11 @@ void reproject( const Mat& src,
     Mat_<double>  cBpln_B;
     hconcat(cameraMatrix,Mat()=(Mat_<double>(3,1) << 0,0,0), cBpln_B);
     Mat_<double> cBpln_Apln=cBpln_B*cB_W*cW_A*cA_Apln;
-    cout<<"depth"<<invDepth<<endl;
-   {//debug
-   cout<<"warpmat: "<<cBpln_Apln<<endl;
-   }
+
+//    {//debug
+//        cout<<"depth"<<invDepth<<endl;
+//        cout<<"warpmat: "<<cBpln_Apln<<endl;
+//    }
 
     warpPerspective(src, dst, cBpln_Apln, src.size() ,INTER_NEAREST,BORDER_CONSTANT,Scalar(-1.0e100,-1.0e100,-1.0e100));//.013 s for nearest, .021 for linear
 

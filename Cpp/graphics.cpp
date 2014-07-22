@@ -115,7 +115,7 @@ void* guiLoop(void*){
            
         }else if(pausing){
             namedWindow("control",CV_WINDOW_KEEPRATIO);
-            cout<<"Paused"<<endl;
+            cout<<"Paused: Space (in GUI window) to continue"<<endl;
             while(waitKey()!=' ');
             
             CV_XADD(&pausing,-1);

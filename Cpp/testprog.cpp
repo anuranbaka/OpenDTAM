@@ -46,11 +46,13 @@ void myExit(){
 
 int App_main( int argc, char** argv )
 {
-
+    cv::gpu::CudaMem imageContainer;
     pthread_setname_np(pthread_self(),"App_main");
         
     FileStorage fs;
-
+    void* junk;
+    cudaMalloc(&junk,500);
+    cudaFree(junk);
 
     Mat cameraAffinePoseBase;
     int imageNum=0;
@@ -137,20 +139,17 @@ int App_main( int argc, char** argv )
             //cost.updateCostL1(image,R,T);//dbg
             Mat cameraAffinePoseAlternate,mask;
             hconcat(R,T,cameraAffinePoseAlternate);
-            cv::gpu::CudaMem cimg(image.rows,image.cols,CV_8UC4);
+            imageContainer.create(image.rows,image.cols,CV_8UC4);
             Mat tmp;
-//             
             cvtColor(image,tmp,CV_RGB2RGBA);
-            const Mat& tmp2=cimg;
-            tmp.convertTo(tmp2,CV_8UC4,255.0);
-
-            cv.updateCost(cimg, R, T);
+            Mat imageContainerRef=imageContainer;//Required by ambiguous conversion rules
+            tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
+            cv.updateCost(imageContainer, R, T);
             cudaDeviceSynchronize();
             
-            Mat ret=cv.downloadOldStyle(5);
+            Mat ret;
             cv.loInd.download(ret);
-            cout<<ret.type();
-            pfShow("cost slice",ret,0,cv::Vec2d(0,32));
+            pfShow("Base Soln",ret,0,cv::Vec2d(0,32));
             gpause();
            
 //

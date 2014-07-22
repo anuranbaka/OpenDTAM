@@ -26,16 +26,16 @@ using namespace gpu;
 void CostVolume::solveProjection(const cv::Mat& R, const cv::Mat& T) {
     Mat P;
     RTToP(R, T, P);
-    cout<<cameraMatrix<<endl;
     projection.create(4, 4, CV_64FC1);
     projection=0.0;
     projection(Range(0, 2), Range(0, 3)) += cameraMatrix.rowRange(0, 2);
 
     projection.at<double>(2,3)=1.0;
     projection.at<double>(3,2)=1.0;
-    cout<<"Augmented Camera Matrix:\n"<<projection<<endl;
+//    {//debug
+//        cout<<"Augmented Camera Matrix:\n"<<projection<<endl;
+//    }
     projection=projection*P;
-    
     cout<<projection<<endl;
     
    // exit(0);
