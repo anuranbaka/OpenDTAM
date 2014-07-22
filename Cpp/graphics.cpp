@@ -111,6 +111,7 @@ void* guiLoop(void*){
                 namedWindow(name,CV_WINDOW_KEEPRATIO);
             }
             imshow( name, mat);
+            waitKey(1);//waitkey must occur here so matrix doesn't fall out of scope because imshow is dumb that way :(
            
         }else if(pausing){
             namedWindow("control",CV_WINDOW_KEEPRATIO);
@@ -122,7 +123,7 @@ void* guiLoop(void*){
         if(pausing<0){
             pausing=0;
         }
-        waitKey(1);
+//         waitKey(1);
         if(allDie)
             return 0;
 //         usleep(100);

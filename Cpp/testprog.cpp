@@ -147,9 +147,9 @@ int App_main( int argc, char** argv )
             cv.updateCost(cimg, R, T);
             cudaDeviceSynchronize();
             
-            Mat ret=cv.downloadOldStyle(0);
+            Mat ret=cv.downloadOldStyle(5);
             pfShow("cost slice",ret/*,0,cv::Vec2d(0,5)*/);
-           // myExit();
+           
 //
 //            if (cost.imageNum<3){
 //                tic();
@@ -235,7 +235,7 @@ int App_main( int argc, char** argv )
         }
 //        allDie=1;
 //        sleep(10);
-        goto end;
+        myExit();
     }
     while(1){
         usleep(1000);
