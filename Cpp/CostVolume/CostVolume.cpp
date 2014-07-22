@@ -83,8 +83,7 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
 
 static cudaArray* cuArray=0;
 static cudaTextureObject_t texObj=0;
-cudaTextureObject_t simpleTex(Mat image){
-    Mat im2=image.clone();
+cudaTextureObject_t simpleTex(const Mat& image){
     assert(image.isContinuous());
     assert(image.type()==CV_8UC4);
     
@@ -103,7 +102,7 @@ cudaTextureObject_t simpleTex(Mat image){
     cudaSafeCall(cudaMallocArray(&cuArray, &channelDesc, image.cols, image.rows));
     }
     
-    cudaSafeCall(cudaMemcpyToArray(cuArray, 0, 0, im2.datastart, im2.dataend-im2.datastart,
+    cudaSafeCall(cudaMemcpyToArray(cuArray, 0, 0, image.datastart, image.dataend-image.datastart,
                                    cudaMemcpyHostToDevice/*,StreamAccessor::getStream(cvStream)*/));
     
     // Specify texture memory location
@@ -189,10 +188,11 @@ void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, con
     double *p = (double*)imFromCV.data;
     m34 persp;
     for(int i=0;i<12;i++) persp.data[i]=p[i];
-//         passThroughCaller(cols,rows);
-//         perspCaller(cols,rows,persp);
-//        volumeProjectCaller(cols,rows,persp);
-        simpleCostCaller(cols,rows,persp);
+//    passThroughCaller(cols,rows);
+//    perspCaller(cols,rows,persp);
+//    volumeProjectCaller(cols,rows,persp);
+//    simpleCostCaller(cols,rows,persp);
+    globalWeightedCostCaller(cols,rows,persp,.3);
 
 }
 

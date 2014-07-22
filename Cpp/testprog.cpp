@@ -80,8 +80,8 @@ int App_main( int argc, char** argv )
 
     Cost cost(image.clone(),32, cameraMatrix, R,T);
     Mat tmp;
-    image.convertTo(tmp,CV_8UC4, 255.0);
-    CostVolume cv(tmp,(FrameID)1,32,0.015,0.0,R,T,cameraMatrix);
+    //image.convertTo(tmp,CV_8UC4, 255.0);
+    CostVolume cv(image,(FrameID)1,32,0.015,0.0,R,T,cameraMatrix);
 
     Track tracker(cost);
     assert(cost.rows==480);
