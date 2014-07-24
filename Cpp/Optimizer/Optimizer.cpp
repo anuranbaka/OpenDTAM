@@ -43,7 +43,7 @@ bool Optimizer::optimizeA(){
 
     loadConstants(cv.rows, cv.cols, cv.layers, layerStep, a, d, cv.data, (float*)cv.lo.data,
             (float*)cv.hi.data, (float*)cv.loInd.data);
-    minimizeACaller  ( 0);
+    minimizeACaller  ( 1,1);
     return doneOptimizing;
 }
 
