@@ -1,7 +1,7 @@
 #ifndef TRACK_HPP
 #define TRACK_HPP
 #include <opencv2/opencv.hpp>
-#include <Cost.h>
+#include <CostVolume/Cost.h>
 
 class Track{
 public:

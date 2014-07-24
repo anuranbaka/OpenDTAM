@@ -11,6 +11,7 @@
 #include "CostVolume/utils/reprojectCloud.hpp"
 #include "CostVolume/Cost.h"
 #include "CostVolume/CostVolume.hpp"
+#include "Optimizer/Optimizer.hpp"
 #include "graphics.hpp"
 #include "set_affinity.h"
 #include "Track/Track.hpp"
@@ -81,9 +82,14 @@ int App_main( int argc, char** argv )
     hconcat(R,T,cameraAffinePoseBase);
 
     Cost cost(image.clone(),32, cameraMatrix, R,T);
+
     Mat tmp;
     //image.convertTo(tmp,CV_8UC4, 255.0);
     CostVolume cv(image,(FrameID)1,32,0.015,0.0,R,T,cameraMatrix);
+    Optimizer optimizer(cv);
+    optimizer.initOptimization();
+    optimizer.optimizeA();
+
 
     Track tracker(cost);
     assert(cost.rows==480);
@@ -149,8 +155,13 @@ int App_main( int argc, char** argv )
             
             Mat ret;
             cv.loInd.download(ret);
-            pfShow("Base Soln",ret,0,cv::Vec2d(0,32));
-            gpause();
+           // pfShow("Initial Min Soln",ret,0,cv::Vec2d(0,32));
+            optimizer.optimizeA();
+
+            optimizer._a.download(ret);
+            //pfShow("One A Opt Soln",ret,0,cv::Vec2d(0,32));
+            //gpause();
+            //gpause();
            
 //
 //            if (cost.imageNum<3){

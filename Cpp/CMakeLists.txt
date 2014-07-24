@@ -9,26 +9,43 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O3 -g -ggdb")
 find_package( OpenCV 2.4 REQUIRED )
 find_package( Qt5Core REQUIRED)
 find_package(CUDA REQUIRED)
+find_package(Boost COMPONENTS system thread)
 
 #message(STATUS ${OpenCV_CONSIDERED_CONFIGS})
 
+macro (add_sources)
+    file (RELATIVE_PATH _relPath "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
+    foreach (_src ${ARGN})
+        if (_relPath)
+            list (APPEND DTAM_SOURCES "${_relPath}/${_src}")
+        else()
+            list (APPEND DTAM_SOURCES "${_src}")
+        endif()
+    endforeach()
+    if (_relPath)
+        # propagate SRCS to parent directory
+        set (DTAM_SOURCES ${DTAM_SOURCES} PARENT_SCOPE)
+    endif()
+endmacro(add_sources)
 
 
 
 set(BASEPATH "${CMAKE_SOURCE_DIR}")
-include_directories("${BASEPATH}" ${CUDA_INCLUDE_DIRS})
+
 
 #add_library(GraphicsLib SHARED graphics.cpp)#must be in own library so we can link against it.
 
-include_directories(CostVolume)
+
 add_subdirectory(CostVolume)
-
-include_directories(Track)
 add_subdirectory(Track)
+add_subdirectory(Optimizer)
 
-find_package(Boost COMPONENTS system thread)
-include_directories(${Boost_INCLUDE_DIRS})
+
+include_directories("${BASEPATH}" ${CUDA_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_35,code=sm_35;--use_fast_math ;--restrict; -lineinfo)
+cuda_add_library(OpenDTAM SHARED ${DTAM_SOURCES})
 
 add_executable (a.out testprog.cpp convertAhandaPovRayToStandard.cpp graphics.cpp)
-target_link_libraries( a.out  TrackFiles CostFiles ${OpenCV_LIBS} ${Boost_LIBRARIES})
+target_link_libraries( a.out  OpenDTAM ${OpenCV_LIBS} ${Boost_LIBRARIES})
 

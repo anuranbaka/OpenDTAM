@@ -31,19 +31,7 @@ typedef size_t st;
 #define QUIET_DTAM 0
 #include "quiet.hpp"
 
-void myshow(const string name,const Mat& _mat){
-    Mat mat=_mat.clone();
-    double min;
-    double max;
-    cv::minMaxIdx(mat, &min, &max);
-    float scale = 1/ (max-min);
-    mat.convertTo(mat,CV_32FC1, scale, -min*scale);
-    mat.convertTo(mat,CV_8UC3, 255.0);//use 8 bit so we can have the nice mouse over
-    cout<<name<<": view scale: "<<max-min<<endl;
-    namedWindow(name, 1 );
-    imshow( name, mat);
 
-}
 
 
 
@@ -205,7 +193,6 @@ inline float Cost::aBasic(float* data,float l,float ds,float d,float& value){
         value=vnext;
         return (float)l-1;
     }
-    
     
     if(mi==0){//first was best
         value=mv;

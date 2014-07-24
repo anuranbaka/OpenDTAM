@@ -1,5 +1,4 @@
 #include "Track.hpp"
-#include <Cost.h>
 #include "utils/utils.hpp"
 using namespace cv;
 using namespace std;

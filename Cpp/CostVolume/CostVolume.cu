@@ -19,6 +19,7 @@ __constant__ float* lo;
 __constant__ float* hi;
 __constant__ float* loInd;
 __constant__ /*const __restrict__*/ float3* base;
+__constant__ /*const __restrict__*/ float* bf;
 __constant__ cudaTextureObject_t tex;
 
 __global__ void updateCostCol(m33 sliceToIm, unsigned int yoff);
@@ -40,6 +41,8 @@ void loadConstants(int h_layers, int h_layerStep, float3* h_base,
     SEND(uint,cols);
     SEND(uint,rows);
     SEND(float3*,base);
+    float* h_bf=(float*)h_base;
+    SEND(float*,bf);
     SEND(cudaTextureObject_t,tex);
 }
 
@@ -49,9 +52,9 @@ void loadConstants(int h_layers, int h_layerStep, float3* h_base,
 
 
 void updateCostColCaller(int cols,int rows, int y, m33 sliceToIm){
-    static cudaStream_t strs [15]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    static cudaStream_t strs [32]={0,0,0,0, 0,0,0,0,  0,0,0,0, 0,0,0,0,  0,0,0,0, 0,0,0,0,  0,0,0,0, 0,0,0,0,};
     static int num=0;
-    int here=(num++%14)+1;
+    int here=(num++%31)+1;
     if(!strs[here])
         cudaStreamCreate(&(strs[here]));
    dim3 dimBlock(64,1);
@@ -273,9 +276,11 @@ __global__ void globalWeightedCost(m34 p,float weight)
         cdata[offset+z*layerStep]=c0*weight+(v1+v2+v3)*(1-weight);
     }
 }
+#define BLOCK_X 64
+#define BLOCK_Y 4
 __global__ void globalWeightedBoundsCost(m34 p,float weight);
 void globalWeightedBoundsCostCaller(int cols,int rows,m34 p,float weight){
-   dim3 dimBlock(64,4);
+   dim3 dimBlock(BLOCK_X,BLOCK_Y);
    dim3 dimGrid((cols  + dimBlock.x - 1) / dimBlock.x,
                 (rows + dimBlock.y - 1) / dimBlock.y);
    globalWeightedBoundsCost<<<dimGrid, dimBlock>>>(p, weight);
@@ -284,12 +289,32 @@ void globalWeightedBoundsCostCaller(int cols,int rows,m34 p,float weight){
 
 __global__ void globalWeightedBoundsCost(m34 p,float weight)
 {
+    //float*bf=(float*)base;
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+//    //unsigned int topleft=3*blockDim.x * blockIdx.x + 3*cols*blockDim.y*blockIdx.y;
+//    //unsigned int loff=threadIdx.x+3*cols*threadIdx.y;
+//    unsigned int sooff=threadIdx.x+threadIdx.y*blockDim.x;
+//    //unsigned int sioff=threadIdx.x+3*threadIdx.y*blockDim.x;
+//    unsigned int sioff=3*sooff-2*threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+    //unsigned int gindex=topleft+loff;
+
     float xf=x;
     float yf=y;
     unsigned int offset=x+y*cols;
-    float3 B = base[x+y*cols];
+//    unsigned int gindex=offset*3-2*threadIdx.x;
+//    const unsigned int mul=BLOCK_X;
+//    __shared__ float buff[BLOCK_X*BLOCK_Y*3];
+//
+//
+//    buff[sioff] = bf[gindex];
+//    buff[sioff+mul] = bf[gindex+mul];
+//    buff[sioff+mul*2] = bf[gindex+mul*2];
+//    //__syncthreads();
+//    float3 B =((float3*)buff)[sooff];
+
+
+    float3 B = base[x+y*cols];//Known bug:this requires 12 loads instead of 4 because of stupid memory addressing, can't really fix
     float wi = p.data[8]*xf + p.data[9]*yf + p.data[11];
     float xi = (p.data[0]*xf + p.data[1]*yf + p.data[3]);
     float yi = (p.data[4]*xf + p.data[5]*yf + p.data[7]);
@@ -316,6 +341,8 @@ __global__ void globalWeightedBoundsCost(m34 p,float weight)
     loInd[offset]=mini;
     hi[offset]=maxv;
 }
+
+
 }}}}
 
 
