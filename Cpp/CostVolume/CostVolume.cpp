@@ -65,7 +65,9 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
     cameraMatrix  = _cameraMatrix.clone();
     solveProjection(R, T);
     baseImage.upload(image);
+    cvtColor(baseImage,baseImageGray,CV_RGB2GRAY);
     lo.create(image.size(), CV_32FC1);
+    lo=0;
     hi.create(image.size(), CV_32FC1);
     loInd.create(image.size(), CV_32FC1);
     dataContainer.create(layers, rows * cols, CV_32FC1);
@@ -101,7 +103,7 @@ cudaTextureObject_t simpleTex(const Mat& image){
     if (!cuArray){
     cudaSafeCall(cudaMallocArray(&cuArray, &channelDesc, image.cols, image.rows));
     }
-    
+    assert((image.dataend-image.datastart)==image.cols*image.rows*sizeof(uchar4));
     cudaSafeCall(cudaMemcpyToArray(cuArray, 0, 0, image.datastart, image.dataend-image.datastart,
                                    cudaMemcpyHostToDevice/*,StreamAccessor::getStream(cvStream)*/));
     

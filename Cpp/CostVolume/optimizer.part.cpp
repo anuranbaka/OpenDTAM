@@ -170,6 +170,7 @@ static inline float afunc(float* data,float theta,float d,float ds,int a,float l
 //     return std::abs(1.0/(2.0*theta)*ds*ds*(d-a)) + data[a]*lambda;//L1 Version
 }
 
+
 inline float Cost::aBasic(float* data,float l,float ds,float d,float& value){
     int mi=0;
     float vlast,vnext,v,A,B,C;

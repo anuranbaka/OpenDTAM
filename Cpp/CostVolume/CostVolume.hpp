@@ -25,6 +25,7 @@ public:
     cv::Mat projection;//projects world coordinates (x,y,z) into (rows,cols,layers)
 
     cv::gpu::GpuMat baseImage;
+    cv::gpu::GpuMat baseImageGray;
     cv::gpu::GpuMat lo;
     cv::gpu::GpuMat hi;
     cv::gpu::GpuMat loInd;

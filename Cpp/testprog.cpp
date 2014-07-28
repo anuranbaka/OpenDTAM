@@ -88,7 +88,6 @@ int App_main( int argc, char** argv )
     CostVolume cv(image,(FrameID)1,32,0.015,0.0,R,T,cameraMatrix);
     Optimizer optimizer(cv);
     optimizer.initOptimization();
-    optimizer.optimizeA();
 
 
     Track tracker(cost);
@@ -141,7 +140,7 @@ int App_main( int argc, char** argv )
             T=Ts[imageNum];
             R=Rs[imageNum];
             image=images[imageNum];
-           
+
             //cost.updateCostL1(image,R,T);//dbg
             Mat cameraAffinePoseAlternate,mask;
             hconcat(R,T,cameraAffinePoseAlternate);
@@ -152,17 +151,30 @@ int App_main( int argc, char** argv )
             tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
             cv.updateCost(imageContainer, R, T);
             cudaDeviceSynchronize();
-            
+            if (imageNum==3){
+                optimizer.initOptimization();
+            }
             Mat ret;
             cv.loInd.download(ret);
            // pfShow("Initial Min Soln",ret,0,cv::Vec2d(0,32));
             optimizer.optimizeA();
 
             optimizer._a.download(ret);
-            //pfShow("One A Opt Soln",ret,0,cv::Vec2d(0,32));
+            pfShow("One A Opt Soln",ret,0,cv::Vec2d(0,32));
+
+
+            optimizer.cacheGValues();
+            optimizer._gy.download(ret);
+            //pfShow("G function", ret, 0, cv::Vec2d(0, 1));
             //gpause();
+            for (int i=0;i<100;i++){
+            optimizer.optimizeQD();
+            optimizer._qx.download(ret);
+            pfShow("G function", ret/*, 0, cv::Vec2d(0, 1)*/);
+            optimizer._d.download(ret);
+            pfShow("D function", ret, 0, cv::Vec2d(0, 32));
+        }
             //gpause();
-           
 //
 //            if (cost.imageNum<3){
 //                tic();

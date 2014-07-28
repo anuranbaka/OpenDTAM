@@ -87,7 +87,7 @@ private:
         thetaStart=500.0;
         thetaMin=0.01;
         running=false;
-        
+
         epsilon=.1;
         lambda=.000001;
         thetaStep=.99;

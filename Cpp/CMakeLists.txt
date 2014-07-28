@@ -4,7 +4,7 @@ project(dtam)
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/local_store/Qt/5.3/gcc_64/lib/cmake")# "/local_store/opencv-2.4.9/debug/unix-install/")
 #message(STATUS ${CMAKE_MODULE_PATH})
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O3 -g -ggdb")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O3 -g -ggdb ")
 
 find_package( OpenCV 2.4 REQUIRED )
 find_package( Qt5Core REQUIRED)
@@ -43,7 +43,7 @@ add_subdirectory(Optimizer)
 
 include_directories("${BASEPATH}" ${CUDA_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_35,code=sm_35;--use_fast_math ;--restrict; -lineinfo)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_35,code=sm_35;--use_fast_math ;--restrict; -lineinfo; )
 cuda_add_library(OpenDTAM SHARED ${DTAM_SOURCES})
 
 add_executable (a.out testprog.cpp convertAhandaPovRayToStandard.cpp graphics.cpp)

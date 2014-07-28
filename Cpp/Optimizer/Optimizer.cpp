@@ -10,7 +10,7 @@ void Optimizer::setDefaultParams(){
     thetaMin   =     0.01;
     thetaStep  =      .99;
     epsilon    =       .1;
-    lambda     =  .000001;
+    lambda     =  .001;
 }
 
 Optimizer::Optimizer(CostVolume cv) : cv(cv)
@@ -20,6 +20,7 @@ Optimizer::Optimizer(CostVolume cv) : cv(cv)
 
 void Optimizer::initOptimization(){
     theta=thetaStart;
+    computeSigmas();
     initA();
     initQD();
 
@@ -30,6 +31,7 @@ void Optimizer::initQD(){
     _qx=0.0;
     _qy.create(cv.rows,cv.cols,CV_32FC1);
     _qy=0.0;
+    cacheGValues();
 }
 void Optimizer::initA() {
     cv.loInd.copyTo(_a);
@@ -43,7 +45,8 @@ bool Optimizer::optimizeA(){
 
     loadConstants(cv.rows, cv.cols, cv.layers, layerStep, a, d, cv.data, (float*)cv.lo.data,
             (float*)cv.hi.data, (float*)cv.loInd.data);
-    minimizeACaller  ( 1,1);
+    minimizeACaller  ( theta,lambda);
     return doneOptimizing;
 }
+
 
