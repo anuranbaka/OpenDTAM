@@ -167,7 +167,7 @@ int App_main( int argc, char** argv )
             optimizer._gy.download(ret);
             //pfShow("G function", ret, 0, cv::Vec2d(0, 1));
             //gpause();
-            for (int i=0;i<100;i++){
+            for (int i=0;i<10;i++){
             optimizer.optimizeQD();
             optimizer._qx.download(ret);
             pfShow("G function", ret/*, 0, cv::Vec2d(0, 1)*/);

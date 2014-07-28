@@ -67,9 +67,9 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
     baseImage.upload(image);
     cvtColor(baseImage,baseImageGray,CV_RGB2GRAY);
     lo.create(image.size(), CV_32FC1);
-    lo=0;
     hi.create(image.size(), CV_32FC1);
     loInd.create(image.size(), CV_32FC1);
+    loInd=0;
     dataContainer.create(layers, rows * cols, CV_32FC1);
     dataContainer = initialCost;
     data = (float*) dataContainer.data;
