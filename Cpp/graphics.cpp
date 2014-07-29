@@ -21,10 +21,14 @@ void gpause(){
     gcheck();
 }
 void gcheck(){
-
-    while(CV_XADD(&pausing,0)){
+    while(allDie){
         usleep(100);
-        if(allDie)
+        if(allDie>1)
+                    return;
+    }
+    while(ready||CV_XADD(&pausing,0)){
+        usleep(100);
+        if(allDie>1)
                     return;
     }
 }
@@ -124,8 +128,12 @@ void* guiLoop(void*){
             pausing=0;
         }
 //         waitKey(1);
-        if(allDie)
+        if(allDie){
+            waitKey(1);
+            waitKey(1);
+            allDie++;
             return 0;
+        }
 //         usleep(100);
     }
     return NULL;

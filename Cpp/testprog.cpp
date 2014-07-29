@@ -39,9 +39,11 @@ int main( int argc, char** argv ){
     return App_main(argc, argv);
 }
 void myExit(){
-    sleep(1);
+    cudaDeviceSynchronize();
+
     allDie=1;
-    sleep(1);
+    gcheck();
+    usleep(100000);
     exit(0);
 }
 
@@ -155,6 +157,7 @@ int App_main( int argc, char** argv )
             cudaDeviceSynchronize();
             Mat ret;
             if (imageNum==5){
+                cudaProfilerStart();//doesn't really work
                 optimizer.initOptimization();
                 bool doneOptimizing;
                 do{
@@ -183,7 +186,9 @@ int App_main( int argc, char** argv )
                 optimizer._d.download(ret);
                 optimizer._d.download(ret);
                 pfShow("Depth Solution", ret, 0, cv::Vec2d(0, 32));
-                gpause();
+//                gpause();
+                cudaProfilerStop();
+                myExit();
             }
 
             cv.loInd.download(ret);
@@ -281,7 +286,7 @@ int App_main( int argc, char** argv )
         usleep(1000);
     }
 end:
-//cudaProfilerStop();
+
     return 0;
 }
 

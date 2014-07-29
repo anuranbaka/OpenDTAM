@@ -5,6 +5,10 @@
 
 #include "Optimizer.hpp"
 #include "Optimizer.cuh"
+#include <opencv2/gpu/stream_accessor.hpp>
+#include <iostream>
+
+using namespace std;
 void Optimizer::setDefaultParams(){
     thetaStart =    20.0;
     thetaMin   =     10.0;
@@ -24,8 +28,10 @@ void Optimizer::initOptimization(){
     initA();
     initQD();
 
+
 }
 void Optimizer::initQD(){
+
     _a.copyTo(_d);
     _qx.create(cv.rows,cv.cols,CV_32FC1);
     _qx=0.0;
@@ -38,6 +44,8 @@ void Optimizer::initA() {
 }
 bool Optimizer::optimizeA(){
     using namespace cv::gpu::device::dtam_optimizer;
+    localStream = cv::gpu::StreamAccessor::getStream(cvStream);
+
     bool doneOptimizing = theta <= thetaMin;
     int layerStep = cv.rows * cv.cols;
     float* d = (float*) _d.data;
