@@ -6,11 +6,11 @@
 #include "Optimizer.hpp"
 #include "Optimizer.cuh"
 void Optimizer::setDefaultParams(){
-    thetaStart =    500.0;
-    thetaMin   =     0.01;
-    thetaStep  =      .99;
-    epsilon    =       .1;
-    lambda     =  .001;
+    thetaStart =    20.0;
+    thetaMin   =     10.0;
+    thetaStep  =      .97;
+    epsilon    =       .01;
+    lambda     =       .01;
 }
 
 Optimizer::Optimizer(CostVolume cv) : cv(cv)
@@ -43,9 +43,10 @@ bool Optimizer::optimizeA(){
     float* d = (float*) _d.data;
     float* a = (float*) _a.data;
 
-    loadConstants(cv.rows, cv.cols, cv.layers, layerStep, a, d, cv.data, (float*)cv.lo.data,
-            (float*)cv.hi.data, (float*)cv.loInd.data);
+//    loadConstants(cv.rows, cv.cols, cv.layers, layerStep, a, d, cv.data, (float*)cv.lo.data,
+//            (float*)cv.hi.data, (float*)cv.loInd.data);
     minimizeACaller  ( theta,lambda);
+    theta*=thetaStep;
     return doneOptimizing;
 }
 

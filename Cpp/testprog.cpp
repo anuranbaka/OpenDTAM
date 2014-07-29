@@ -149,31 +149,46 @@ int App_main( int argc, char** argv )
             cvtColor(image,tmp,CV_RGB2RGBA);
             Mat imageContainerRef=imageContainer;//Required by ambiguous conversion rules
             tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
+            if (imageNum<5){
             cv.updateCost(imageContainer, R, T);
-            cudaDeviceSynchronize();
-            if (imageNum==3){
-                optimizer.initOptimization();
             }
+            cudaDeviceSynchronize();
             Mat ret;
+            if (imageNum==5){
+                optimizer.initOptimization();
+                bool doneOptimizing;
+                do{
+                    cout<<"Theta: "<< optimizer.theta<<endl;
+//                    optimizer._a.download(ret);
+//                    pfShow("One A Opt Soln", ret, 0, cv::Vec2d(0, 32));
+
+    //                optimizer.cacheGValues();
+    //                optimizer._gy.download(ret);
+    //                pfShow("G function", ret, 0, cv::Vec2d(0, 1));
+    //                gpause();
+                    for (int i = 0; i < 10; i++) {
+                        optimizer.optimizeQD();
+                        cudaDeviceSynchronize();
+//                        optimizer._qx.download(ret);
+//                        pfShow("Qx function", ret, 0, cv::Vec2d(-1, 1));
+//                        optimizer._gy.download(ret);
+//                        pfShow("Gy function", ret, 0, cv::Vec2d(0, 1));
+//                        optimizer._d.download(ret);
+//                        pfShow("D function", ret, 0, cv::Vec2d(0, 32));
+                    }
+                    cudaDeviceSynchronize();
+                    doneOptimizing=optimizer.optimizeA();
+                }while(!doneOptimizing);
+                cudaDeviceSynchronize();
+                optimizer._d.download(ret);
+                optimizer._d.download(ret);
+                pfShow("Depth Solution", ret, 0, cv::Vec2d(0, 32));
+                gpause();
+            }
+
             cv.loInd.download(ret);
            // pfShow("Initial Min Soln",ret,0,cv::Vec2d(0,32));
-            optimizer.optimizeA();
 
-            optimizer._a.download(ret);
-            pfShow("One A Opt Soln",ret,0,cv::Vec2d(0,32));
-
-
-            optimizer.cacheGValues();
-            optimizer._gy.download(ret);
-            //pfShow("G function", ret, 0, cv::Vec2d(0, 1));
-            //gpause();
-            for (int i=0;i<10;i++){
-            optimizer.optimizeQD();
-            optimizer._qx.download(ret);
-            pfShow("G function", ret/*, 0, cv::Vec2d(0, 1)*/);
-            optimizer._d.download(ret);
-            pfShow("D function", ret, 0, cv::Vec2d(0, 32));
-        }
             //gpause();
 //
 //            if (cost.imageNum<3){
