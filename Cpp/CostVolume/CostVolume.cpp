@@ -53,7 +53,7 @@ void CostVolume::checkInputs(const cv::Mat& R, const cv::Mat& T,
 
 CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
         float _far, cv::Mat R, cv::Mat T, cv::Mat _cameraMatrix,
-        float initialCost, float initialWeight) {
+        float initialCost, float initialWeight): R(R),T(T) {
     checkInputs(R, T, _cameraMatrix);
     fid           = _fid;
     rows          = image.rows;

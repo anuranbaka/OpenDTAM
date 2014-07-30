@@ -92,7 +92,8 @@ int App_main( int argc, char** argv )
     optimizer.initOptimization();
 
 
-    Track tracker(cost);
+    //Track tracker(cost);
+    Track tracker(cv,optimizer);
     assert(cost.rows==480);
 
     vector<Mat> images,Rs,Ts;
@@ -118,7 +119,7 @@ int App_main( int argc, char** argv )
 
     }
 
-
+    cudaProfilerStart();
     while(1){
         for (int imageNum=1;imageNum<=50;imageNum++){
             if(imageNum==2){
@@ -157,7 +158,6 @@ int App_main( int argc, char** argv )
             cudaDeviceSynchronize();
             Mat ret;
             if (imageNum==5){
-                cudaProfilerStart();//doesn't really work
                 optimizer.initOptimization();
                 bool doneOptimizing;
                 do{
@@ -176,8 +176,8 @@ int App_main( int argc, char** argv )
 //                        pfShow("Qx function", ret, 0, cv::Vec2d(-1, 1));
 //                        optimizer._gy.download(ret);
 //                        pfShow("Gy function", ret, 0, cv::Vec2d(0, 1));
-//                        optimizer._d.download(ret);
-//                        pfShow("D function", ret, 0, cv::Vec2d(0, 32));
+                        optimizer._d.download(ret);
+                        pfShow("D function", ret, 0, cv::Vec2d(0, 32));
                     }
                     cudaDeviceSynchronize();
                     doneOptimizing=optimizer.optimizeA();
@@ -187,8 +187,6 @@ int App_main( int argc, char** argv )
                 optimizer._d.download(ret);
                 pfShow("Depth Solution", ret, 0, cv::Vec2d(0, 32));
 //                gpause();
-                cudaProfilerStop();
-                myExit();
             }
 
             cv.loInd.download(ret);
@@ -213,45 +211,45 @@ int App_main( int argc, char** argv )
 ////             reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
 //
 //
-//            if(imageNum==1){
-//                tracker.pose=tracker.basePose.clone();
-//            }
-//            //Test out the Tracker
-//            {
-//                Mat tp;
-//                RTToLie(R,T,tp);
-//                //tracker.pose=tp.clone();//Give the answer
-//                tracker.depth=abs(cost.depthMap());
+            if(imageNum==1){
+                tracker.pose=tracker.basePose.clone();
+            }
+            //Test out the Tracker
+            {
+                Mat tp;
+                RTToLie(R,T,tp);
+                //tracker.pose=tp.clone();//Give the answer
+                tracker.depth=optimizer.depthMap();
+
+                tracker.addFrame(image);
+
+                tracker.align();
+                Mat p=tracker.pose;
+                cout << "True Pose: "<< tp << endl;
+                cout << "True Delta: "<< LieSub(tp,tracker.basePose) << endl;
+                cout << "Recovered Pose: "<< p << endl;
+                cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
+                cout << "Pose Error: "<< p-tp << endl;
+
+                reprojectCloud(image,cost.baseImage, tracker.depth, Mat(cost.pose) , LieToP(tracker.pose), Mat(cost.cameraMatrix));
+
+//                 Mat R2,T2;
+//                 LieToRT(p, R2, T2);
 //
-//                tracker.addFrame(image);
+//                 if (imageNum==2&&cost2.imageNum==0){
+//                     cost2=Cost(image.clone(),32, cameraMatrix, R2,T2);
+//                     gpause();
 //
-//                tracker.align();
-//                Mat p=tracker.pose;
-//                cout << "True Pose: "<< tp << endl;
-//                cout << "True Delta: "<< LieSub(tp,tracker.basePose) << endl;
-//                cout << "Recovered Pose: "<< p << endl;
-//                cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
-//                cout << "Pose Error: "<< p-tp << endl;
-//
-//                reprojectCloud(image,cost.baseImage, cost.depthMap(), Mat(cost.pose) , LieToP(tracker.pose), Mat(cost.cameraMatrix));
-//
-////                 Mat R2,T2;
-////                 LieToRT(p, R2, T2);
-////
-////                 if (imageNum==2&&cost2.imageNum==0){
-////                     cost2=Cost(image.clone(),32, cameraMatrix, R2,T2);
-////                     gpause();
-////
-////                 }
-////                 if (cost2.imageNum<2){
-////                     cost2.updateCostL1(image,R2,T2);
-////                 }
-////                 if (cost2.imageNum==1){
-////                     cost2.initOptimization();
-////                     cost2.optimize();//Launches the optimizer threads
-////                 }
-//
-//            }
+//                 }
+//                 if (cost2.imageNum<2){
+//                     cost2.updateCostL1(image,R2,T2);
+//                 }
+//                 if (cost2.imageNum==1){
+//                     cost2.initOptimization();
+//                     cost2.optimize();//Launches the optimizer threads
+//                 }
+
+            }
 //
 ////             if (cost.imageNum==1){
 ////                 gpause();
@@ -280,7 +278,8 @@ int App_main( int argc, char** argv )
         }
 //        allDie=1;
 //        sleep(10);
-        myExit();
+       // cudaProfilerStop();
+       // myExit();
     }
     while(1){
         usleep(1000);

@@ -12,6 +12,17 @@ Track::Track(Cost cost){
     pose=basePose.clone();
 
 }
+Track::Track(CostVolume cost, Optimizer opt){
+    rows=cost.rows;
+    cols=cost.cols;
+    cost.baseImage.download(thisFrame);
+    baseImage=lastFrame=thisFrame;
+    cameraMatrix=Mat(cost.cameraMatrix);
+    depth=opt.depthMap();
+    RTToLie(cost.R,cost.T,basePose);
+    pose=basePose.clone();
+
+}
 void Track::addFrame(cv::Mat frame){
     lastFrame=thisFrame;
     thisFrame=frame;

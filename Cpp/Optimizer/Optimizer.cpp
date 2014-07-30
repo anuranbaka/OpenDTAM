@@ -9,6 +9,7 @@
 #include <iostream>
 
 using namespace std;
+using namespace cv;
 void Optimizer::setDefaultParams(){
     thetaStart =    20.0;
     thetaMin   =     10.0;
@@ -55,7 +56,24 @@ bool Optimizer::optimizeA(){
 //            (float*)cv.hi.data, (float*)cv.loInd.data);
     minimizeACaller  ( theta,lambda);
     theta*=thetaStep;
+    if (doneOptimizing){
+        _a.convertTo(stableDepth,CV_32FC1,cv.depthStep,cv.far);
+    }
     return doneOptimizing;
 }
-
+const cv::Mat Optimizer::depthMap(){
+    //Returns the best available depth map
+    // Code should not rely on the particular mapping of true
+    // internal data to true inverse depth, as this may change.
+    // Currently depth is just a constant multiple of the index, so
+    // infinite depth is always represented. This is likely to change.
+    Mat tmp;
+    if (stableDepth.data) {
+        stableDepth.download(tmp);
+    } else {
+        _a.download(tmp);
+        tmp = tmp * cv.depthStep + cv.far;
+    }
+    return tmp;
+}
 

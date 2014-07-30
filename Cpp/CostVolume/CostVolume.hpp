@@ -22,6 +22,8 @@ public:
     float far;
     float depthStep;
     cv::Mat cameraMatrix;//Note! should be in OpenCV format
+    cv::Mat R;
+    cv::Mat T;
     cv::Mat projection;//projects world coordinates (x,y,z) into (rows,cols,layers)
 
     cv::gpu::GpuMat baseImage;
