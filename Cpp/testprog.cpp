@@ -67,15 +67,22 @@ int App_main( int argc, char** argv )
                                   R,
                                   T);
 
+
 //     cout<<"cameraMatrix: "<<cameraMatrix<<"\n";
 //     cout<< "R : "<<R<<"\n";
 //     cout<< "T : "<<T<<"\n";
     sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",imageNum);
     Mat image;
     
-
+    double sc=2/5.;
     if (!valgrind){
         imread(filename,-1).convertTo(image,CV_32FC3,1.0/65535.0);   // Read the file
+
+        cameraMatrix=(Mat_<double>(3,3) << 481.20*sc,0.0,320*sc-.5,
+                          0.0,480.0*sc,240*sc-.5,
+                          0.0,0.0,1.0);
+        resize(image,image,Size(),sc,sc);
+//            cout<<"cameraMatrix: "<<cameraMatrix<<"\n";
     }else{
         image.create(480,640,CV_32FC3);
         image=0.5;
@@ -94,14 +101,15 @@ int App_main( int argc, char** argv )
 
     //Track tracker(cost);
     Track tracker(cv,optimizer);
-    assert(cost.rows==480);
+    //assert(cost.rows==480);
 
     vector<Mat> images,Rs,Ts;
     for(int i=0;i<=50;i++){
+        Mat tmp;
         sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",i);
         convertAhandaPovRayToStandard("/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds",
                                       i,
-                                      cameraMatrix,
+                                      tmp,
                                       R,
                                       T);
         Mat image;
@@ -109,6 +117,8 @@ int App_main( int argc, char** argv )
 
         if (!valgrind){
             imread(filename, -1).convertTo(image,CV_32FC3,1.0/65535.0);
+//            cameraMatrix.rowRange(0,2)/=3;
+            resize(image,image,Size(),sc,sc);
         }else{
             image.create(480,640,CV_32FC3);
             image=0.5;
@@ -148,16 +158,20 @@ int App_main( int argc, char** argv )
             Mat cameraAffinePoseAlternate,mask;
             hconcat(R,T,cameraAffinePoseAlternate);
             imageContainer.create(image.rows,image.cols,CV_8UC4);
-            Mat tmp;
+            Mat tmp,ret;
             cvtColor(image,tmp,CV_RGB2RGBA);
             Mat imageContainerRef=imageContainer;//Required by ambiguous conversion rules
             tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
-            if (imageNum<5){
-            cv.updateCost(imageContainer, R, T);
+            if (imageNum<30){
+                cv.updateCost(imageContainer, R, T);
+//                cv.loInd.download(ret);
+//                assert(cv.loInd.isContinuous());
+//                pfShow("loInd Soln", cv.downloadOldStyle(0));
+//                gpause();
             }
             cudaDeviceSynchronize();
-            Mat ret;
-            if (imageNum==5){
+
+            if (imageNum==30){
                 optimizer.initOptimization();
                 bool doneOptimizing;
                 do{
@@ -171,22 +185,26 @@ int App_main( int argc, char** argv )
     //                gpause();
                     for (int i = 0; i < 10; i++) {
                         optimizer.optimizeQD();
-                        cudaDeviceSynchronize();
+//                        cudaDeviceSynchronize();
 //                        optimizer._qx.download(ret);
 //                        pfShow("Qx function", ret, 0, cv::Vec2d(-1, 1));
 //                        optimizer._gy.download(ret);
 //                        pfShow("Gy function", ret, 0, cv::Vec2d(0, 1));
-                        optimizer._d.download(ret);
-                        pfShow("D function", ret, 0, cv::Vec2d(0, 32));
+//                        optimizer._d.download(ret);
+//                        pfShow("D function", ret, 0, cv::Vec2d(0, 32));
+//                        gpause();
+                        
                     }
-                    cudaDeviceSynchronize();
+//                    cudaDeviceSynchronize();
                     doneOptimizing=optimizer.optimizeA();
                 }while(!doneOptimizing);
                 cudaDeviceSynchronize();
                 optimizer._d.download(ret);
-                optimizer._d.download(ret);
-                pfShow("Depth Solution", ret, 0, cv::Vec2d(0, 32));
-//                gpause();
+                Mat tmp;
+                optimizer._g1.download(tmp);
+                pfShow("Depth Solution", ret+tmp, 0, cv::Vec2d(0, 32));
+                gpause();
+               // myExit();
             }
 
             cv.loInd.download(ret);
@@ -208,9 +226,9 @@ int App_main( int argc, char** argv )
 //
 //            const Mat thisPose(cost.convertPose(R,T));
 //
-////             reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
-//
-//
+//             reprojectCloud(image,cost.baseImage, cost._d*cost.depthStep, Mat(cost.pose), thisPose, Mat(cost.cameraMatrix));
+
+
             if(imageNum==1){
                 tracker.pose=tracker.basePose.clone();
             }

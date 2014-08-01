@@ -6,13 +6,14 @@
 #include "Optimizer.hpp"
 #include "Optimizer.cuh"
 #include <opencv2/gpu/stream_accessor.hpp>
+#include <opencv2/core/core.hpp>
 #include <iostream>
 
 using namespace std;
 using namespace cv;
 void Optimizer::setDefaultParams(){
     thetaStart =    20.0;
-    thetaMin   =     10.0;
+    thetaMin   =     1.0;
     thetaStep  =      .97;
     epsilon    =       .01;
     lambda     =       .01;
@@ -20,6 +21,9 @@ void Optimizer::setDefaultParams(){
 
 Optimizer::Optimizer(CostVolume cv) : cv(cv)
 {
+    //For performance reasons, OpenDTAM only supports multiple of 32 image sizes with cols >= 64
+    CV_Assert(cv.rows % 32 == 0 && cv.cols % 32 == 0 && cv.cols >= 64);
+
     setDefaultParams();
 }
 

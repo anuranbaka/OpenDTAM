@@ -111,8 +111,8 @@ void* guiLoop(void*){
                 double scale= 1.0/(autoscale[1]-autoscale[0]);
                 mat.convertTo(mat,CV_MAKETYPE(mat.type(),mat.channels()),scale,-autoscale[0]*scale);
             }
-            if(mat.rows<50){
-                namedWindow(name,CV_WINDOW_KEEPRATIO);
+            if(mat.rows<200){
+               namedWindow(name,CV_WINDOW_KEEPRATIO);
             }
             imshow( name, mat);
             waitKey(1);//waitkey must occur here so matrix doesn't fall out of scope because imshow is dumb that way :(

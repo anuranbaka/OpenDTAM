@@ -12,12 +12,13 @@
 
 #include "utils/utils.hpp"
 #include "utils/tinyMat.hpp"
+#include "graphics.hpp"
 #include <iostream>
 
 
 using namespace std;
 using namespace cv;
-using namespace gpu;
+using namespace cv::gpu;
 
 
 
@@ -50,10 +51,15 @@ void CostVolume::checkInputs(const cv::Mat& R, const cv::Mat& T,
     assert(_cameraMatrix.size() == Size(3, 3));
     assert(_cameraMatrix.type() == CV_64FC1);
 }
-
+#define FLATUP(src,dst){GpuMat tmp;tmp.upload(src);dst.create(1,rows*cols, src.type());dst=dst.reshape(0,rows);}
+#define FLATALLOC(n) n.create(1,rows*cols, CV_32FC1);n=n.reshape(0,rows)
 CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
         float _far, cv::Mat R, cv::Mat T, cv::Mat _cameraMatrix,
         float initialCost, float initialWeight): R(R),T(T) {
+
+    //For performance reasons, OpenDTAM only supports multiple of 32 image sizes with cols >= 64
+    CV_Assert(image.rows % 32 == 0 && image.cols % 32 == 0 && image.cols >= 64);
+
     checkInputs(R, T, _cameraMatrix);
     fid           = _fid;
     rows          = image.rows;
@@ -64,11 +70,18 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
     depthStep     = (near - far) / (layers - 1);
     cameraMatrix  = _cameraMatrix.clone();
     solveProjection(R, T);
-    baseImage.upload(image);
+    GpuMat tmp;
+    baseImage.upload(image.reshape(0,1));
     cvtColor(baseImage,baseImageGray,CV_RGB2GRAY);
-    lo.create(image.size(), CV_32FC1);
-    hi.create(image.size(), CV_32FC1);
-    loInd.create(image.size(), CV_32FC1);
+    baseImage=baseImage.reshape(0,rows);
+    baseImageGray=baseImageGray.reshape(0,rows);
+    Mat ret;
+    baseImageGray.download(ret);
+    pfShow("",ret.reshape(0,rows));
+    gpause();
+    FLATALLOC(lo);
+    FLATALLOC(hi);
+    FLATALLOC(loInd);
     loInd=0;
     dataContainer.create(layers, rows * cols, CV_32FC1);
     dataContainer = initialCost;
@@ -157,6 +170,10 @@ void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, con
     Mat imFromWorld=cameraMatrixTex*viewMatrixImage;//3x4
     Mat imFromCV=imFromWorld*projection.inv();
     imFromCV.colRange(2,3)*=depthStep;
+    assert(baseImage.isContinuous());
+    assert(lo.isContinuous());
+    assert(hi.isContinuous());
+    assert(loInd.isContinuous());
     //load up the constant stuff
     loadConstants(layers, rows*cols, (float3*) (baseImage.data),
             hits,  data, (float*) (lo.data), (float*) (hi.data), (float*) (loInd.data),

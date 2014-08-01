@@ -68,7 +68,7 @@ void Optimizer::computeSigmas(){
     sigma_d = rho;
     sigma_q = sigma;
 }
-
+#define FLATALLOC(n) n.create(1,cv.rows*cv.cols, CV_32FC1);n=n.reshape(0,cv.rows)
 void Optimizer::cacheGValues(){
     using namespace cv::gpu::device::dtam_optimizer;
     localStream = cv::gpu::StreamAccessor::getStream(cvStream);
@@ -80,6 +80,9 @@ void Optimizer::cacheGValues(){
     // Call the gpu function for caching g's
     loadConstants(cv.rows, cv.cols, cv.layers, layerStep, a, d, cv.data, (float*)cv.lo.data,
             (float*)cv.hi.data, (float*)cv.loInd.data);
+    FLATALLOC(_g1);
+    FLATALLOC(_gx);
+    FLATALLOC(_gy);
     _g1.create(cv.rows,cv.cols,CV_32FC1);
     _gx.create(cv.rows,cv.cols,CV_32FC1);
     _gy.create(cv.rows,cv.cols,CV_32FC1);
