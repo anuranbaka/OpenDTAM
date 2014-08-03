@@ -48,7 +48,7 @@
 //
 // The paper is clear that it uses ESM for the initial levels of 
 // the pyramid, and implies that it uses Model 1 for the full
-// estimation. I would like to allow either choice to be made.
+// estimation. TODO:I would like to allow either choice to be made.
 //
 using namespace cv;
 using namespace std;

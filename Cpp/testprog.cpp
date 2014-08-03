@@ -35,6 +35,7 @@ int main( int argc, char** argv ){
 
 //    set_affinity(1);
 //    //cvStartLoop(&App_main,argc, argv);//will crash if used with opengl!
+
     initGui();
     return App_main(argc, argv);
 }
@@ -54,7 +55,7 @@ int App_main( int argc, char** argv )
         
     FileStorage fs;
     void* junk;
-    cudaMalloc(&junk,500);
+    cudaMalloc(&junk,5500);
     cudaFree(junk);
 
     Mat cameraAffinePoseBase;
@@ -74,7 +75,7 @@ int App_main( int argc, char** argv )
     sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",imageNum);
     Mat image;
     
-    double sc=2/5.;
+    double sc=5/5.;
     if (!valgrind){
         imread(filename,-1).convertTo(image,CV_32FC3,1.0/65535.0);   // Read the file
 
@@ -176,8 +177,8 @@ int App_main( int argc, char** argv )
                 bool doneOptimizing;
                 do{
                     cout<<"Theta: "<< optimizer.theta<<endl;
-//                    optimizer._a.download(ret);
-//                    pfShow("One A Opt Soln", ret, 0, cv::Vec2d(0, 32));
+                   optimizer._a.download(ret);
+                   pfShow("A", ret, 0, cv::Vec2d(0, 32));
 
     //                optimizer.cacheGValues();
     //                optimizer._gy.download(ret);
@@ -186,12 +187,12 @@ int App_main( int argc, char** argv )
                     for (int i = 0; i < 10; i++) {
                         optimizer.optimizeQD();
 //                        cudaDeviceSynchronize();
-//                        optimizer._qx.download(ret);
-//                        pfShow("Qx function", ret, 0, cv::Vec2d(-1, 1));
-//                        optimizer._gy.download(ret);
-//                        pfShow("Gy function", ret, 0, cv::Vec2d(0, 1));
-//                        optimizer._d.download(ret);
-//                        pfShow("D function", ret, 0, cv::Vec2d(0, 32));
+                       optimizer._qx.download(ret);
+                       pfShow("Qx function", ret, 0, cv::Vec2d(-1, 1));
+                       optimizer._gy.download(ret);
+                       pfShow("Gy function", ret, 0, cv::Vec2d(0, 1));
+                       optimizer._d.download(ret);
+                       pfShow("D function", ret, 0, cv::Vec2d(0, 32));
 //                        gpause();
                         
                     }
@@ -200,9 +201,8 @@ int App_main( int argc, char** argv )
                 }while(!doneOptimizing);
                 cudaDeviceSynchronize();
                 optimizer._d.download(ret);
-                Mat tmp;
-                optimizer._g1.download(tmp);
-                pfShow("Depth Solution", ret+tmp, 0, cv::Vec2d(0, 32));
+                
+                pfShow("Depth Solution", ret, 0, cv::Vec2d(0, 32));
                 gpause();
                // myExit();
             }
@@ -297,7 +297,7 @@ int App_main( int argc, char** argv )
 //        allDie=1;
 //        sleep(10);
        // cudaProfilerStop();
-       // myExit();
+        myExit();
     }
     while(1){
         usleep(1000);
