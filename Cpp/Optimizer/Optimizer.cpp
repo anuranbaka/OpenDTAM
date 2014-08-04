@@ -12,10 +12,10 @@
 using namespace std;
 using namespace cv;
 void Optimizer::setDefaultParams(){
-    thetaStart =    20.0;
+    thetaStart =    3.0;
     thetaMin   =     1.0;
     thetaStep  =      .97;
-    epsilon    =       .01;
+    epsilon    =       .1;
     lambda     =       .01;
 }
 

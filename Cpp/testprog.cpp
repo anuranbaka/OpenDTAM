@@ -50,6 +50,7 @@ void myExit(){
 
 int App_main( int argc, char** argv )
 {
+    int numImg=10;
     cv::gpu::CudaMem imageContainer;
     pthread_setname_np(pthread_self(),"App_main");
         
@@ -62,6 +63,7 @@ int App_main( int argc, char** argv )
     int imageNum=0;
     char filename[500];
     Mat cameraMatrix,R,T;
+    vector<Mat> images,Rs,Ts;
     convertAhandaPovRayToStandard("/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds",
                                   imageNum,
                                   cameraMatrix,
@@ -75,7 +77,7 @@ int App_main( int argc, char** argv )
     sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",imageNum);
     Mat image;
     
-    double sc=5/5.;
+    double sc=2/5.;
     if (!valgrind){
         imread(filename,-1).convertTo(image,CV_32FC3,1.0/65535.0);   // Read the file
 
@@ -88,7 +90,7 @@ int App_main( int argc, char** argv )
         image.create(480,640,CV_32FC3);
         image=0.5;
     }
-    
+
     hconcat(R,T,cameraAffinePoseBase);
 
     Cost cost(image.clone(),32, cameraMatrix, R,T);
@@ -104,8 +106,8 @@ int App_main( int argc, char** argv )
     Track tracker(cv,optimizer);
     //assert(cost.rows==480);
 
-    vector<Mat> images,Rs,Ts;
-    for(int i=0;i<=50;i++){
+
+    for(int i=0;i<=numImg;i++){
         Mat tmp;
         sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",i);
         convertAhandaPovRayToStandard("/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds",
@@ -132,8 +134,8 @@ int App_main( int argc, char** argv )
 
     cudaProfilerStart();
     while(1){
-        for (int imageNum=1;imageNum<=50;imageNum++){
-            if(imageNum==2){
+        for (int imageNum=1;imageNum<=numImg;imageNum++){
+            if(imageNum==1){
                 cudaDeviceSynchronize();
             //    cudaProfilerStart();
             }
@@ -156,14 +158,14 @@ int App_main( int argc, char** argv )
             image=images[imageNum];
 
             //cost.updateCostL1(image,R,T);//dbg
-            Mat cameraAffinePoseAlternate,mask;
-            hconcat(R,T,cameraAffinePoseAlternate);
+
+
             imageContainer.create(image.rows,image.cols,CV_8UC4);
             Mat tmp,ret;
             cvtColor(image,tmp,CV_RGB2RGBA);
             Mat imageContainerRef=imageContainer;//Required by ambiguous conversion rules
             tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
-            if (imageNum<30){
+            if (imageNum<2){
                 cv.updateCost(imageContainer, R, T);
 //                cv.loInd.download(ret);
 //                assert(cv.loInd.isContinuous());
@@ -172,40 +174,63 @@ int App_main( int argc, char** argv )
             }
             cudaDeviceSynchronize();
 
-            if (imageNum==30){
-                optimizer.initOptimization();
+            if (imageNum==2    ){//ucv test
+                //init ucv
+                tic();
+                imageContainer.create(image.rows,image.cols,CV_8UC4);
+                Mat tmp,ret;
+                cvtColor(image,tmp,CV_RGB2RGBA);
+                Mat imageContainerRef=imageContainer;//Required by ambiguous conversion rules
+                tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
+                CostVolume cv2(images[0],(FrameID)0,32,0.015,0.0,Rs[0],Ts[0],cameraMatrix);
+                cv2.updateCost(imageContainer, R, T);
+
+                Optimizer optimizer2(cv2);
+//                pfShow("ADD", cv2.downloadOldStyle(0));
+//                gpause();
+
+                optimizer2.initOptimization();
+                cudaDeviceSynchronize();
                 bool doneOptimizing;
                 do{
-                    cout<<"Theta: "<< optimizer.theta<<endl;
-                   optimizer._a.download(ret);
-                   pfShow("A", ret, 0, cv::Vec2d(0, 32));
+//                    cout<<"Theta: "<< optimizer2.theta<<endl;
+//                   optimizer2._a.download(ret);
+//                   pfShow("A", ret, 0, cv::Vec2d(0, 32));
 
     //                optimizer.cacheGValues();
     //                optimizer._gy.download(ret);
     //                pfShow("G function", ret, 0, cv::Vec2d(0, 1));
     //                gpause();
-                    for (int i = 0; i < 10; i++) {
-                        optimizer.optimizeQD();
+                    for (int i = 0; i < 5; i++) {
+                        optimizer2.optimizeQD();
 //                        cudaDeviceSynchronize();
-                       optimizer._qx.download(ret);
-                       pfShow("Qx function", ret, 0, cv::Vec2d(-1, 1));
-                       optimizer._gy.download(ret);
-                       pfShow("Gy function", ret, 0, cv::Vec2d(0, 1));
-                       optimizer._d.download(ret);
-                       pfShow("D function", ret, 0, cv::Vec2d(0, 32));
-//                        gpause();
+//                       optimizer2._qx.download(ret);
+//                       pfShow("Qx function", ret, 0, cv::Vec2d(-1, 1));
+//                       optimizer2._gy.download(ret);
+//                       pfShow("Gy function", ret, 0, cv::Vec2d(0, 1));
+//                       optimizer2._d.download(ret);
+//                       pfShow("D function", ret, 0, cv::Vec2d(0, 32));
+//                       usleep(100000);
+                        //gpause();
                         
                     }
 //                    cudaDeviceSynchronize();
-                    doneOptimizing=optimizer.optimizeA();
+                    doneOptimizing=optimizer2.optimizeA();
                 }while(!doneOptimizing);
                 cudaDeviceSynchronize();
-                optimizer._d.download(ret);
+                toc();
+                optimizer2._a.download(ret);
                 
                 pfShow("Depth Solution", ret, 0, cv::Vec2d(0, 32));
                 gpause();
-               // myExit();
+                cv=cv2;
+                optimizer=optimizer2;
+
+//                myExit();
             }
+
+
+
 
             cv.loInd.download(ret);
            // pfShow("Initial Min Soln",ret,0,cv::Vec2d(0,32));
@@ -290,9 +315,10 @@ int App_main( int argc, char** argv )
 //    //         namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display.
 //    //         imshow( "Display window", cost.baseImage );                   // Show our image inside it.
 //    //     waitKey(0);                                          // Wait for a keystroke in the window
-//    usleep(10);
+    usleep(100000);
 
             //cout<<cv.downloadOldStyle(5);
+
         }
 //        allDie=1;
 //        sleep(10);

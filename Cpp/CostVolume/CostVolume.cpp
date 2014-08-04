@@ -75,10 +75,6 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
     cvtColor(baseImage,baseImageGray,CV_RGB2GRAY);
     baseImage=baseImage.reshape(0,rows);
     baseImageGray=baseImageGray.reshape(0,rows);
-    Mat ret;
-    baseImageGray.download(ret);
-    pfShow("",ret.reshape(0,rows));
-    gpause();
     FLATALLOC(lo);
     FLATALLOC(hi);
     FLATALLOC(loInd);
@@ -86,8 +82,8 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
     dataContainer.create(layers, rows * cols, CV_32FC1);
     dataContainer = initialCost;
     data = (float*) dataContainer.data;
-    hitContainer.create(layers, rows * cols, CV_32FC1);
-    hitContainer = initialWeight;
+    //hitContainer.create(layers, rows * cols, CV_32FC1);
+    //hitContainer = initialWeight;
     hits = (float*) hitContainer.data;
     count = 0;
 
@@ -156,6 +152,7 @@ void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, con
 
     //change input image to a texture
     //ArrayTexture tex(image, cvStream);
+    pfShow("im",image);
     cudaTextureObject_t texObj = simpleTex(image);
     cudaSafeCall( cudaDeviceSynchronize() );
 
