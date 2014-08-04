@@ -77,7 +77,7 @@ int App_main( int argc, char** argv )
     sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",imageNum);
     Mat image;
     
-    double sc=2/5.;
+    double sc=5/5.;
     if (!valgrind){
         imread(filename,-1).convertTo(image,CV_32FC3,1.0/65535.0);   // Read the file
 
@@ -201,7 +201,7 @@ int App_main( int argc, char** argv )
     //                optimizer._gy.download(ret);
     //                pfShow("G function", ret, 0, cv::Vec2d(0, 1));
     //                gpause();
-                    for (int i = 0; i < 5; i++) {
+                    for (int i = 0; i < 10; i++) {
                         optimizer2.optimizeQD();
 //                        cudaDeviceSynchronize();
 //                       optimizer2._qx.download(ret);
