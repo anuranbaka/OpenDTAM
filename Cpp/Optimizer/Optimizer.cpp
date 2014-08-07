@@ -19,12 +19,24 @@ void Optimizer::setDefaultParams(){
     lambda     =       .01;
 }
 
-Optimizer::Optimizer(CostVolume cv) : cv(cv)
+Optimizer::Optimizer(CostVolume cv) : cv(cv), cvStream(cv.cvStream)
 {
     //For performance reasons, OpenDTAM only supports multiple of 32 image sizes with cols >= 64
     CV_Assert(cv.rows % 32 == 0 && cv.cols % 32 == 0 && cv.cols >= 64);
-
+    allocate();
     setDefaultParams();
+    
+}
+
+void Optimizer::allocate(){
+    _a.create(cv.rows,cv.cols,CV_32FC1);
+    _d.create(cv.rows,cv.cols,CV_32FC1);
+    _qx.create(cv.rows,cv.cols,CV_32FC1);
+    _qy.create(cv.rows,cv.cols,CV_32FC1);
+    _g1.create(cv.rows,cv.cols,CV_32FC1);
+    _gx.create(cv.rows,cv.cols,CV_32FC1);
+    _gy.create(cv.rows,cv.cols,CV_32FC1);
+    stableDepth.create(cv.rows,cv.cols,CV_32FC1);
 }
 
 void Optimizer::initOptimization(){
@@ -32,20 +44,17 @@ void Optimizer::initOptimization(){
     computeSigmas();
     initA();
     initQD();
-
-
 }
-void Optimizer::initQD(){
 
-    _a.copyTo(_d);
-    _qx.create(cv.rows,cv.cols,CV_32FC1);
-    _qx=0.0;
-    _qy.create(cv.rows,cv.cols,CV_32FC1);
-    _qy=0.0;
+void Optimizer::initQD(){
+    cvStream.enqueueCopy(cv.loInd,_d);
+    cvStream.enqueueMemSet(_qx,0.0);
+    cvStream.enqueueMemSet(_qy,0.0);
     cacheGValues();
 }
 void Optimizer::initA() {
-    cv.loInd.copyTo(_a);
+//     cv.loInd.copyTo(_a);
+    cvStream.enqueueCopy(cv.loInd,_a);
 }
 bool Optimizer::optimizeA(){
     using namespace cv::gpu::device::dtam_optimizer;
@@ -59,9 +68,11 @@ bool Optimizer::optimizeA(){
 //    loadConstants(cv.rows, cv.cols, cv.layers, layerStep, a, d, cv.data, (float*)cv.lo.data,
 //            (float*)cv.hi.data, (float*)cv.loInd.data);
     minimizeACaller  ( theta,lambda);
+
     theta*=thetaStep;
     if (doneOptimizing){
-        _a.convertTo(stableDepth,CV_32FC1,cv.depthStep,cv.far);
+//         _a.convertTo(stableDepth,CV_32FC1,cv.depthStep,cv.far);
+        cvStream.enqueueConvert(_a,stableDepth,CV_32FC1,cv.depthStep,cv.far);
     }
     return doneOptimizing;
 }
@@ -72,6 +83,7 @@ const cv::Mat Optimizer::depthMap(){
     // Currently depth is just a constant multiple of the index, so
     // infinite depth is always represented. This is likely to change.
     Mat tmp;
+    
     if (stableDepth.data) {
         stableDepth.download(tmp);
     } else {

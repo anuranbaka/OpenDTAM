@@ -44,7 +44,7 @@ add_subdirectory(Optimizer)
 include_directories("${BASEPATH}" ${CUDA_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_35,code=sm_35;--use_fast_math ;--restrict; -lineinfo; )
-cuda_add_library(OpenDTAM SHARED ${DTAM_SOURCES})
+cuda_add_library(OpenDTAM SHARED ${DTAM_SOURCES} OpenDTAM.cpp)
 
 add_executable (a.out testprog.cpp convertAhandaPovRayToStandard.cpp graphics.cpp)
 target_link_libraries( a.out  OpenDTAM ${OpenCV_LIBS} ${Boost_LIBRARIES})

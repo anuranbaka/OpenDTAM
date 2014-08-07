@@ -30,6 +30,7 @@ public:
     cv::gpu::GpuMat stableDepth;
 
 //private:
+    void allocate();
     void initA();
     void initQD();
     void computeSigmas();

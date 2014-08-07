@@ -8,6 +8,8 @@
 namespace cv { namespace gpu { namespace device {
     namespace dtam_updateCost{
 
+cudaStream_t localStream;
+        
 //__constant__ float sliceToIm[3 * 3];
 __constant__ uint  rows;
 __constant__ uint  cols;
@@ -24,7 +26,7 @@ __constant__ cudaTextureObject_t tex;
 
 __global__ void updateCostCol(m33 sliceToIm, unsigned int yoff);
 
-#define SEND(type,sym) cudaMemcpyToSymbol(sym, &h_ ## sym, sizeof(type));
+#define SEND(type,sym) cudaMemcpyToSymbolAsync(sym, &h_ ## sym, sizeof(type), 0, cudaMemcpyHostToDevice, localStream);
 
 void loadConstants(int h_layers, int h_layerStep, float3* h_base,
         float* h_hdata, float* h_cdata, float* h_lo, float* h_hi, float* h_loInd,
@@ -283,7 +285,9 @@ void globalWeightedBoundsCostCaller(int cols,int rows,m34 p,float weight){
    dim3 dimBlock(BLOCK_X,BLOCK_Y);
    dim3 dimGrid((cols  + dimBlock.x - 1) / dimBlock.x,
                 (rows + dimBlock.y - 1) / dimBlock.y);
-   globalWeightedBoundsCost<<<dimGrid, dimBlock>>>(p, weight);
+   globalWeightedBoundsCost<<<dimGrid, dimBlock, 0, localStream>>>(p, weight);
+   assert(localStream);
+   cudaSafeCall( cudaGetLastError() );
 }
 
 

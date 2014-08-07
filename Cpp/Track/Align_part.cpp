@@ -13,8 +13,8 @@ using namespace std;
 #include "stdio.h"
 
 //debug
-// #define QUIET_DTAM 0
-// #include "quiet.hpp"
+#define QUIET_DTAM 1
+#include "quiet.hpp"
 
 enum alignment_modes{CV_DTAM_REV,CV_DTAM_FWD,CV_DTAM_ESM};
 const double small0=.1;//~6deg, not trivial, but hopefully enough to make the translation matter

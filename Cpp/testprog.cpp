@@ -75,16 +75,28 @@ int App_main( int argc, char** argv )
 //     cout<< "R : "<<R<<"\n";
 //     cout<< "T : "<<T<<"\n";
     sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",imageNum);
-    Mat image;
-    
-    double sc=5/5.;
+    Mat image; 
+    double sc=1/5.;
     if (!valgrind){
         imread(filename,-1).convertTo(image,CV_32FC3,1.0/65535.0);   // Read the file
 
-        cameraMatrix=(Mat_<double>(3,3) << 481.20*sc,0.0,320*sc-.5,
-                          0.0,480.0*sc,240*sc-.5,
-                          0.0,0.0,1.0);
+        Size2d s0=image.size();
         resize(image,image,Size(),sc,sc);
+        Size2d sn=image.size();
+        double sx=(sn.width/s0.width);
+        double sy=(sn.height/s0.height);
+        cameraMatrix+=(Mat)(Mat_<double>(3,3) << 0,0.0,0.5,
+                                            0.0,0.0,0.5,
+                                            0.0,0.0,0);
+        cameraMatrix=cameraMatrix.mul((Mat)(Mat_<double>(3,3) <<    sx,0.0,sx,
+                                                0.0,sy ,sy,
+                                                0.0,0.0,1.0));
+        cameraMatrix-=(Mat)(Mat_<double>(3,3) << 0,0.0,0.5,
+                                            0.0,0.0,0.5,
+                                            0.0,0.0,0);
+
+
+        
 //            cout<<"cameraMatrix: "<<cameraMatrix<<"\n";
     }else{
         image.create(480,640,CV_32FC3);
@@ -172,9 +184,9 @@ int App_main( int argc, char** argv )
 //                pfShow("loInd Soln", cv.downloadOldStyle(0));
 //                gpause();
             }
-            cudaDeviceSynchronize();
 
-            if (imageNum==2    ){//ucv test
+
+            if (imageNum==10    ){//ucv test
                 //init ucv
                 tic();
                 imageContainer.create(image.rows,image.cols,CV_8UC4);
@@ -190,12 +202,12 @@ int App_main( int argc, char** argv )
 //                gpause();
 
                 optimizer2.initOptimization();
-                cudaDeviceSynchronize();
+                //cudaStreamSynchronize();
                 bool doneOptimizing;
                 do{
 //                    cout<<"Theta: "<< optimizer2.theta<<endl;
-//                   optimizer2._a.download(ret);
-//                   pfShow("A", ret, 0, cv::Vec2d(0, 32));
+                  optimizer2._a.download(ret);
+                  pfShow("A", ret, 0, cv::Vec2d(0, 32));
 
     //                optimizer.cacheGValues();
     //                optimizer._gy.download(ret);
@@ -217,7 +229,7 @@ int App_main( int argc, char** argv )
 //                    cudaDeviceSynchronize();
                     doneOptimizing=optimizer2.optimizeA();
                 }while(!doneOptimizing);
-                cudaDeviceSynchronize();
+                optimizer2.cvStream.waitForCompletion();
                 toc();
                 optimizer2._a.download(ret);
                 
@@ -226,14 +238,14 @@ int App_main( int argc, char** argv )
                 cv=cv2;
                 optimizer=optimizer2;
 
-//                myExit();
+                myExit();
             }
 
 
 
 
-            cv.loInd.download(ret);
-           // pfShow("Initial Min Soln",ret,0,cv::Vec2d(0,32));
+//             cv.loInd.download(ret);
+//             pfShow("Initial Min Soln",ret,0,cv::Vec2d(0,32));
 
             //gpause();
 //
@@ -263,17 +275,18 @@ int App_main( int argc, char** argv )
                 RTToLie(R,T,tp);
                 //tracker.pose=tp.clone();//Give the answer
                 tracker.depth=optimizer.depthMap();
-
+                pfShow("Tdepth",tracker.depth);
                 tracker.addFrame(image);
 
                 tracker.align();
                 Mat p=tracker.pose;
-                cout << "True Pose: "<< tp << endl;
-                cout << "True Delta: "<< LieSub(tp,tracker.basePose) << endl;
-                cout << "Recovered Pose: "<< p << endl;
-                cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
-                cout << "Pose Error: "<< p-tp << endl;
-
+//                 {//debug
+//                     cout << "True Pose: "<< tp << endl;
+//                     cout << "True Delta: "<< LieSub(tp,tracker.basePose) << endl;
+//                     cout << "Recovered Pose: "<< p << endl;
+//                     cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
+//                     cout << "Pose Error: "<< p-tp << endl;
+//                 }
                 reprojectCloud(image,cost.baseImage, tracker.depth, Mat(cost.pose) , LieToP(tracker.pose), Mat(cost.cameraMatrix));
 
 //                 Mat R2,T2;

@@ -72,26 +72,22 @@ void Optimizer::computeSigmas(){
 void Optimizer::cacheGValues(){
     using namespace cv::gpu::device::dtam_optimizer;
     localStream = cv::gpu::StreamAccessor::getStream(cvStream);
-    if(_gx.data)
+    if(cachedG)
         return;//already cached
     int layerStep = cv.rows * cv.cols;
     float* d = (float*) _d.data;
     float* a = (float*) _a.data;
     // Call the gpu function for caching g's
+    
     loadConstants(cv.rows, cv.cols, cv.layers, layerStep, a, d, cv.data, (float*)cv.lo.data,
             (float*)cv.hi.data, (float*)cv.loInd.data);
-    FLATALLOC(_g1);
-    FLATALLOC(_gx);
-    FLATALLOC(_gy);
-    _g1.create(cv.rows,cv.cols,CV_32FC1);
-    _gx.create(cv.rows,cv.cols,CV_32FC1);
-    _gy.create(cv.rows,cv.cols,CV_32FC1);
-
+    assert(_g1.isContinuous());
     float* pp = (float*) cv.baseImageGray.data;//TODO: write a color version.
     float* g1p = (float*)_g1.data;
     float* gxp = (float*)_gx.data;
     float* gyp = (float*)_gy.data;
     computeGCaller(pp,  g1p,  gxp,  gyp,  lambda,  cv.cols);
+    cachedG=1;
 }
 
 bool Optimizer::optimizeQD(){

@@ -67,7 +67,7 @@ void loadConstants(uint h_rows, uint h_cols, uint h_layers, uint h_layerStep,
         //special
         arows=h_rows;
         acols=h_cols;
-
+        assert(arows>0);
         assert(h_layers>=32);
         assert(h_layers<=256); //make sure bit packing will work
 }
@@ -84,6 +84,7 @@ void funcName##Caller arglist{                                                  
    dim3 dimGrid((acols  + dimBlock.x - 1) / dimBlock.x,                                  \
                 (arows + dimBlock.y - 1) / dimBlock.y);                                  \
    funcName<<<dimGrid, dimBlock,0,localStream>>>notypes;                                  \
+   cudaSafeCall( cudaGetLastError() );\
 };static __global__ void funcName arglist
 
 
@@ -94,6 +95,7 @@ void funcName##Caller arglist{                                                  
    dim3 dimGrid(1,                                  \
                 (arows + dimBlock.y - 1) / dimBlock.y);                                  \
    funcName<<<dimGrid, dimBlock,0,localStream>>>notypes;                                  \
+   cudaSafeCall( cudaGetLastError() );\
 };static __global__ void funcName arglist
 
 const int BLOCKX1D=256;
@@ -104,6 +106,7 @@ void funcName##Caller arglist{                                                  
    dim3 dimBlock(BLOCKX1D);                                                              \
    dim3 dimGrid((acols*arows) / dimBlock.x);                                             \
    funcName<<<dimGrid, dimBlock,0,localStream>>>notypes;                                  \
+   cudaSafeCall( cudaGetLastError() );\
 };static __global__ void funcName arglist
 
 
@@ -270,11 +273,13 @@ GENERATE_CUDA_FUNC1D(minimizeAcool,
 static __global__ void computeG1  (float* pp, float* g1p, float* gxp, float* gyp, float lambda, int cols);
 static __global__ void computeG2  (float* pp, float* g1p, float* gxp, float* gyp, float lambda, int cols);
 void computeGCaller  (float* pp, float* g1p, float* gxp, float* gyp, float lambda, int cols){
-   dim3 dimBlock(BLOCKX2D,BLOCKY2D);
+//   dim3 dimBlock(BLOCKX2D,BLOCKY2D);
+   dim3 dimBlock(BLOCKX2D,4);
    dim3 dimGrid(1,
                 (arows + dimBlock.y - 1) / dimBlock.y);
    computeG1<<<dimGrid, dimBlock,0,localStream>>>(pp, g1p, gxp, gyp, lambda, cols);
    computeG2<<<dimGrid, dimBlock,0,localStream>>>(pp, g1p, gxp, gyp, lambda, cols);
+   cudaSafeCall( cudaGetLastError() );
 };
 
 GENERATE_CUDA_FUNC2DROWS(computeG1,
@@ -659,10 +664,14 @@ void updateQDCaller(float* gqxpt, float* gqypt, float *dpt, float * apt,
 
     dim3 dimBlock(BLOCKX2D, BLOCKY2D);
     dim3 dimGrid(1, (arows + dimBlock.y - 1) / dimBlock.y);
+    assert(dimGrid.y>0);
+    cudaSafeCall( cudaGetLastError() );
     updateQ<<<dimGrid, dimBlock,0,localStream>>>( gqxpt, gqypt, dpt, apt,
             gxpt, gypt, sigma_q, sigma_d, epsilon, theta);
+    cudaSafeCall( cudaGetLastError() );
     updateD<<<dimGrid, dimBlock,0,localStream>>>( gqxpt, gqypt, dpt, apt,
             gxpt, gypt, sigma_q, sigma_d, epsilon, theta);
+    cudaSafeCall( cudaGetLastError() );
 };
 
 //                            static __global__ void updateQD  (float* gqxpt, float* gqypt, float *dpt, float * apt,
