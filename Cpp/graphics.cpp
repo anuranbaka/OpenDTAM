@@ -34,6 +34,8 @@ void gcheck(){
 }
 
 void pfShow(const string name,const Mat& _mat,int defaultscale, Vec2d autoscale){
+    assert(_mat.rows>0 && _mat.cols>0);
+
     if (defaultscale==1){
         autoscale=Vec2d(-1,-1);
     }

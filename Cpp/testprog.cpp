@@ -123,7 +123,7 @@ int App_main( int argc, char** argv )
 
     OpenDTAM odm(cameraMatrix);
     odm.addFrameWithPose(image,R,T);
-cout<<cameraMatrix<<endl;
+    cout<<cameraMatrix<<endl;
     hconcat(R,T,cameraAffinePoseBase);
 
     Cost cost(image.clone(),32, cameraMatrix, R,T);
@@ -156,7 +156,6 @@ cout<<cameraMatrix<<endl;
             imread(filename, -1).convertTo(image,CV_32FC3,1.0/65535.0);
 //            cameraMatrix.rowRange(0,2)/=3;
             resize(image,image,Size(),sc,sc);
-            cout<<sum(image)<<endl;
         }else{
             image.create(480,640,CV_32FC3);
             image=0.5;
@@ -222,34 +221,14 @@ cout<<cameraMatrix<<endl;
                 Mat imageContainerRef=imageContainer;//Required by ambiguous conversion rules
                 tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
                 CostVolume cv2(images[0],(FrameID)0,32,0.015,0.0,Rs[0],Ts[0],cameraMatrix);
-                cout<<"tCm"<<cameraMatrix<<endl;
-                cout<<"tbSum"<<sum(images[0])<<endl;
-                cout<<"tRs"<<cv2.R<<endl;
-                cout<<"tTs"<<cv2.T<<endl;
-                
-                
-                cv2.updateCost(imageContainer, R, T);
-                cout<<"ictSum"<<sum(imageContainerRef)<<endl;
-                cout<<"tR"<<R<<endl;
-                cout<<"tT"<<T<<endl;
                 cv2.updateCost(imageContainer, R, T);
                 
-                cv2.loInd.download(ret);
-                cout<<"uliSum"<<sum(ret)<<endl;
-                
-                
-                
-                cv2.loInd.download(ret);
-                cout<<"a2R"<<R<<endl;
-
                 Optimizer optimizer2(cv2);
 //                pfShow("ADD", cv2.downloadOldStyle(0));
 //                gpause();
 
                 optimizer2.initOptimization();
                 
-                pfShow("o2 loInd",ret);
-                gpause();
                 //cudaStreamSynchronize();
                 bool doneOptimizing;
                 do{
@@ -264,12 +243,12 @@ cout<<cameraMatrix<<endl;
                     for (int i = 0; i < 10; i++) {
                         optimizer2.optimizeQD();
 //                        cudaDeviceSynchronize();
-                      optimizer2._qx.download(ret);
-                      pfShow("Qx function", ret, 0, cv::Vec2d(-1, 1));
-                      optimizer2._gy.download(ret);
-                      pfShow("Gy function", ret, 0, cv::Vec2d(0, 1));
-                      optimizer2._d.download(ret);
-                      pfShow("D function", ret, 0, cv::Vec2d(0, 32));
+//                       optimizer2._qx.download(ret);
+//                       pfShow("Qx function", ret, 0, cv::Vec2d(-1, 1));
+//                       optimizer2._gy.download(ret);
+//                       pfShow("Gy function", ret, 0, cv::Vec2d(0, 1));
+//                       optimizer2._d.download(ret);
+//                       pfShow("D function", ret, 0, cv::Vec2d(0, 32));
 //                       usleep(100000);
                         //gpause();
                         
@@ -278,7 +257,7 @@ cout<<cameraMatrix<<endl;
                     doneOptimizing=optimizer2.optimizeA();
                 }while(!doneOptimizing);
                 while(!optimizer2.cvStream.queryIfComplete()){
-                    pfShow("Depth Solution", optimizer2.depthMap());
+                    pfShow("Ongoing Solution", optimizer2.depthMap());
                 }
                 toc();
                 
@@ -388,7 +367,8 @@ cout<<cameraMatrix<<endl;
 //        allDie=1;
 //        sleep(10);
        // cudaProfilerStop();
-        myExit();
+       ImplThread::stopAllThreads();
+        break;  
     }
     while(1){
         usleep(1000);

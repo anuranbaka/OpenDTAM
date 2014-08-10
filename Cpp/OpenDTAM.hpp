@@ -61,7 +61,11 @@ class OpenDTAM{
     StallableSynchronizedStack<Ptr<Frame> > ucvd;// frames with micro cv's (stack)
     StallableSynchronizedStack<Ptr<Frame> > mcvd;//frames with macro cv's (stack)
     StallableSynchronizedStack<Ptr<Frame> > cvd; //frames with all cv's  (stack)
-
+    int Ttrkid;
+    int Tutrkid;
+   
+    
+    
     FrameID fn;
     bool initd;
     public:
@@ -71,6 +75,9 @@ class OpenDTAM{
         cameraMatrix(cameraMatrix),
         initd(0)
         {}
+    ~OpenDTAM(){
+        ImplThreadLauncher<OpenDTAM>::stopThread(Tutrkid);
+    }
     
     //Non-default parameters should be set before calling init!
     void init(const Mat& image){
@@ -105,7 +112,7 @@ class OpenDTAM{
         }
         ucvSize=Size(128,96);
         
-        ImplThreadLauncher<OpenDTAM>::startThread(*this,&OpenDTAM::Tutrk,"uTrack",3);
+        Tutrkid=ImplThreadLauncher<OpenDTAM>::startThread(*this,&OpenDTAM::Tutrk,"uTrack",3);
     }
     
 
@@ -272,11 +279,7 @@ bool utrk(Ptr<Frame> _frame){
     LieToRT(p,frame.R,frame.T);
 }
 
-
-
-
 cv::gpu::CudaMem imageContainerUcv;
-
 bool ucv(Ptr<Frame> _base,Ptr<Frame> _alt){
     Frame& base=*_base;
     Frame& alt=*_alt;
@@ -299,40 +302,28 @@ bool ucv(Ptr<Frame> _base,Ptr<Frame> _alt){
     ucameraMatrix-=(Mat)(Mat_<double>(3,3) << 0,0.0,0.5,
                                         0.0,0.0,0.5,
                                         0.0,0.0,0);
-    cudaDeviceSynchronize();
-    cout<<ucameraMatrix<<endl;
+
     Ptr<CostVolume> cvp(new CostVolume(b,base.fid,32,0.015,0.0,base.R,base.T,ucameraMatrix));
     CostVolume& cv=*cvp;
-    cout<<"uCm"<<ucameraMatrix<<endl;
-    cout<<"ubSum"<<sum(b)<<endl;
-    cout<<"uRs"<<cv.R<<endl;
-    cout<<"uTs"<<cv.T<<endl;
+    
     imageContainerUcv.create(a.rows,a.cols,CV_8UC4);
     Mat tmp,ret;
     cvtColor(a,tmp,CV_RGB2RGBA);
-
     Mat imageContainerRef=imageContainerUcv;//Required by ambiguous conversion rules
     tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
-    cout<<"icuSum"<<cv::sum(imageContainerRef)<<endl;
-    cout<<"aR"<<alt.R<<endl;
-    cout<<"aT"<<alt.T<<endl;
     cv.updateCost(imageContainerUcv, alt.R, alt.T);
 
-    cv.loInd.download(ret);
-    cout<<"uliSum"<<sum(ret)<<endl;
-    while(1);
+
     
     Ptr<Optimizer> optimizerp(new Optimizer(cv));
     Optimizer& optimizer=*optimizerp;
     optimizer.initOptimization();
-    cv.loInd.download(ret);
-    pfShow("odm loind",ret);
     gpause();
     bool doneOptimizing;
-    do{
+    do{ 
 //         cout<<"Theta: "<< optimizer.theta<<endl;
         optimizer._a.download(ret);
-        pfShow("One A Opt Soln", ret, 0, cv::Vec2d(0, 32));
+        pfShow("uA", ret, 0, cv::Vec2d(0, 32));
 
 //         optimizer.cacheGValues();
 //         optimizer._gy.download(ret);
@@ -342,28 +333,27 @@ bool ucv(Ptr<Frame> _base,Ptr<Frame> _alt){
             optimizer.optimizeQD();
 //             cudaDeviceSynchronize();
             optimizer._qx.download(ret);
-            pfShow("Qx function", ret, 0, cv::Vec2d(-1, 1));
+            pfShow("uQx function", ret, 0, cv::Vec2d(-1, 1));
             optimizer._gy.download(ret);
-            pfShow("Gy function", ret, 0, cv::Vec2d(0, 1));
+            pfShow("uGy function", ret, 0, cv::Vec2d(0, 1));
             optimizer._d.download(ret);
-            pfShow("D function", ret, 0, cv::Vec2d(0, 32));
-            gpause();
-            
+            pfShow("uD function", ret, 0, cv::Vec2d(0, 32));
         }
 //         cudaDeviceSynchronize();
         doneOptimizing=optimizer.optimizeA();
-    }while(!doneOptimizing);
+    }while(!doneOptimizing);   
     optimizer.cvStream.waitForCompletion();
     base.cv=cvp;
     base.optimizer=optimizerp;
     ucvd.push(_base);
     cvd.push(_base);
+    gpause();
     return true;
 }
 
 
-void Tutrk(void){
-    while(1){
+void Tutrk(int* stop){
+    while(!*stop){
         Ptr<Frame> myFrame=utrkq.pop();
         if(!utrk(myFrame)){
             cout<<"tracking fail,recovering..."<<endl;
