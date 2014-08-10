@@ -37,7 +37,7 @@ void CostVolume::solveProjection(const cv::Mat& R, const cv::Mat& T) {
 //        cout<<"Augmented Camera Matrix:\n"<<projection<<endl;
 //    }
     projection=projection*P;
-//     cout<<projection<<endl;
+    cout<<projection<<endl;
     
    // exit(0);
 }
@@ -92,10 +92,15 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
 
 
 
-
 static cudaArray* cuArray=0;
 static cudaTextureObject_t texObj=0;
-cudaTextureObject_t simpleTex(const Mat& image,Stream cvStream=Stream::Null()){
+
+cudaTextureObject_t CostVolume::simpleTex(const Mat& image,Stream cvStream){
+    cudaArray* cuArray=(cudaArray*)(char*)_cuArray;
+//     if(!_texObj){
+//         _texObj=Ptr<char>((char*)new cudaTextureObject_t);
+//     }
+//     cudaTextureObject_t texObj=*(cudaTextureObject_t*)(char*)_texObj;
     assert(image.isContinuous());
     assert(image.type()==CV_8UC4);
     
@@ -114,6 +119,7 @@ cudaTextureObject_t simpleTex(const Mat& image,Stream cvStream=Stream::Null()){
     cudaSafeCall(cudaMallocArray(&cuArray, &channelDesc, image.cols, image.rows));
     }
     assert((image.dataend-image.datastart)==image.cols*image.rows*sizeof(uchar4));
+    
     cudaSafeCall(cudaMemcpyToArrayAsync(cuArray, 0, 0, image.datastart, image.dataend-image.datastart,
                                    cudaMemcpyHostToDevice,StreamAccessor::getStream(cvStream)));
     
@@ -127,7 +133,7 @@ cudaTextureObject_t simpleTex(const Mat& image,Stream cvStream=Stream::Null()){
     // Create texture object
     cudaSafeCall(cudaCreateTextureObject(&texObj, &resDesc, &texDesc, NULL));
     }
-    return texObj;
+   return texObj;
 }
 
 
@@ -156,7 +162,9 @@ void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, con
     //change input image to a texture
     //ArrayTexture tex(image, cvStream);
     pfShow("im",image);
-    cudaTextureObject_t texObj = simpleTex(image,cvStream);
+    cudaTextureObject_t texObj=simpleTex(image,cvStream);
+//     simpleTex(image,cvStream);
+//     cudaTextureObject_t texObj=*(cudaTextureObject_t*)(char*)_texObj;
     cudaSafeCall( cudaDeviceSynchronize() );
 
     //find projection matrix from cost volume to image (3x4)

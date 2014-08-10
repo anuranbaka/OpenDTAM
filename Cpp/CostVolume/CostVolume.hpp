@@ -8,7 +8,7 @@
 
 
 #include <opencv2/gpu/gpu.hpp>
-
+#include <opencv2/gpu/stream_accessor.hpp>
 typedef  int FrameID;
 
 class CostVolume
@@ -59,11 +59,13 @@ private:
     void solveProjection(const cv::Mat& R, const cv::Mat& T);
     void checkInputs(const cv::Mat& R, const cv::Mat& T,
             const cv::Mat& _cameraMatrix);
-    
+    cudaTextureObject_t simpleTex(const cv::Mat& image,cv::gpu::Stream cvStream=cv::gpu::Stream::Null());
 
 private:
     //temp variables ("static" containers)
-
+    cv::Ptr<char> _cuArray;//cudaArray*
+    cv::Ptr<char> _texObj;//cudaTextureObject_t
+    
 };
 
 #endif // COSTVOLUME_HPP

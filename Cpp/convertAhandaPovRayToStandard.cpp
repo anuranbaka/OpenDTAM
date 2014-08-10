@@ -22,7 +22,7 @@ void convertAhandaPovRayToStandard(const char * filepath,
     char text_file_name[600];
     sprintf(text_file_name,"%s/scene_%03d.txt",filepath,imageNumber);
 
-//     cout << "text_file_name = " << text_file_name << endl;
+    cout << "text_file_name = " << text_file_name << endl;
 
     ifstream cam_pars_file(text_file_name);
     if(!cam_pars_file.is_open())

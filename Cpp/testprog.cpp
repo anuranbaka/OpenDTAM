@@ -121,8 +121,8 @@ int App_main( int argc, char** argv )
         image=0.5;
     }
 
-    OpenDTAM odm(cameraMatrix);
-    odm.addFrameWithPose(image,R,T);
+//     OpenDTAM odm(cameraMatrix);
+//     odm.addFrameWithPose(image,R,T);
 
     hconcat(R,T,cameraAffinePoseBase);
 
@@ -165,8 +165,8 @@ int App_main( int argc, char** argv )
         Ts.push_back(T.clone());
 
     }
-    odm.addFrameWithPose(images[1],Rs[1],Ts[1]);
-    odm.addFrame(images[2]);
+    //odm.addFrameWithPose(images[1],Rs[1],Ts[1]);
+    //odm.addFrame(images[2]);
 //     while(1){
 //         usleep(100000);
 //     }
@@ -242,12 +242,12 @@ int App_main( int argc, char** argv )
                     for (int i = 0; i < 10; i++) {
                         optimizer2.optimizeQD();
 //                        cudaDeviceSynchronize();
-//                       optimizer2._qx.download(ret);
-//                       pfShow("Qx function", ret, 0, cv::Vec2d(-1, 1));
-//                       optimizer2._gy.download(ret);
-//                       pfShow("Gy function", ret, 0, cv::Vec2d(0, 1));
-//                       optimizer2._d.download(ret);
-//                       pfShow("D function", ret, 0, cv::Vec2d(0, 32));
+                      optimizer2._qx.download(ret);
+                      pfShow("Qx function", ret, 0, cv::Vec2d(-1, 1));
+                      optimizer2._gy.download(ret);
+                      pfShow("Gy function", ret, 0, cv::Vec2d(0, 1));
+                      optimizer2._d.download(ret);
+                      pfShow("D function", ret, 0, cv::Vec2d(0, 32));
 //                       usleep(100000);
                         //gpause();
                         
@@ -262,6 +262,8 @@ int App_main( int argc, char** argv )
                 
                 
                 pfShow("Depth Solution", optimizer2.depthMap());
+                optimizer2._a.download(ret);
+                pfShow("Depth Solution", ret, 0, cv::Vec2d(0, 32));
                 gpause();
                 cv=cv2;
                 optimizer=optimizer2;
