@@ -59,12 +59,13 @@ private:
     void solveProjection(const cv::Mat& R, const cv::Mat& T);
     void checkInputs(const cv::Mat& R, const cv::Mat& T,
             const cv::Mat& _cameraMatrix);
-    cudaTextureObject_t simpleTex(const cv::Mat& image,cv::gpu::Stream cvStream=cv::gpu::Stream::Null());
+    void simpleTex(const cv::Mat& image,cv::gpu::Stream cvStream=cv::gpu::Stream::Null());
 
 private:
     //temp variables ("static" containers)
-    cv::Ptr<char> _cuArray;//cudaArray*
-    cv::Ptr<char> _texObj;//cudaTextureObject_t
+    cv::Ptr<char> _cuArray;//Ptr<cudaArray*> really
+    cv::Ptr<char> _texObj;//Ptr<cudaTextureObject_t> really
+
     
 };
 

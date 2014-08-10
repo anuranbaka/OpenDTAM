@@ -111,7 +111,7 @@ class OpenDTAM{
 
     
     typedef Ptr<Frame> Fp;
-    FrameID addFrameWithPose(Mat image, Mat R, Mat T){
+    FrameID addFrameWithPose(const Mat& image, const Mat& R, const Mat& T){
         if(!initd){
             init(image);
             initd=1;
@@ -130,8 +130,8 @@ class OpenDTAM{
                 tmp.im=new Mat(image);
                 tmp.gray=new Mat();
                 cvtColor(image, *tmp.gray,CV_BGR2GRAY); 
-                tmp.R=R; 
-                tmp.T=T; 
+                tmp.R=R.clone(); 
+                tmp.T=T.clone(); 
                 tmp.reg2d=1; 
                 tmp.reg3d=1; 
                 tmp.gt=1; //rough+fine tracked and ground truth
@@ -280,37 +280,54 @@ cv::gpu::CudaMem imageContainerUcv;
 bool ucv(Ptr<Frame> _base,Ptr<Frame> _alt){
     Frame& base=*_base;
     Frame& alt=*_alt;
-    Mat cameraMatrix=this->cameraMatrix.clone();
+    Mat ucameraMatrix=this->cameraMatrix.clone();
     Mat b,a;
     
     Size2d s0=base.im->size();
     resize(*base.im,b,ucvSize);
     resize(*alt.im,a,ucvSize);
     Size2d sn=b.size();
+    cout<<sum(a)<<sum(b)<<endl;
     double sx=(sn.width/s0.width);
     double sy=(sn.height/s0.height);
-    cameraMatrix+=(Mat)(Mat_<double>(3,3) << 0,0.0,0.5,
+    ucameraMatrix+=(Mat)(Mat_<double>(3,3) << 0,0.0,0.5,
                                         0.0,0.0,0.5,
                                         0.0,0.0,0);
-    cameraMatrix=cameraMatrix.mul((Mat)(Mat_<double>(3,3) <<    sx,0.0,sx,
+    ucameraMatrix=ucameraMatrix.mul((Mat)(Mat_<double>(3,3) <<    sx,0.0,sx,
                                             0.0,sy ,sy,
                                             0.0,0.0,1.0));
-    cameraMatrix-=(Mat)(Mat_<double>(3,3) << 0,0.0,0.5,
+    ucameraMatrix-=(Mat)(Mat_<double>(3,3) << 0,0.0,0.5,
                                         0.0,0.0,0.5,
                                         0.0,0.0,0);
-        
-    Ptr<CostVolume> cvp(new CostVolume(b,base.fid,32,0.015,0.0,base.R,base.T,cameraMatrix));
+    cudaDeviceSynchronize();
+    cout<<ucameraMatrix<<endl;
+    Ptr<CostVolume> cvp(new CostVolume(b,base.fid,32,0.015,0.0,base.R,base.T,ucameraMatrix));
     CostVolume& cv=*cvp;
+    cout<<"uCm"<<ucameraMatrix<<endl;
+    cout<<"ubSum"<<sum(b)<<endl;
+    cout<<"uRs"<<cv.R<<endl;
+    cout<<"uTs"<<cv.T<<endl;
     imageContainerUcv.create(a.rows,a.cols,CV_8UC4);
     Mat tmp,ret;
-    cvtColor(b,tmp,CV_RGB2RGBA);
+    cvtColor(a,tmp,CV_RGB2RGBA);
+
     Mat imageContainerRef=imageContainerUcv;//Required by ambiguous conversion rules
     tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
+    cout<<"icuSum"<<cv::sum(imageContainerRef)<<endl;
+    cout<<"aR"<<alt.R<<endl;
+    cout<<"aT"<<alt.T<<endl;
     cv.updateCost(imageContainerUcv, alt.R, alt.T);
+
+    cv.loInd.download(ret);
+    cout<<"uliSum"<<sum(ret)<<endl;
+    while(1);
+    
     Ptr<Optimizer> optimizerp(new Optimizer(cv));
     Optimizer& optimizer=*optimizerp;
     optimizer.initOptimization();
-    
+    cv.loInd.download(ret);
+    pfShow("odm loind",ret);
+    gpause();
     bool doneOptimizing;
     do{
 //         cout<<"Theta: "<< optimizer.theta<<endl;

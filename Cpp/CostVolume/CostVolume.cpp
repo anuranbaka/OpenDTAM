@@ -51,11 +51,12 @@ void CostVolume::checkInputs(const cv::Mat& R, const cv::Mat& T,
     assert(_cameraMatrix.size() == Size(3, 3));
     assert(_cameraMatrix.type() == CV_64FC1);
 }
+
 #define FLATUP(src,dst){GpuMat tmp;tmp.upload(src);dst.create(1,rows*cols, src.type());dst=dst.reshape(0,rows);}
 #define FLATALLOC(n) n.create(1,rows*cols, CV_32FC1);n=n.reshape(0,rows)
 CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
         float _far, cv::Mat R, cv::Mat T, cv::Mat _cameraMatrix,
-        float initialCost, float initialWeight): R(R),T(T),initialWeight(initialWeight) {
+        float initialCost, float initialWeight): R(R),T(T),initialWeight(initialWeight),_cuArray(0) {
 
     //For performance reasons, OpenDTAM only supports multiple of 32 image sizes with cols >= 64
     CV_Assert(image.rows % 32 == 0 && image.cols % 32 == 0 && image.cols >= 64);
@@ -87,16 +88,25 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
     //hitContainer = initialWeight;
     hits = (float*) hitContainer.data;
     count = 0;
-
+    
+    //messy way to disguise cuda objects
+    _cuArray=Ptr<char>((char*)(new cudaArray*));
+    *((cudaArray**)(char*)_cuArray)=0;
+    _texObj=Ptr<char>((char*)(new cudaTextureObject_t));
+    *((cudaTextureObject_t*)(char*)_texObj)=0;
+    
 }
 
 
 
-static cudaArray* cuArray=0;
-static cudaTextureObject_t texObj=0;
+// static cudaArray* cuArray=0;
+// static cudaTextureObject_t texObj=0;
 
-cudaTextureObject_t CostVolume::simpleTex(const Mat& image,Stream cvStream){
-    cudaArray* cuArray=(cudaArray*)(char*)_cuArray;
+void CostVolume::simpleTex(const Mat& image,Stream cvStream){
+    cudaArray*& cuArray=*((cudaArray**)(char*)_cuArray);
+    cudaTextureObject_t& texObj=*((cudaTextureObject_t*)(char*)_texObj);
+    
+//     cudaArray*& cuArray=*((cudaArray**)((char*)_cuArray));
 //     if(!_texObj){
 //         _texObj=Ptr<char>((char*)new cudaTextureObject_t);
 //     }
@@ -118,6 +128,7 @@ cudaTextureObject_t CostVolume::simpleTex(const Mat& image,Stream cvStream){
     if (!cuArray){
     cudaSafeCall(cudaMallocArray(&cuArray, &channelDesc, image.cols, image.rows));
     }
+    
     assert((image.dataend-image.datastart)==image.cols*image.rows*sizeof(uchar4));
     
     cudaSafeCall(cudaMemcpyToArrayAsync(cuArray, 0, 0, image.datastart, image.dataend-image.datastart,
@@ -129,11 +140,11 @@ cudaTextureObject_t CostVolume::simpleTex(const Mat& image,Stream cvStream){
     resDesc.resType = cudaResourceTypeArray;
     resDesc.res.array.array = cuArray;
     
-    if (! texObj){
+    if (!texObj){
     // Create texture object
     cudaSafeCall(cudaCreateTextureObject(&texObj, &resDesc, &texDesc, NULL));
     }
-   return texObj;
+   //return texObj;
 }
 
 
@@ -161,11 +172,10 @@ void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, con
    
     //change input image to a texture
     //ArrayTexture tex(image, cvStream);
-    pfShow("im",image);
-    cudaTextureObject_t texObj=simpleTex(image,cvStream);
-//     simpleTex(image,cvStream);
-//     cudaTextureObject_t texObj=*(cudaTextureObject_t*)(char*)_texObj;
-    cudaSafeCall( cudaDeviceSynchronize() );
+    simpleTex(image,cvStream);
+    cudaTextureObject_t& texObj=*((cudaTextureObject_t*)(char*)_texObj);
+//     cudaTextureObject_t texObj=simpleTex(image,cvStream);
+//     cudaSafeCall( cudaDeviceSynchronize() );
 
     //find projection matrix from cost volume to image (3x4)
     Mat viewMatrixImage;

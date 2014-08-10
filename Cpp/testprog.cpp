@@ -94,7 +94,7 @@ int App_main( int argc, char** argv )
 //     cout<< "T : "<<T<<"\n";
     sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",imageNum);
     Mat image; 
-    double sc=5/5.;
+    double sc=1/5.;
     if (!valgrind){
         imread(filename,-1).convertTo(image,CV_32FC3,1.0/65535.0);   // Read the file
 
@@ -121,9 +121,9 @@ int App_main( int argc, char** argv )
         image=0.5;
     }
 
-//     OpenDTAM odm(cameraMatrix);
-//     odm.addFrameWithPose(image,R,T);
-
+    OpenDTAM odm(cameraMatrix);
+    odm.addFrameWithPose(image,R,T);
+cout<<cameraMatrix<<endl;
     hconcat(R,T,cameraAffinePoseBase);
 
     Cost cost(image.clone(),32, cameraMatrix, R,T);
@@ -151,11 +151,12 @@ int App_main( int argc, char** argv )
                                       T);
         Mat image;
         cout<<filename<<endl;
-
+        
         if (!valgrind){
             imread(filename, -1).convertTo(image,CV_32FC3,1.0/65535.0);
 //            cameraMatrix.rowRange(0,2)/=3;
             resize(image,image,Size(),sc,sc);
+            cout<<sum(image)<<endl;
         }else{
             image.create(480,640,CV_32FC3);
             image=0.5;
@@ -165,8 +166,8 @@ int App_main( int argc, char** argv )
         Ts.push_back(T.clone());
 
     }
-    //odm.addFrameWithPose(images[1],Rs[1],Ts[1]);
-    //odm.addFrame(images[2]);
+    odm.addFrameWithPose(images[10],Rs[10],Ts[10]);
+    odm.addFrame(images[2]);
 //     while(1){
 //         usleep(100000);
 //     }
@@ -203,13 +204,13 @@ int App_main( int argc, char** argv )
             cvtColor(image,tmp,CV_RGB2RGBA);
             Mat imageContainerRef=imageContainer;//Required by ambiguous conversion rules
             tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
-            if (imageNum<2){
-                cv.updateCost(imageContainer, R, T);
-//                cv.loInd.download(ret);
-//                assert(cv.loInd.isContinuous());
-//                pfShow("loInd Soln", cv.downloadOldStyle(0));
-//                gpause();
-            }
+//             if (imageNum<2){
+//                 cv.updateCost(imageContainer, R, T);
+// //                cv.loInd.download(ret);
+// //                assert(cv.loInd.isContinuous());
+// //                pfShow("loInd Soln", cv.downloadOldStyle(0));
+// //                gpause();
+//             }
 
 
             if (imageNum==10    ){//ucv test
@@ -221,13 +222,34 @@ int App_main( int argc, char** argv )
                 Mat imageContainerRef=imageContainer;//Required by ambiguous conversion rules
                 tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
                 CostVolume cv2(images[0],(FrameID)0,32,0.015,0.0,Rs[0],Ts[0],cameraMatrix);
+                cout<<"tCm"<<cameraMatrix<<endl;
+                cout<<"tbSum"<<sum(images[0])<<endl;
+                cout<<"tRs"<<cv2.R<<endl;
+                cout<<"tTs"<<cv2.T<<endl;
+                
+                
                 cv2.updateCost(imageContainer, R, T);
+                cout<<"ictSum"<<sum(imageContainerRef)<<endl;
+                cout<<"tR"<<R<<endl;
+                cout<<"tT"<<T<<endl;
+                cv2.updateCost(imageContainer, R, T);
+                
+                cv2.loInd.download(ret);
+                cout<<"uliSum"<<sum(ret)<<endl;
+                
+                
+                
+                cv2.loInd.download(ret);
+                cout<<"a2R"<<R<<endl;
 
                 Optimizer optimizer2(cv2);
 //                pfShow("ADD", cv2.downloadOldStyle(0));
 //                gpause();
 
                 optimizer2.initOptimization();
+                
+                pfShow("o2 loInd",ret);
+                gpause();
                 //cudaStreamSynchronize();
                 bool doneOptimizing;
                 do{
