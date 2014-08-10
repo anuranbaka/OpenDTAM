@@ -126,8 +126,8 @@ void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     createPyramid(lastFrameGray,lfPyr,levels);
     
     
-    float scale=1.0;
-    int i=0;
+
+
     
     int level=startlevel;
     Mat p2d=Mat::zeros(1,6,CV_64FC1);

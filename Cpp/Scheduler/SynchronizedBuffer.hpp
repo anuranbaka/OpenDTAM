@@ -55,11 +55,12 @@ public:
     //void readStall();
     //void readUnstall();
     ImplMutex mutex;
+    std::deque<T > q;
     
 private:
     int _readStall;
     ImplCondVar cond;
-    std::deque<T > q;
+    
 public:
     void push(T& in){
         mutex.lock();
@@ -79,6 +80,15 @@ public:
         if (q.size()>0){
             cond.signal();
         }
+        mutex.unlock();
+        return out;
+    }
+    T peek(){
+        mutex.lock();
+        while(q.size()<1||_readStall){
+            cond.wait(mutex);
+        }
+        T out = q.back();
         mutex.unlock();
         return out;
     }

@@ -20,9 +20,14 @@
 
 //debug
 #include "tictoc.h"
-const static bool valgrind=0;
+#include "Scheduler/Frame.hpp"
+
 #include <cuda_profiler_api.h>
 #include <cuda_runtime.h>
+
+#include "OpenDTAM.hpp"
+
+const static bool valgrind=0;
 
 //A test program to make the mapper run
 using namespace cv;
@@ -50,10 +55,23 @@ void myExit(){
 
 int App_main( int argc, char** argv )
 {
+//     VideoCapture cap(0); // open the default camera
+// 
+//     if(!cap.isOpened()) // check if we succeeded
+//         return -1;
+//     while(1){
+//         Mat frame;
+//         cap >> frame; // get a new frame from camera
+//         pfShow("frame",frame);
+//     }
+
+
     int numImg=10;
     cv::gpu::CudaMem imageContainer;
     pthread_setname_np(pthread_self(),"App_main");
-        
+//         cout<<sizeof(Frame)<<endl;
+//         cout<<"hi"<<endl;
+
     FileStorage fs;
     void* junk;
     cudaMalloc(&junk,5500);
@@ -76,7 +94,7 @@ int App_main( int argc, char** argv )
 //     cout<< "T : "<<T<<"\n";
     sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",imageNum);
     Mat image; 
-    double sc=1/5.;
+    double sc=5/5.;
     if (!valgrind){
         imread(filename,-1).convertTo(image,CV_32FC3,1.0/65535.0);   // Read the file
 
@@ -103,14 +121,18 @@ int App_main( int argc, char** argv )
         image=0.5;
     }
 
+    OpenDTAM odm(cameraMatrix);
+    odm.addFrameWithPose(image,R,T);
+
     hconcat(R,T,cameraAffinePoseBase);
 
     Cost cost(image.clone(),32, cameraMatrix, R,T);
-
     Mat tmp;
     //image.convertTo(tmp,CV_8UC4, 255.0);
     CostVolume cv(image,(FrameID)1,32,0.015,0.0,R,T,cameraMatrix);
+
     Optimizer optimizer(cv);
+
     optimizer.initOptimization();
 
 
@@ -143,7 +165,11 @@ int App_main( int argc, char** argv )
         Ts.push_back(T.clone());
 
     }
-
+    odm.addFrameWithPose(images[1],Rs[1],Ts[1]);
+    odm.addFrame(images[2]);
+//     while(1){
+//         usleep(100000);
+//     }
     cudaProfilerStart();
     while(1){
         for (int imageNum=1;imageNum<=numImg;imageNum++){
@@ -206,8 +232,8 @@ int App_main( int argc, char** argv )
                 bool doneOptimizing;
                 do{
 //                    cout<<"Theta: "<< optimizer2.theta<<endl;
-                  optimizer2._a.download(ret);
-                  pfShow("A", ret, 0, cv::Vec2d(0, 32));
+//                   optimizer2._a.download(ret);
+//                   pfShow("A", ret, 0, cv::Vec2d(0, 32));
 
     //                optimizer.cacheGValues();
     //                optimizer._gy.download(ret);
@@ -229,11 +255,13 @@ int App_main( int argc, char** argv )
 //                    cudaDeviceSynchronize();
                     doneOptimizing=optimizer2.optimizeA();
                 }while(!doneOptimizing);
-                optimizer2.cvStream.waitForCompletion();
+                while(!optimizer2.cvStream.queryIfComplete()){
+                    pfShow("Depth Solution", optimizer2.depthMap());
+                }
                 toc();
-                optimizer2._a.download(ret);
                 
-                pfShow("Depth Solution", ret, 0, cv::Vec2d(0, 32));
+                
+                pfShow("Depth Solution", optimizer2.depthMap());
                 gpause();
                 cv=cv2;
                 optimizer=optimizer2;

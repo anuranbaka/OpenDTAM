@@ -25,17 +25,19 @@ Optimizer::Optimizer(CostVolume cv) : cv(cv), cvStream(cv.cvStream)
     CV_Assert(cv.rows % 32 == 0 && cv.cols % 32 == 0 && cv.cols >= 64);
     allocate();
     setDefaultParams();
+    stableDepthEnqueued=cachedG=haveStableDepth=0;
     
 }
 
 void Optimizer::allocate(){
-    _a.create(cv.rows,cv.cols,CV_32FC1);
-    _d.create(cv.rows,cv.cols,CV_32FC1);
-    _qx.create(cv.rows,cv.cols,CV_32FC1);
-    _qy.create(cv.rows,cv.cols,CV_32FC1);
-    _g1.create(cv.rows,cv.cols,CV_32FC1);
-    _gx.create(cv.rows,cv.cols,CV_32FC1);
-    _gy.create(cv.rows,cv.cols,CV_32FC1);
+    cout<<cv.rows<<", "<<cv.cols<<endl;
+    _a.create(cv.rows,cv.cols,CV_32FC1);assert(_a.isContinuous());
+    _d.create(cv.rows,cv.cols,CV_32FC1);assert(_d.isContinuous());
+    _qx.create(cv.rows,cv.cols,CV_32FC1);assert(_qx.isContinuous());
+    _qy.create(cv.rows,cv.cols,CV_32FC1);assert(_qy.isContinuous());
+    _g1.create(cv.rows,cv.cols,CV_32FC1);assert(_g1.isContinuous());
+    _gx.create(cv.rows,cv.cols,CV_32FC1);assert(_gx.isContinuous());
+    _gy.create(cv.rows,cv.cols,CV_32FC1);assert(_gy.isContinuous());
     stableDepth.create(cv.rows,cv.cols,CV_32FC1);
 }
 
@@ -71,8 +73,12 @@ bool Optimizer::optimizeA(){
 
     theta*=thetaStep;
     if (doneOptimizing){
+        stableDepthReady=(char*)(new cudaEvent_t);
+        cudaEventCreate((cudaEvent_t*)(char*)stableDepthReady,cudaEventBlockingSync);
 //         _a.convertTo(stableDepth,CV_32FC1,cv.depthStep,cv.far);
         cvStream.enqueueConvert(_a,stableDepth,CV_32FC1,cv.depthStep,cv.far);
+        cudaEventRecord(*(cudaEvent_t*)(char*)stableDepthReady,localStream);
+        stableDepthEnqueued = 1;
     }
     return doneOptimizing;
 }
@@ -82,12 +88,15 @@ const cv::Mat Optimizer::depthMap(){
     // internal data to true inverse depth, as this may change.
     // Currently depth is just a constant multiple of the index, so
     // infinite depth is always represented. This is likely to change.
-    Mat tmp;
-    
-    if (stableDepth.data) {
-        stableDepth.download(tmp);
-    } else {
-        _a.download(tmp);
+    Mat tmp(cv.rows,cv.cols,CV_32FC1);
+    cv::gpu::Stream str;
+    if(stableDepthEnqueued){
+        cudaEventSynchronize(*(cudaEvent_t*)(char*)stableDepthReady);
+        str.enqueueDownload(stableDepth,tmp);
+        str.waitForCompletion();
+    }else{
+        str.enqueueDownload(_a,tmp);
+        str.waitForCompletion();
         tmp = tmp * cv.depthStep + cv.far;
     }
     return tmp;

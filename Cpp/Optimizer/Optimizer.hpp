@@ -29,7 +29,7 @@ public:
     cv::gpu::GpuMat _qx,_qy,_d,_a,_g,_g1,_gx,_gy,_gbig;
     cv::gpu::GpuMat stableDepth;
 
-//private:
+private:
     void allocate();
     void initA();
     void initQD();
@@ -40,11 +40,15 @@ public:
     float theta,sigma_d,sigma_q;
 
     //flags
-    bool cachedG;
-
+    bool cachedG, haveStableDepth;
+    
+    //
+    int stableDepthEnqueued;
+    cv::Ptr<char> stableDepthReady;//really a void*
+public:
     cv::gpu::Stream cvStream;
 
-
+    
 };
 
 #endif // OPTIMIZER_H

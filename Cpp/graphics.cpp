@@ -76,7 +76,7 @@ static inline T take(queue<T>& q){
 
 
 void* guiLoop(void*){
-    set_affinity(0);
+    set_affinity(3);
     pthread_setname_np(pthread_self(),"Graphics");
     Mat mat;
     while(1){
@@ -111,8 +111,9 @@ void* guiLoop(void*){
                 double scale= 1.0/(autoscale[1]-autoscale[0]);
                 mat.convertTo(mat,CV_MAKETYPE(mat.type(),mat.channels()),scale,-autoscale[0]*scale);
             }
-            if(mat.rows<200){
-               namedWindow(name,CV_WINDOW_KEEPRATIO);
+            if(mat.rows<250){
+                name+=":small";
+                namedWindow(name, CV_WINDOW_KEEPRATIO | CV_GUI_NORMAL);
             }
             imshow( name, mat);
             waitKey(1);//waitkey must occur here so matrix doesn't fall out of scope because imshow is dumb that way :(
@@ -123,6 +124,8 @@ void* guiLoop(void*){
             while(waitKey()!=' ');
             
             CV_XADD(&pausing,-1);
+        }else{
+            waitKey(1);
         }
         if(pausing<0){
             pausing=0;
