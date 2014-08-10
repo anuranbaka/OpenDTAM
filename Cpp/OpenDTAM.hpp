@@ -356,7 +356,7 @@ void Tutrk(int* stop){
     while(!*stop){
         Ptr<Frame> myFrame=utrkq.pop();
         if(!utrk(myFrame)){
-            cout<<"tracking fail,recovering..."<<endl;
+            cout<<"Restarting ODM Tracking"<<endl;
             utrkq.readStall();//prevent others from wasting time trying to track until got a new cv
             std::vector<Ptr<Frame> > frames=utrkd.peekn(2);
             ucv(frames[0],frames[1]);

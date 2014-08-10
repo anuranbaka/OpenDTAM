@@ -46,11 +46,11 @@ int main( int argc, char** argv ){
 }
 void myExit(){
     cudaDeviceSynchronize();
-
-    allDie=1;
-    gcheck();
-    usleep(100000);
-    exit(0);
+    ImplThread::stopAllThreads();
+//     allDie=1;
+//     gcheck();
+//     usleep(100000);
+//     exit(0);
 }
 
 int App_main( int argc, char** argv )
@@ -367,7 +367,7 @@ int App_main( int argc, char** argv )
 //        allDie=1;
 //        sleep(10);
        // cudaProfilerStop();
-       ImplThread::stopAllThreads();
+       
         break;  
     }
     while(1){

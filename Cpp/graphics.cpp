@@ -3,7 +3,9 @@
 #include <queue>
 #include <string>
 #include "set_affinity.h"
+#include "utils/ImplThreadLaunch.hpp"
 #include "graphics.hpp"
+
 using namespace std;
 using namespace cv;
 static queue<Mat> toShow;
@@ -21,14 +23,9 @@ void gpause(){
     gcheck();
 }
 void gcheck(){
-    while(allDie){
-        usleep(100);
-        if(allDie>1)
-                    return;
-    }
     while(ready||CV_XADD(&pausing,0)){
         usleep(100);
-        if(allDie>1)
+        if(allDie)
                     return;
     }
 }
@@ -77,11 +74,9 @@ static inline T take(queue<T>& q){
 
 
 
-void* guiLoop(void*){
-    set_affinity(3);
-    pthread_setname_np(pthread_self(),"Graphics");
+void guiLoop(int* die){
     Mat mat;
-    while(1){
+    while(!*die){
         if (props.size()>0){//deal with new windows
             Gmux.lock();
             string name=take(nameWin);
@@ -133,18 +128,14 @@ void* guiLoop(void*){
             pausing=0;
         }
 //         waitKey(1);
-        if(allDie){
-            waitKey(1);
-            waitKey(1);
-            allDie++;
-            return 0;
-        }
 //         usleep(100);
     }
-    return NULL;
+    allDie=1;
+    cout<<"Gui Shutting down"<<endl;
+    waitKey(1);
 }
 void initGui(){
-    pthread_t threadGui;
-    pthread_create( &threadGui, NULL, &guiLoop, NULL);
+    ImplThread::startThread(guiLoop,"Graphics"); 
+    
 }
 
