@@ -249,7 +249,6 @@ bool utrk(Ptr<Frame> _frame){
     for (int level=utrkLevel2DStart; level<utrkLevel2DEnd; level++){
         int iters=3;
         for(int i=0;i<iters;i++){
-            tic();
             //HACK: use 3d alignment with depth disabled for 2D. ESM would be much better, but I'm lazy right now.
             bool success = align_level_largedef_gray_forward(   (*lf.pyramid)[level],//Total Mem cost ~185 load/stores of image
                                                                 Mat(),
@@ -264,7 +263,6 @@ bool utrk(Ptr<Frame> _frame){
                 cout<<"Restarting ODM Tracking"<<endl;
                 return 0;
             }
-            toc();
         }
     }
     frame.relPose2d=p2d;
@@ -375,7 +373,7 @@ bool ucv(Ptr<Frame> _base,Ptr<Frame> _alt){
     base.optimizer=optimizerp;
     ucvd.push(_base);
     cvd.push(_base);
-    gpause();
+//     gpause();
     return true;
 }
 
