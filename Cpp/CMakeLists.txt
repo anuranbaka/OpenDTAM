@@ -40,6 +40,7 @@ add_subdirectory(CostVolume)
 add_subdirectory(Track)
 add_subdirectory(Optimizer)
 add_subdirectory(utils)
+add_subdirectory(Scheduler)
 
 
 include_directories("${BASEPATH}" ${CUDA_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})

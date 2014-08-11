@@ -114,7 +114,7 @@ void guiLoop(int* die){
             }
             imshow( name, mat);
             waitKey(1);//waitkey must occur here so matrix doesn't fall out of scope because imshow is dumb that way :(
-           
+//            cout<<name<<" queue:"<<ready<<endl;
         }else if(pausing){
             namedWindow("control",CV_WINDOW_KEEPRATIO);
             cout<<"Paused: Space (in GUI window) to continue"<<endl;

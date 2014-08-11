@@ -66,7 +66,7 @@ int App_main( int argc, char** argv )
 //     }
 
 
-    int numImg=10;
+    int numImg=50;
     cv::gpu::CudaMem imageContainer;
     pthread_setname_np(pthread_self(),"App_main");
 //         cout<<sizeof(Frame)<<endl;
@@ -166,13 +166,17 @@ int App_main( int argc, char** argv )
 
     }
     odm.addFrameWithPose(images[10],Rs[10],Ts[10]);
-    odm.addFrame(images[2]);
 //     while(1){
 //         usleep(100000);
 //     }
     cudaProfilerStart();
     while(1){
-        for (int imageNum=1;imageNum<=numImg;imageNum++){
+        for (int imageNum=2;imageNum<=numImg;imageNum++){
+            odm.addFrame(images[imageNum]);
+            
+            
+            
+            
             if(imageNum==1){
                 cudaDeviceSynchronize();
             //    cudaProfilerStart();
@@ -262,14 +266,14 @@ int App_main( int argc, char** argv )
                 toc();
                 
                 
-                pfShow("Depth Solution", optimizer2.depthMap());
-                optimizer2._a.download(ret);
-                pfShow("Depth Solution", ret, 0, cv::Vec2d(0, 32));
-                gpause();
+//                 pfShow("Depth Solution", optimizer2.depthMap());
+//                 optimizer2._a.download(ret);
+//                 pfShow("Depth Solution", ret, 0, cv::Vec2d(0, 32));
+//                 gpause();
                 cv=cv2;
                 optimizer=optimizer2;
 
-                myExit();
+//                 myExit();
             }
 
 
@@ -367,12 +371,10 @@ int App_main( int argc, char** argv )
 //        allDie=1;
 //        sleep(10);
        // cudaProfilerStop();
-       
+       while(1)usleep(100000);;
         break;  
     }
-    while(1){
-        usleep(1000);
-    }
+
 end:
 
     return 0;

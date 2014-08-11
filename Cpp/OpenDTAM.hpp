@@ -93,7 +93,7 @@ class OpenDTAM{
         }
         if(!utrkLevel2DStart)   utrkLevel2DStart = 0;
         if(!utrkLevel2DEnd)     utrkLevel2DEnd   = min(utrkLevel2DStart+2, pyrLevels);
-        if(!utrkLevel3DStart)   utrkLevel3DStart = min(utrkLevel2DEnd,     pyrLevels);
+        if(!utrkLevel3DStart)   utrkLevel3DStart = min(utrkLevel2DEnd,     pyrLevels-1);//assure at least 1 level of 3d
         if(!utrkLevel3DEnd)     utrkLevel3DEnd   = min(utrkLevel3DStart+2, pyrLevels);
         if(!mtrkLevel3DStart)   mtrkLevel3DStart = min(utrkLevel3DEnd,     pyrLevels);
         if(!mtrkLevel3DEnd)     mtrkLevel3DEnd   = min(mtrkLevel3DStart+2, pyrLevels);
@@ -216,33 +216,40 @@ bool utrk(Ptr<Frame> _frame){
     
     //Find the last frame before this one
     Ptr<Frame> lfp;
-    {
-        fs.mutex.lock();
+    {//try for previous frame, if that doesn't work, use last utrkd frame 
+        {
+        ScopeLock s(fs.mutex);
         assert(frame.fid-1>=0);
         lfp=fs.q[frame.fid-1];
-        fs.mutex.unlock();
+        }
+        assert(lfp->reg3d);//this must be true for relative poses to make sense, remove assert if don't care.
+        if(!lfp->reg3d){
+        ScopeLock s(utrkd.mutex);
+        lfp=utrkd.q.back();
+        }
     }
     Frame & lf = *lfp;
     
     // Find a depth map to track from
     Ptr<Frame> basep;
     {
-        ucvd.mutex.lock();
-        if(ucvd.q.size()==0)//no ucv yet! might be at init
+        ScopeLock s(ucvd.mutex);
+        if(ucvd.q.size()==0){//no ucv yet! might be at init
+            cout<<"OpenDTAM Tracking Starting."<<endl;
             return 0;
+        }
         basep = ucvd.q.back();
-        ucvd.mutex.unlock();
     }
     Frame & base = *basep;
     
-    Mat p=Mat::zeros(1,6,CV_64FC1);
     Mat p2d=Mat::zeros(1,6,CV_64FC1);
     
     //Do 2D tracking
     static Mat Z(lf.im->rows,lf.im->cols,CV_32FC1);
-    for (int level=utrkLevel2DStart; level<=utrkLevel2DEnd; level++){
-        int iters=1;
+    for (int level=utrkLevel2DStart; level<utrkLevel2DEnd; level++){
+        int iters=3;
         for(int i=0;i<iters;i++){
+            tic();
             //HACK: use 3d alignment with depth disabled for 2D. ESM would be much better, but I'm lazy right now.
             bool success = align_level_largedef_gray_forward(   (*lf.pyramid)[level],//Total Mem cost ~185 load/stores of image
                                                                 Mat(),
@@ -250,17 +257,29 @@ bool utrk(Ptr<Frame> _frame){
                                                                 cameraMatrixPyr[level],//Mat_<double>
                                                                 p2d,                //Mat_<double>
                                                                 CV_DTAM_FWD,
-                                                                1,
+                                                                .7,
                                                                 3);
-            if (!success)
+            
+            if (!success){
+                cout<<"Restarting ODM Tracking"<<endl;
                 return 0;
+            }
+            toc();
         }
     }
-    p=LieAdd(p2d,p);
+    frame.relPose2d=p2d;
+    frame.reg2d=1;
+    
+    Mat pbase,plf,p;
+    RTToLie(lf.R, lf.T, plf);//plf has global pose of lf
+    RTToLie(base.R, base.T,pbase);//pbase has global pose of base
+    p=LieAdd(p2d,plf);//p has global pose of frame
+    p=LieSub(p,pbase);//p has relative pose to base
 
     //Do 3D tracking
-    for (int level=utrkLevel3DStart; level<=utrkLevel3DEnd; level++){
-        int iters=1;
+    for (int level=utrkLevel3DStart; level<utrkLevel3DEnd; level++){
+        float thr = (utrkLevel3DEnd-level)>=2 ? .05 : .2; //more stringent matching on last two levels 
+        int iters=3;
         for(int i=0;i<iters;i++){
             bool success = align_level_largedef_gray_forward(   (*base.pyramid)[level],//Total Mem cost ~185 load/stores of image
                                                                 base.optimizer->depthMap(),
@@ -268,15 +287,21 @@ bool utrk(Ptr<Frame> _frame){
                                                                 cameraMatrixPyr[level],//Mat_<double>
                                                                 p,                //Mat_<double>
                                                                 CV_DTAM_FWD,
-                                                                1,
-                                                                3);
-            if (!success)
+                                                                thr,
+                                                                6);
+            if (!success){
+                cout<<"Restarting ODM Tracking"<<endl;
                 return 0;
+            }
         }
     }
-    frame.relPose2d=p2d;
+    
     frame.relPose3d=p;
+    p=LieAdd(p,pbase);//p has global pose
     LieToRT(p,frame.R,frame.T);
+    frame.reg3d=1;
+    
+    return 1;
 }
 
 cv::gpu::CudaMem imageContainerUcv;
@@ -317,11 +342,14 @@ bool ucv(Ptr<Frame> _base,Ptr<Frame> _alt){
     
     Ptr<Optimizer> optimizerp(new Optimizer(cv));
     Optimizer& optimizer=*optimizerp;
+//     optimizer.thetaStart =    20.0;
+//     optimizer.thetaMin=0.01;
+//     optimizer.thetaStep=.99;
     optimizer.initOptimization();
-    gpause();
+//     gpause();
     bool doneOptimizing;
     do{ 
-//         cout<<"Theta: "<< optimizer.theta<<endl;
+        cout<<"Theta: "<< optimizer.getTheta()<<endl;
         optimizer._a.download(ret);
         pfShow("uA", ret, 0, cv::Vec2d(0, 32));
 
@@ -332,10 +360,10 @@ bool ucv(Ptr<Frame> _base,Ptr<Frame> _alt){
         for (int i = 0; i < 10; i++) {
             optimizer.optimizeQD();
 //             cudaDeviceSynchronize();
-            optimizer._qx.download(ret);
-            pfShow("uQx function", ret, 0, cv::Vec2d(-1, 1));
-            optimizer._gy.download(ret);
-            pfShow("uGy function", ret, 0, cv::Vec2d(0, 1));
+//             optimizer._qx.download(ret);
+//             pfShow("uQx function", ret, 0, cv::Vec2d(-1, 1));
+//             optimizer._gy.download(ret);
+//             pfShow("uGy function", ret, 0, cv::Vec2d(0, 1));
             optimizer._d.download(ret);
             pfShow("uD function", ret, 0, cv::Vec2d(0, 32));
         }
@@ -353,10 +381,10 @@ bool ucv(Ptr<Frame> _base,Ptr<Frame> _alt){
 
 
 void Tutrk(int* stop){
+    cout<<"Thread Launched "<< stop << endl;
     while(!*stop){
         Ptr<Frame> myFrame=utrkq.pop();
         if(!utrk(myFrame)){
-            cout<<"Restarting ODM Tracking"<<endl;
             utrkq.readStall();//prevent others from wasting time trying to track until got a new cv
             std::vector<Ptr<Frame> > frames=utrkd.peekn(2);
             ucv(frames[0],frames[1]);

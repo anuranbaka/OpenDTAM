@@ -6,8 +6,10 @@
 #  include <opencv2/core/core.hpp>
 #  include <map>
 #  include <iostream>
+#include <Scheduler/ImplMutex.hpp>
 namespace ImplThread{
-    extern std::map<const pthread_t,typename cv::Ptr<int> > mymap;
+    extern std::map<const pthread_t,int* > mymap;
+    extern ImplMutex mutex;
     void stopAllThreads();
     unsigned int startThread(void (*_func)(int*) , const std::string& _name="ODMThread",int affinity=-1);
 }
@@ -30,8 +32,9 @@ class ImplThreadLauncher{
             set_affinity(pass->cpuid);
         }
         Object* object=(Object*)pass->instance;
-        delete pass;
+
         (object->*(pass->func))(pass->stop);
+        delete pass;
     }
     
     static void set_affinity(int cpuid){
@@ -45,6 +48,7 @@ class ImplThreadLauncher{
     
 public:
     static unsigned int startThread(Object& object,void (Object::*_func)(int*), const std::string& _name="ODMThread",int affinity=-1){
+        ImplThread::mutex.lock();
         using namespace ImplThread;
         Pass* pass=new Pass;
         pass->name=_name;
@@ -52,28 +56,27 @@ public:
         pass->func=_func;
         pass->instance=&object;
         pass->stop=new int(0);
-        cv::Ptr<int> stopp=pass->stop;
+        int* stopp=pass->stop;
         pthread_t thread;
         
         pthread_create( &thread, NULL,launch, (void*) pass);
+        std::cout<<" Thread Requested: "<<_name<<" : "<<thread<<":"<< stopp<< std::endl;
         mymap[thread]=stopp;
+        ImplThread::mutex.unlock();
         return thread;
     }
     static void stopThread(unsigned int thread_id){
+        ImplThread::mutex.lock();
         using namespace ImplThread;
-        *mymap.at(thread_id)=1;
-        pthread_join(thread_id,NULL);
-        mymap.erase(thread_id);
-    }
-    static void stopAllThreads(){
-        using namespace ImplThread;
-        for (volatile std::map<const pthread_t,typename cv::Ptr<int> >::iterator it=mymap.begin(); it!=mymap.end();){
-            std::cout<<"Iter: "<<(int)it<<":"<<(int)mymap.end()<<std::endl;
-            stopThread(it->first);
-            it=mymap.begin();
-            std::cout<<"Iter: "<<(int)it<<":"<<(int)mymap.end()<<std::endl;
+        if(mymap.count(thread_id)){
+            *mymap.at(thread_id)=1;
+            std::cout<<" Thread Stop: "<< thread_id<< std::endl;
+            pthread_join(thread_id,NULL);
+            mymap.erase(thread_id);   
         }
+        ImplThread::mutex.unlock();
     }
+    
 };
 
 
