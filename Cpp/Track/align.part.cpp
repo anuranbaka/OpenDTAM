@@ -112,9 +112,9 @@ void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     lastFrameGray=makeGray(lastFrame)  ;
     
     tic();
-    int levels=3; // 6 levels on a 640x480 image is 20x15
+    int levels=6; // 6 levels on a 640x480 image is 20x15
     int startlevel=0;
-    int endlevel=3;
+    int endlevel=4;
 
     Mat p=LieSub(pose,basePose);// the Lie parameters 
     cout<<"pose: "<<p<<endl;
@@ -150,7 +150,7 @@ void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     p=LieAdd(p2d,p);
 //     cout<<"3D iteration:"<<endl;
     for (level=startlevel; level<levels && level<endlevel; level++){
-        int iters=1;
+        int iters=3;
         for(int i=0;i<iters;i++){
             float thr = (levels-level)>=2 ? .05 : .2; //more stringent matching on last two levels 
             bool improved;

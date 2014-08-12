@@ -230,14 +230,14 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
 //     //debug
 //     {
 //         if (numParams==6){
-//         pfShow("Before iteration",_I);
+        pfShow("Before iteration",_I);
 // //         if(I.rows==480){
 // //             Mask(I,fit<.05,I);
 // //             pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
 // // //             gpause();
 // //         }
 // //         else{
-//             pfShow("After Iteration",I,0,Vec2d(0,1));
+            pfShow("After Iteration",I,0,Vec2d(0,1));
 //             pfShow("To match",T);
 // //         }
 //         }
