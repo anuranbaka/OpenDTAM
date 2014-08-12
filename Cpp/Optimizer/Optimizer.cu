@@ -67,13 +67,12 @@ void loadConstants(uint h_rows, uint h_cols, uint h_layers, uint h_layerStep,
         //special
         arows=h_rows;
         acols=h_cols;
-
+        assert(arows>0);
         assert(h_layers>=32);
         assert(h_layers<=256); //make sure bit packing will work
 }
 
-static cudaStream_t strs [32]={0,0,0,0, 0,0,0,0,  0,0,0,0, 0,0,0,0,  0,0,0,0, 0,0,0,0,  0,0,0,0, 0,0,0,0,};
-static int num=0;
+
 cudaStream_t localStream=0;
 
 const int BLOCKX2D=32;
@@ -81,22 +80,22 @@ const int BLOCKY2D=32;
 #define GENERATE_CUDA_FUNC2D(funcName,arglist,notypes)                                     \
 static __global__ void funcName arglist;                                                        \
 void funcName##Caller arglist{                                                           \
-    int here=(num++%31)+1;                                                               \
    dim3 dimBlock(BLOCKX2D,BLOCKY2D);                                                                  \
    dim3 dimGrid((acols  + dimBlock.x - 1) / dimBlock.x,                                  \
                 (arows + dimBlock.y - 1) / dimBlock.y);                                  \
    funcName<<<dimGrid, dimBlock,0,localStream>>>notypes;                                  \
+   cudaSafeCall( cudaGetLastError() );\
 };static __global__ void funcName arglist
 
 
 #define GENERATE_CUDA_FUNC2DROWS(funcName,arglist,notypes)                                     \
 static __global__ void funcName arglist;                                                        \
 void funcName##Caller arglist{                                                           \
-    int here=(num++%31)+1;                                                               \
    dim3 dimBlock(BLOCKX2D,BLOCKY2D);                                                                  \
    dim3 dimGrid(1,                                  \
                 (arows + dimBlock.y - 1) / dimBlock.y);                                  \
    funcName<<<dimGrid, dimBlock,0,localStream>>>notypes;                                  \
+   cudaSafeCall( cudaGetLastError() );\
 };static __global__ void funcName arglist
 
 const int BLOCKX1D=256;
@@ -104,10 +103,10 @@ const int BLOCKX1D=256;
 #define GENERATE_CUDA_FUNC1D(funcName,arglist,notypes)                                     \
 static __global__ void funcName arglist;                                                        \
 void funcName##Caller arglist{                                                           \
-    int here=(num++%31)+1;                                                               \
    dim3 dimBlock(BLOCKX1D);                                                              \
    dim3 dimGrid((acols*arows) / dimBlock.x);                                             \
    funcName<<<dimGrid, dimBlock,0,localStream>>>notypes;                                  \
+   cudaSafeCall( cudaGetLastError() );\
 };static __global__ void funcName arglist
 
 
@@ -271,12 +270,211 @@ GENERATE_CUDA_FUNC1D(minimizeAcool,
 
 
 
+static __global__ void computeG1  (float* pp, float* g1p, float* gxp, float* gyp, float lambda, int cols);
+static __global__ void computeG2  (float* pp, float* g1p, float* gxp, float* gyp, float lambda, int cols);
+void computeGCaller  (float* pp, float* g1p, float* gxp, float* gyp, float lambda, int cols){
+//   dim3 dimBlock(BLOCKX2D,BLOCKY2D);
+   dim3 dimBlock(BLOCKX2D,4);
+   dim3 dimGrid(1,
+                (arows + dimBlock.y - 1) / dimBlock.y);
+   computeG1<<<dimGrid, dimBlock,0,localStream>>>(pp, g1p, gxp, gyp, lambda, cols);
+   computeG2<<<dimGrid, dimBlock,0,localStream>>>(pp, g1p, gxp, gyp, lambda, cols);
+   cudaSafeCall( cudaGetLastError() );
+};
 
-
-GENERATE_CUDA_FUNC2DROWS(computeG,
+GENERATE_CUDA_FUNC2DROWS(computeG1,
                      (float* pp, float* g1p, float* gxp, float* gyp, float lambda, int cols),
                      (pp, g1p, gxp, gyp, lambda, cols)) {
 //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
+
+//Original pseudocode for this function:
+    // //subscripts u,d,l,r mean up,down,left,right
+    // void computeG(){
+    //     // g0 is the strongest nearby gradient (excluding point defects)
+    //     g0x=fabsf(pr-pl);//|dx|
+    //     g0y=fabsf(pd-pu);//|dy|
+    //     g0=max(g0x,g0y);
+    //     // g1 is the scaled g0 through the g function exp(-alpha*x^beta)
+    //     g1=sqrt(g0); //beta=0.5
+    //     alpha=3.5;
+    //     g1=exp(-alpha*g1);
+    //     //hard to explain this without a picture, but breaks are where both neighboring pixels are near a change
+    //     gx=max(g1r,g1);
+    //     gy=max(g1d,g1);
+    //     gu=gyu;  //upper spring is the lower spring of the pixel above
+    //     gd=gy;   //lower spring
+    //     gr=gx;   //right spring
+    //     gl=gxl;  //left spring is the right spring of the pixel to the left
+    // }
+    const float alpha=3.5f;
+    int x = threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    int upoff=-(y!=0)*cols;
+    int dnoff=(y!=rows-1)*cols;
+    //itr0
+    int pt=x+y*cols;
+    float ph,pn,pu,pd,pl,pr;
+    float g0x,g0y,g0,g1,gt,gsav;
+    float tmp;
+    ph=pp[pt];
+    pn=pp[pt+blockDim.x];
+
+    pr=__shfl_down(ph,2);
+    tmp=__shfl_up(pn,30);
+    if(threadIdx.x>=30){
+        pr=tmp;
+    }
+    pl=ph;
+    pu=pp[pt+upoff];
+    pd=pp[pt+dnoff];
+
+
+    // g0 is the strongest nearby gradient (excluding point defects)
+        gt=fabsf(pr-pl);
+        g0x=__shfl_up(gt,1);//?xxxxxx no prior val
+        gsav=__shfl_down(gt,31);//x000000 for next time
+        g0x=threadIdx.x>0?g0x:0.0f;//0xxxxxx
+        g0y=fabsf(pd-pu);
+
+        g0=fmaxf(g0x,g0y);
+    // g1 is the scaled g0 through the g function
+        g1=sqrt(g0);
+        g1=exp(-alpha*g1);
+    //save
+        g1p[pt]=g1;
+
+    x+=32;
+    //itr 1:n-2
+    for(;x<cols-32;x+=32){
+        pt=x+y*cols;
+        ph=pn;
+        pn=pp[pt+blockDim.x];
+        pr=__shfl_down(ph,2);
+        tmp=__shfl_up(pn,30);
+        pr=threadIdx.x>=30?tmp:pr;
+
+        pl=ph;
+        pu=pp[pt+upoff];
+        pd=pp[pt+dnoff];
+
+        // g0 is the strongest nearby gradient (excluding point defects)
+            gt=fabsf(pr-pl);
+            g0x=__shfl_up(gt,1);//?xxxxxx
+            g0x=threadIdx.x>0?g0x:gsav;//xxxxxxx
+            gsav=__shfl_down(gt,31);//x000000 for next time
+            g0y=fabsf(pd-pu);
+
+            g0=fmaxf(g0x,g0y);
+
+        // g1 is the scaled g0 through the g function
+            g1=sqrt(g0);
+            g1=exp(-alpha*g1);
+        //save
+            g1p[pt]=g1;
+    }
+
+    //itr n-1
+    pt=x+y*cols;
+    ph=pn;
+    pr=__shfl_down(ph,2);
+    pl=ph;
+    pu=pp[pt+upoff];
+    pd=pp[pt+dnoff];
+
+    // g0 is the strongest nearby gradient (excluding point defects)
+        gt=fabsf(pr-pl);
+        g0x=__shfl_up(gt,1);//?xxxxxx
+        g0x=threadIdx.x>0?g0x:gsav;//xxxxxxx
+        g0y=fabsf(pd-pu);
+
+        g0=fmaxf(g0x,g0y);
+    // g1 is the scaled g0 through the g function
+        g1=sqrt(g0);
+        g1=exp(-alpha*g1);
+    //save
+        g1p[pt]=g1;
+}
+GENERATE_CUDA_FUNC2DROWS(computeG2,
+                     (float* pp, float* g1p, float* gxp, float* gyp, float lambda, int cols),
+                     (pp, g1p, gxp, gyp, lambda, cols)) {
+    int x = threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    int dnoff=(y!=rows-1)*cols;
+    //itr0
+    int pt=x+y*cols;
+    float g1h,g1n,g1u,g1d,g1r,g1l,gx,gy;
+    float tmp;
+//part2, find gx,gy
+    x = threadIdx.x;
+    y = blockIdx.y * blockDim.y + threadIdx.y;
+    //itr0
+    pt=x+y*cols;
+
+    g1h=g1p[pt];
+    g1n=g1p[pt+blockDim.x];
+    g1r=__shfl_down(g1h,1);
+    tmp=__shfl_up(g1n,31);
+    if(threadIdx.x>=31){
+        g1r=tmp;
+    }
+    g1l=g1h;
+    g1u=g1h;
+    g1d=g1p[pt+dnoff];
+
+    gx=fmaxf(g1l,g1r);
+    gy=fmaxf(g1u,g1d);
+
+    //save
+        gxp[pt]=gx;
+        gyp[pt]=gy;
+    x+=32;
+    //itr 1:n-2
+    for(;x<cols-32;x+=32){
+        pt=x+y*cols;
+        g1h=g1n;
+        g1n=g1p[pt+blockDim.x];
+        g1r=__shfl_down(g1h,1);
+        tmp=__shfl_up(g1n,31);
+        g1r=threadIdx.x>=31?tmp:g1r;
+
+        g1l=g1h;
+        g1u=g1h;
+        g1d=g1p[pt+dnoff];
+
+        gx=fmaxf(g1l,g1r);
+        gy=fmaxf(g1u,g1d);
+        //save
+            gxp[pt]=gx;
+            gyp[pt]=gy;
+    }
+
+    //itr n-1
+    pt=x+y*cols;
+    g1h=g1n;
+    g1r=__shfl_down(g1h,1);
+    g1l=g1h;
+    g1u=g1h;
+    g1d=g1p[pt+dnoff];
+
+    gx=fmaxf(g1l,g1r);
+    gy=fmaxf(g1u,g1d);
+
+
+    //save
+        gxp[pt]=gx;
+        gyp[pt]=gy;
+
+}
+
+
+//This version is faster, but makes synchronization errors at the lines between parts 1 and 2.
+//Could be fixed by a second pass for part 2 over the stitch lines, but I don't have time to figure that out
+//right now.
+GENERATE_CUDA_FUNC2DROWS(computeGunsafe,
+                     (float* pp, float* g1p, float* gxp, float* gyp, float lambda, int cols),
+                     (pp, g1p, gxp, gyp, lambda, cols)) {
+//TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
+//TODO: rerun kernel on lines with y%32==31 or y%32==0 to fix stitch lines
 
 //Original pseudocode for this function:
     // //subscripts u,d,l,r mean up,down,left,right
@@ -466,10 +664,14 @@ void updateQDCaller(float* gqxpt, float* gqypt, float *dpt, float * apt,
 
     dim3 dimBlock(BLOCKX2D, BLOCKY2D);
     dim3 dimGrid(1, (arows + dimBlock.y - 1) / dimBlock.y);
+    assert(dimGrid.y>0);
+    cudaSafeCall( cudaGetLastError() );
     updateQ<<<dimGrid, dimBlock,0,localStream>>>( gqxpt, gqypt, dpt, apt,
             gxpt, gypt, sigma_q, sigma_d, epsilon, theta);
+    cudaSafeCall( cudaGetLastError() );
     updateD<<<dimGrid, dimBlock,0,localStream>>>( gqxpt, gqypt, dpt, apt,
             gxpt, gypt, sigma_q, sigma_d, epsilon, theta);
+    cudaSafeCall( cudaGetLastError() );
 };
 
 //                            static __global__ void updateQD  (float* gqxpt, float* gqypt, float *dpt, float * apt,

@@ -3,7 +3,9 @@
 #include <queue>
 #include <string>
 #include "set_affinity.h"
+#include "utils/ImplThreadLaunch.hpp"
 #include "graphics.hpp"
+
 using namespace std;
 using namespace cv;
 static queue<Mat> toShow;
@@ -21,19 +23,16 @@ void gpause(){
     gcheck();
 }
 void gcheck(){
-    while(allDie){
-        usleep(100);
-        if(allDie>1)
-                    return;
-    }
     while(ready||CV_XADD(&pausing,0)){
         usleep(100);
-        if(allDie>1)
+        if(allDie)
                     return;
     }
 }
 
 void pfShow(const string name,const Mat& _mat,int defaultscale, Vec2d autoscale){
+    assert(_mat.rows>0 && _mat.cols>0);
+
     if (defaultscale==1){
         autoscale=Vec2d(-1,-1);
     }
@@ -75,11 +74,9 @@ static inline T take(queue<T>& q){
 
 
 
-void* guiLoop(void*){
-    set_affinity(0);
-    pthread_setname_np(pthread_self(),"Graphics");
+void guiLoop(int* die){
     Mat mat;
-    while(1){
+    while(!*die){
         if (props.size()>0){//deal with new windows
             Gmux.lock();
             string name=take(nameWin);
@@ -111,35 +108,34 @@ void* guiLoop(void*){
                 double scale= 1.0/(autoscale[1]-autoscale[0]);
                 mat.convertTo(mat,CV_MAKETYPE(mat.type(),mat.channels()),scale,-autoscale[0]*scale);
             }
-            if(mat.rows<200){
-               namedWindow(name,CV_WINDOW_KEEPRATIO);
+            if(mat.rows<250){
+                name+=":small";
+                namedWindow(name, CV_WINDOW_KEEPRATIO | CV_GUI_NORMAL);
             }
             imshow( name, mat);
             waitKey(1);//waitkey must occur here so matrix doesn't fall out of scope because imshow is dumb that way :(
-           
+//            cout<<name<<" queue:"<<ready<<endl;
         }else if(pausing){
             namedWindow("control",CV_WINDOW_KEEPRATIO);
             cout<<"Paused: Space (in GUI window) to continue"<<endl;
             while(waitKey()!=' ');
             
             CV_XADD(&pausing,-1);
+        }else{
+            waitKey(1);
         }
         if(pausing<0){
             pausing=0;
         }
 //         waitKey(1);
-        if(allDie){
-            waitKey(1);
-            waitKey(1);
-            allDie++;
-            return 0;
-        }
 //         usleep(100);
     }
-    return NULL;
+    allDie=1;
+    cout<<"Gui Shutting down"<<endl;
+    waitKey(1);
 }
 void initGui(){
-    pthread_t threadGui;
-    pthread_create( &threadGui, NULL, &guiLoop, NULL);
+    ImplThread::startThread(guiLoop,"Graphics"); 
+    
 }
 

@@ -57,6 +57,12 @@ static void RTToLie(InputArray _R, InputArray _T, OutputArray Lie ){
     T.copyTo(p.rowRange(Range(3,6)));
     assert(Lie.size()==Size(6,1));
 }
+static Mat RTToLie(InputArray _R, InputArray _T){
+
+    Mat P;
+    RTToLie(_R,_T,P);
+    return P;
+}
 static void PToLie(InputArray _P, OutputArray Lie){
 
     Mat P = _P.getMat();
@@ -73,6 +79,15 @@ static void RTToP(InputArray _R, InputArray _T, OutputArray _P ){
     Mat P = _P.getMat();
     hconcat(R,T,P);
     make4x4(P).copyTo(_P);
+}
+static Mat RTToP(InputArray _R, InputArray _T){
+    
+    Mat R = _R.getMat();
+    Mat T = _T.getMat();
+    Mat P;
+    hconcat(R,T,P);
+    make4x4(P);
+    return P;
 }
 static void LieToP(InputArray Lie, OutputArray _P){
     Mat p = Lie.getMat();
