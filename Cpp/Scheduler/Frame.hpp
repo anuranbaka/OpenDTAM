@@ -25,6 +25,7 @@ struct Frame{
 //     Tracker tracker;
 //     vector<Mat> pyramid;
     Ptr<vector<Mat> > pyramid;
+    Frame():fid(0),im(),gray(),R(),T(),relPose2d(),relPose3d(),reg2d(0),reg3d(0),gt(0),parent(),cv(),optimizer(),pyramid(){}
 };
 
 #endif

@@ -71,8 +71,26 @@ class OpenDTAM{
     public:
         
     OpenDTAM(Mat cameraMatrix):
-        fn(0),
+        rows(0),
+        cols(0),
         cameraMatrix(cameraMatrix),
+        pyrLevels(0),
+        cameraMatrixPyr(),
+        utrkLevel2DStart(0),utrkLevel2DEnd(0),
+        utrkLevel3DStart(0),utrkLevel3DEnd(0),
+        mtrkLevel3DStart(0),mtrkLevel3DEnd(0),
+        fs(),//the frame stream
+        utrkq(),//frames needing fast tracking
+        utrkd(),//frames that have been tracked at rough level
+        mtrkq(),//frames needing fine tracking
+        mtrkd(),//frames that have been tracked at fine level
+        trkd(), //frames that have been tracked at all levels
+        ucvq(), //frames to convert to low quality cost volumes ("micro cv's")
+        mcvq(), //frames to convert to high quality cost volumes ("macro cv's")
+        ucvd(),// frames with micro cv's (stack)
+        mcvd(),//frames with macro cv's (stack)
+        cvd(), //frames with all cv's  (stack)
+        fn(0),
         initd(0)
         {}
     ~OpenDTAM(){
@@ -100,7 +118,10 @@ class OpenDTAM{
         
         //Construct cameraMatricies for pyramids
         {
-            cameraMatrixPyr.resize(pyrLevels);
+            cameraMatrixPyr.reserve(pyrLevels);
+            for(int i=0;i<pyrLevels;i++){
+                cameraMatrixPyr.push_back(Mat());
+            }
             //Figure out camera matrices for each level
             for (double scale=1.0,l2=pyrLevels-1; l2>=0; scale/=2, l2--) {
                 Mat cameraMatrix2=cameraMatrix.clone();
@@ -130,13 +151,13 @@ class OpenDTAM{
         //Construct new frame
         Fp newFp(new Frame);
         {
-            Frame tmp={};
+            Frame tmp;
             //Fill known fields
             {
                 tmp.fid=fid; 
                 tmp.im=new Mat(image);
                 tmp.gray=new Mat();
-                cvtColor(image, *tmp.gray,CV_BGR2GRAY); 
+                cvtColor(image, *(tmp.gray),CV_BGR2GRAY); 
                 tmp.R=R.clone(); 
                 tmp.T=T.clone(); 
                 tmp.reg2d=1; 
@@ -172,7 +193,7 @@ class OpenDTAM{
         //Construct new frame
         Fp newFp(new Frame);
         {
-            Frame tmp={};
+            Frame tmp;
             //Fill known fields
             {
                 tmp.fid=fid; 
