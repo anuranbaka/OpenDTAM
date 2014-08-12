@@ -1,7 +1,6 @@
 #if !defined WIN32 && !defined WINCE
 #  include "ImplThreadLaunch.hpp"
 
-
 using namespace std;
 namespace ImplThread{
     ImplMutex mutex;
@@ -13,7 +12,12 @@ namespace ImplThread{
             pthread_t thread_id=it->first;
             *(it->second)=1;
             cout<<" Thread Stop: "<< thread_id<<":"<<it->second<< endl;
-            pthread_join(thread_id,NULL);
+            
+            timespec ts;
+            clock_gettime(CLOCK_REALTIME, &ts);
+            ts.tv_sec += 5;//5 sec timeout
+            if(pthread_timedjoin_np(thread_id,NULL,&ts))
+                pthread_cancel(thread_id);
             
 //             it=mymap.begin();
         }
