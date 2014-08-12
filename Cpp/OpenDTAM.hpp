@@ -12,15 +12,9 @@
 
 
 //Mine
-#include "convertAhandaPovRayToStandard.h"
-#include "CostVolume/utils/reproject.hpp"
-#include "CostVolume/utils/reprojectCloud.hpp"
-#include "CostVolume/Cost.h"
 #include "CostVolume/CostVolume.hpp"
 #include "Optimizer/Optimizer.hpp"
 #include "graphics.hpp"
-#include "set_affinity.h"
-#include "Track/Track.hpp"
 #include "utils/utils.hpp"
 #include "Scheduler/Frame.hpp"
 #include "Scheduler/SynchronizedBuffer.hpp"
@@ -28,7 +22,7 @@
 
 
 //debug
-#include "tictoc.h"
+
 
 //move to cpp
 #include "Track/Alignment.cpp"

@@ -1,13 +1,13 @@
-void convertPovRayToCamMatrix(   //Inputs
-                                 Mat_<double>& cam_pos,
-                                 Mat_<double>& cam_dir,
-						         Mat_<double>& cam_up,
-						         double cam_angle,
-						         double w,
-						         double h,
-						         //Outputs
-						         Mat_<double>& cameraMatrix,
-						         Mat_<double>& cameraAffinePose){
+void convertPovRayToCamMatrix(  //Inputs
+                                Mat_<double>& cam_pos,
+                                Mat_<double>& cam_dir,
+                                Mat_<double>& cam_up,
+                                double cam_angle,
+                                double w,
+                                double h,
+                                //Outputs
+                                Mat_<double>& cameraMatrix,
+                                Mat_<double>& cameraAffinePose){
     //cameraMatrix is 3x3, takes [x,y,z]' in camera frame to camera plane
     //cameraAffinePose is 4x4 and takes points in world frame to camera frame
     // to reproject from camera image to camera frame at a given depth d do:
@@ -36,8 +36,8 @@ void convertPovRayToCamMatrix(   //Inputs
 
     //takes camera frame to image frame
     cameraMatrix = (Mat_<double>(3,3) << fx,0,cx,
-										    0,fy,cy,
-										    0,0,1);
+                                         0,fy,cy,
+                                         0,0,1);
 
     //takes rotated camera frame to camera frame
     // the up is negated because the camera's y axis points down

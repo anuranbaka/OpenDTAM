@@ -118,12 +118,12 @@ void convertAhandaPovRayToStandard(const char * filepath,
 
     T=-R*Mat(posvector);
 //     cout<<"T: "<<T<<endl<<"pos: "<<Mat(posvector)<<endl;
-   /* cameraMatrix=(Mat_<double>(3,3) << 480,0.0,320.5,
-										    0.0,480.0,240.5,
-										    0.0,0.0,1.0);*/
+//     cameraMatrix=(Mat_<double>(3,3) <<  480,0.0,320.5,
+//                                         0.0,480.0,240.5,
+//                                         0.0,0.0,1.0);
     cameraMatrix=(Mat_<double>(3,3) << 481.20,0.0,319.5,
-                  0.0,480.0,239.5,
-                  0.0,0.0,1.0);
+                                        0.0,480.0,239.5,
+                                        0.0,0.0,1.0);
 
 }
 

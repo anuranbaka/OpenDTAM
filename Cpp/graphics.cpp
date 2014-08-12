@@ -2,7 +2,6 @@
 #include <boost/thread/mutex.hpp>
 #include <queue>
 #include <string>
-#include "set_affinity.h"
 #include "utils/ImplThreadLaunch.hpp"
 #include "graphics.hpp"
 
