@@ -12,9 +12,9 @@ class Optimizer
 public:
     CostVolume cv;//The cost volume we are attached to
     
-    Optimizer(CostVolume cv);
+    Optimizer(CostVolume& cv);
 
-    void attach(CostVolume cv);
+    void attach(CostVolume& cv);
     void initOptimization();
     bool optimizeA();
     bool optimizeQD();
