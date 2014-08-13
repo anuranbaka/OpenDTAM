@@ -12,14 +12,14 @@
 using namespace std;
 using namespace cv;
 void Optimizer::setDefaultParams(){
-    thetaStart =    10.0;
+    thetaStart =    20.0;
     thetaMin   =     1.0;
     thetaStep  =      .97;
     epsilon    =       .1;
     lambda     =       .01;
 }
 
-Optimizer::Optimizer(CostVolume cv) : cv(cv), cvStream(cv.cvStream)
+Optimizer::Optimizer(CostVolume& cv) : cv(cv), cvStream(cv.cvStream)
 {
     //For performance reasons, OpenDTAM only supports multiple of 32 image sizes with cols >= 64
     CV_Assert(cv.rows % 32 == 0 && cv.cols % 32 == 0 && cv.cols >= 64);
@@ -30,7 +30,6 @@ Optimizer::Optimizer(CostVolume cv) : cv(cv), cvStream(cv.cvStream)
 }
 
 void Optimizer::allocate(){
-    cout<<cv.rows<<", "<<cv.cols<<endl;
     _a.create(cv.rows,cv.cols,CV_32FC1);assert(_a.isContinuous());
     _d.create(cv.rows,cv.cols,CV_32FC1);assert(_d.isContinuous());
     _qx.create(cv.rows,cv.cols,CV_32FC1);assert(_qx.isContinuous());
