@@ -147,7 +147,6 @@ void CostVolume::simpleTex(const Mat& image,Stream cvStream){
 }
 
 
-static CudaMem c;
 void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& T){
     using namespace cv::gpu::device::dtam_updateCost;
     localStream = cv::gpu::StreamAccessor::getStream(cvStream);
@@ -172,14 +171,14 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
     image=_image;//no copy
         if(_image.type()!=CV_8UC4 || !_image.isContinuous()){
             if(!_image.isContinuous()&&_image.type()==CV_8UC4){
-                c.create(_image.rows,_image.cols,CV_8UC4);
-                image=c.createMatHeader();
+                cBuffer.create(_image.rows,_image.cols,CV_8UC4);
+                image=cBuffer.createMatHeader();
                 _image.copyTo(image);//copies data
                 
             }
             if(_image.type()!=CV_8UC4){
-                c.create(_image.rows,_image.cols,CV_8UC4);
-                Mat cm=c.createMatHeader();
+                cBuffer.create(_image.rows,_image.cols,CV_8UC4);
+                Mat cm=cBuffer.createMatHeader();
                 if(_image.type()==CV_8UC1||_image.type()==CV_8SC1){
                     cvtColor(_image,cm,CV_GRAY2BGRA);
                 }else if(_image.type()==CV_8UC3||_image.type()==CV_8SC3){
