@@ -37,7 +37,6 @@ void CostVolume::solveProjection(const cv::Mat& R, const cv::Mat& T) {
 //        cout<<"Augmented Camera Matrix:\n"<<projection<<endl;
 //    }
     projection=projection*P;
-    cout<<projection<<endl;
     
    // exit(0);
 }
@@ -148,8 +147,8 @@ void CostVolume::simpleTex(const Mat& image,Stream cvStream){
 }
 
 
-
-void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, const cv::Mat& T){
+static CudaMem c;
+void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& T){
     using namespace cv::gpu::device::dtam_updateCost;
     localStream = cv::gpu::StreamAccessor::getStream(cvStream);
     
@@ -168,8 +167,43 @@ void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, con
     //
     // make sure we modify the cameraMatrix to take into account the texture coordinates
     //
-
-   
+    Mat image;
+    {
+    image=_image;//no copy
+        if(_image.type()!=CV_8UC4 || !_image.isContinuous()){
+            if(!_image.isContinuous()&&_image.type()==CV_8UC4){
+                c.create(_image.rows,_image.cols,CV_8UC4);
+                image=c.createMatHeader();
+                _image.copyTo(image);//copies data
+                
+            }
+            if(_image.type()!=CV_8UC4){
+                c.create(_image.rows,_image.cols,CV_8UC4);
+                Mat cm=c.createMatHeader();
+                if(_image.type()==CV_8UC1||_image.type()==CV_8SC1){
+                    cvtColor(_image,cm,CV_GRAY2BGRA);
+                }else if(_image.type()==CV_8UC3||_image.type()==CV_8SC3){
+                    cvtColor(_image,cm,CV_BGR2BGRA);
+                }else{
+                    image=_image;
+                    if(_image.channels()==1){
+                        cvtColor(image,image,CV_GRAY2BGRA);
+                    }
+                    if(_image.channels()==3){
+                        cvtColor(image,image,CV_BGR2BGRA);
+                    }
+                    //image is now 4 channel, unknown depth but not 8 bit
+                    if(_image.depth()>=5){//float
+                        image.convertTo(cm,CV_8UC4,255.0);
+                    }else if(image.depth()>=2){//0-65535
+                        image.convertTo(cm,CV_8UC4,1/256.0);
+                    }
+                }
+                image=cm;
+            }
+        }
+        CV_Assert(image.type()==CV_8UC4);
+    }
     //change input image to a texture
     //ArrayTexture tex(image, cvStream);
     simpleTex(image,cvStream);
@@ -237,4 +271,16 @@ void CostVolume::updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, con
 
 }
 
+
+CostVolume::~CostVolume(){
+    cudaArray*& cuArray=*((cudaArray**)(char*)_cuArray);
+    cudaTextureObject_t& texObj=*((cudaTextureObject_t*)(char*)_texObj);
+    if (cuArray){
+        cudaFreeArray(cuArray);
+    }
+    if (texObj){
+        cudaDestroyTextureObject(texObj);
+    }
+    
+}
 
