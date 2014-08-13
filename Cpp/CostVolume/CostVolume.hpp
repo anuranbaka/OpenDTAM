@@ -42,7 +42,10 @@ public:
     int count;
     cv::gpu::Stream cvStream;
 
-    void updateCost(const cv::gpu::CudaMem& image, const cv::Mat& R, const cv::Mat& T);
+    void updateCost(const cv::Mat& image, const cv::Mat& R, const cv::Mat& T);//Accepts pinned RGBA8888 or BGRA8888 for high speed
+    
+    CostVolume(){}
+    ~CostVolume();
     CostVolume(cv::Mat image, FrameID _fid, int _layers, float _near, float _far,
             cv::Mat R, cv::Mat T, cv::Mat _cameraMatrix, float initialCost=3.0, float initialWeight=.001);
 
