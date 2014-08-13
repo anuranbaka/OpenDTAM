@@ -95,7 +95,7 @@ int App_main( int argc, char** argv )
     CostVolume cv(images[0],(FrameID)0,layers,0.010,0.0,Rs[0],Ts[0],cameraMatrix);;
     
     int imageNum=0;
-while(1){
+
     for (int imageNum=0;imageNum<numImg;imageNum++){//cycle through images forever
         T=Ts[imageNum];
         R=Rs[imageNum];
@@ -120,8 +120,8 @@ while(1){
             do{
 //                 cout<<"Theta: "<< optimizer.getTheta()<<endl;
 
-                optimizer._a.download(ret);
-                pfShow("A", ret, 0, cv::Vec2d(0, layers));
+//                 optimizer._a.download(ret);
+//                 pfShow("A", ret, 0, cv::Vec2d(0, layers));
                 
                 
 
@@ -145,7 +145,7 @@ while(1){
             cv=CostVolume(images[imageNum],(FrameID)0,layers,0.010,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
         }
     }
-}
+    myExit();
     return 0;
 }
 
