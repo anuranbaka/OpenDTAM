@@ -27,7 +27,7 @@ void convertAhandaPovRayToStandard(const char * filepath,
     ifstream cam_pars_file(text_file_name);
     if(!cam_pars_file.is_open())
     {
-        cout<<"failed!"<<endl;
+        cerr<<"Failed to open param file, check location of sample trajectory!"<<endl;
         exit(1);
     }
 
