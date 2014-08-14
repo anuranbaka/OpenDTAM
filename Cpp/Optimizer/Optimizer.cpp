@@ -68,7 +68,8 @@ bool Optimizer::optimizeA(){
 
 //    loadConstants(cv.rows, cv.cols, cv.layers, layerStep, a, d, cv.data, (float*)cv.lo.data,
 //            (float*)cv.hi.data, (float*)cv.loInd.data);
-    minimizeACaller  ( theta,lambda);
+    
+    minimizeACaller  ( cv.data, a, d, cv.layers, theta,lambda);
 
     theta*=thetaStep;
     if (doneOptimizing){

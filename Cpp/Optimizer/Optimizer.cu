@@ -20,19 +20,19 @@ namespace cv { namespace gpu { namespace device {
     namespace dtam_optimizer{
 
 //__constant__ float sliceToIm[3 * 3];
-__constant__ int   rows;
-__constant__ int   cols;
-__constant__ int   layers;
-__constant__ int   layerStep;
-__constant__ float   depthStep;//Implemented as 1/(layers-1)
+// __constant__ int   rows;
+// __constant__ int   cols;
+// __constant__ int   layers;
+// __constant__ int   layerStep;
+// __constant__ float   depthStep;//Implemented as 1/(layers-1)
 //__constant__ float  theta;//NI
 //__constant__ float  lambda;//NI
-__constant__ float* a;
-__constant__ float* d;
-__constant__ float* cdata;
-__constant__ float* lo;
-__constant__ float* hi;
-__constant__ float* loInd;
+// __constant__ float* a;
+// __constant__ float* d;
+// __constant__ float* cdata;
+// __constant__ float* lo;
+// __constant__ float* hi;
+// __constant__ float* loInd;
 
 
 static unsigned int arows,acols;
@@ -50,18 +50,18 @@ void loadConstants(uint h_rows, uint h_cols, uint h_layers, uint h_layerStep,
         //replace from arg list to make body:
         //__constant__\s*(\S*)(\s*\S*);
         //SEND(\1,\2);
-        SEND(uint,   rows);
-        SEND(uint,   cols);
-        SEND(uint,   layers);
-        SEND(uint,   layerStep);
-        float h_depthStep=1.0f/(h_layers-1);
-        SEND(float, depthStep);
-        SEND(float*, a);
-        SEND(float*, d);
-        SEND(float*, cdata);
-        SEND(float*, lo);
-        SEND(float*, hi);
-        SEND(float*, loInd);
+//         SEND(uint,   rows);
+//         SEND(uint,   cols);
+//         SEND(uint,   layers);
+//         SEND(uint,   layerStep);
+//         float h_depthStep=1.0f/(h_layers-1);
+//         SEND(float, depthStep);
+//         SEND(float*, a);
+//         SEND(float*, d);
+//         SEND(float*, cdata);
+//         SEND(float*, lo);
+//         SEND(float*, hi);
+//         SEND(float*, loInd);
 
 
         //special
@@ -126,16 +126,17 @@ static inline float afunc(float costval,float theta,float d,float ds,float a,flo
 
 //template <int layers>
 GENERATE_CUDA_FUNC1D(minimizeA,
-                        (float theta,float lambda),
-                        (theta,lambda)) {
+                        (float*cdata,float*a, float* d, int layers,float theta,float lambda),
+                        (cdata,a,d,layers,theta,lambda)) {
    // __shared__ float s0[32*BLOCKX1D];
    // float* s=s0+threadIdx.x*32;
     unsigned int pt = blockIdx.x * blockDim.x + threadIdx.x;
     float dv=d[pt];
     float *out=a+pt;
     float *cp=cdata+pt;
+    const int layerStep=blockDim.x*gridDim.x;
     const int l=layerStep;
-
+    const float depthStep=1.0f/layers;
     float vlast,vnext,v,A,B,C;
 
     unsigned int mini=0;
@@ -182,14 +183,16 @@ GENERATE_CUDA_FUNC1D(minimizeA,
 }
 
 GENERATE_CUDA_FUNC1D(minimizeAshared,
-                        (float theta,float lambda),
-                        (theta,lambda)) {
+                        (float*cdata,float*a, float* d,int rows,int cols, int layers,float theta,float lambda),
+                        (cdata,a,d,rows,cols,layers,theta,lambda)) {
     __shared__ float s0[32*BLOCKX1D];
     float* s=s0+threadIdx.x*32;
     unsigned int pt = blockIdx.x * blockDim.x + threadIdx.x;
     float dv=d[pt];
     float *out=a+pt;
     float *cp=cdata+pt;
+    int layerStep=rows*cols;
+    const float depthStep=1.0f/layers;
     const int l=layerStep;
 
 
@@ -233,12 +236,14 @@ GENERATE_CUDA_FUNC1D(minimizeAshared,
 
 //cool but cryptic min algo
 GENERATE_CUDA_FUNC1D(minimizeAcool,
-                        (float theta,float lambda),
-                        (theta,lambda)) {
+                        (float*cdata,float*a, float* d,int rows,int cols, int layers,float theta,float lambda),
+                        (cdata,a,d,rows,cols,layers,theta,lambda)) {
     //__shared__ float s[32];
     unsigned int pt = blockIdx.x * blockDim.x + threadIdx.x;
     float dv=d[pt];
     float *cp=cdata+pt;
+    int layerStep=rows*cols;
+    const float depthStep=1.0f/layers;
     const int l=layerStep;
 
 
@@ -310,7 +315,7 @@ GENERATE_CUDA_FUNC2DROWS(computeG1,
     int x = threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     int upoff=-(y!=0)*cols;
-    int dnoff=(y!=rows-1)*cols;
+    int dnoff=(y<gridDim.y*blockDim.y-1)*cols;
     //itr0
     int pt=x+y*cols;
     float ph,pn,pu,pd,pl,pr;
@@ -399,7 +404,7 @@ GENERATE_CUDA_FUNC2DROWS(computeG2,
                      (pp, g1p, gxp, gyp, lambda, cols)) {
     int x = threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
-    int dnoff=(y!=rows-1)*cols;
+    int dnoff=(y<gridDim.y*blockDim.y-1)*cols;
     //itr0
     int pt=x+y*cols;
     float g1h,g1n,g1u,g1d,g1r,g1l,gx,gy;
@@ -499,7 +504,7 @@ GENERATE_CUDA_FUNC2DROWS(computeGunsafe,
     int x = threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     int upoff=-(y!=0)*cols;
-    int dnoff=(y!=rows-1)*cols;
+    int dnoff=(y<gridDim.y*blockDim.y-1)*cols;
     //itr0
     int pt=x+y*cols;
     float ph,pn,pu,pd,pl,pr;
@@ -652,14 +657,14 @@ __device__ inline float saturate(float x){
 //                float *gxpt, float *gypt, float sigma_q, float sigma_d, float epsilon,
 //                float theta);//DANGER, no interblock synchronization = weird instability
 static __global__ void updateQ  (float* gqxpt, float* gqypt, float *dpt, float * apt,
-                float *gxpt, float *gypt, float sigma_q, float sigma_d, float epsilon,
+                float *gxpt, float *gypt, int cols, float sigma_q, float sigma_d, float epsilon,
                 float theta);
 static __global__ void updateD  (float* gqxpt, float* gqypt, float *dpt, float * apt,
-                float *gxpt, float *gypt, float sigma_q, float sigma_d, float epsilon,
+                float *gxpt, float *gypt, int cols, float sigma_q, float sigma_d, float epsilon,
                 float theta);
 
 void updateQDCaller(float* gqxpt, float* gqypt, float *dpt, float * apt,
-        float *gxpt, float *gypt, float sigma_q, float sigma_d, float epsilon,
+        float *gxpt, float *gypt, int cols, float sigma_q, float sigma_d, float epsilon,
         float theta) {
 
     dim3 dimBlock(BLOCKX2D, BLOCKY2D);
@@ -667,13 +672,13 @@ void updateQDCaller(float* gqxpt, float* gqypt, float *dpt, float * apt,
     assert(dimGrid.y>0);
     cudaSafeCall( cudaGetLastError() );
     updateQ<<<dimGrid, dimBlock,0,localStream>>>( gqxpt, gqypt, dpt, apt,
-            gxpt, gypt, sigma_q, sigma_d, epsilon, theta);
+            gxpt, gypt, cols, sigma_q, sigma_d, epsilon, theta);
     cudaSafeCall( cudaGetLastError() );
     updateD<<<dimGrid, dimBlock,0,localStream>>>( gqxpt, gqypt, dpt, apt,
-            gxpt, gypt, sigma_q, sigma_d, epsilon, theta);
+            gxpt, gypt, cols, sigma_q, sigma_d, epsilon, theta);
     cudaSafeCall( cudaGetLastError() );
 };
-
+/*
 //                            static __global__ void updateQD  (float* gqxpt, float* gqypt, float *dpt, float * apt,
 //                                            float *gxpt, float *gypt, float sigma_q, float sigma_d, float epsilon,
 //                                            float theta) {
@@ -847,15 +852,15 @@ void updateQDCaller(float* gqxpt, float* gqypt, float *dpt, float * apt,
 //                                    dpt[pt] = d;
 //                                    __syncthreads();
 //                                }
-//                            }
+//                            }*/
 
 
 GENERATE_CUDA_FUNC2DROWS(updateQ,
                 (float* gqxpt, float* gqypt, float *dpt, float * apt,
-                float *gxpt, float *gypt, float sigma_q, float sigma_d, float epsilon,
+                float *gxpt, float *gypt, int cols, float sigma_q, float sigma_d, float epsilon,
                 float theta),
                 ( gqxpt, gqypt, dpt, apt,
-                        gxpt, gypt, sigma_q, sigma_d, epsilon, theta)) {
+                        gxpt, gypt, cols, sigma_q, sigma_d, epsilon, theta)) {
     //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
 
     //Original pseudocode for this function:
@@ -911,8 +916,6 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     bool rt=x==31;
 
-    bool btm=y==rows-1;
-
     bool bbtm=threadIdx.y==blockDim.y-1;
     int pt, bpt,bdnoff ,dnoff;
 
@@ -920,7 +923,7 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
     float tmp;
     bpt = threadIdx.x+threadIdx.y*blockDim.x;
     bdnoff=blockDim.x;
-    dnoff=(!btm)*cols;
+    dnoff=(y<gridDim.y*blockDim.y-1)*cols;
 
 
 
@@ -992,10 +995,10 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
 
 GENERATE_CUDA_FUNC2DROWS(updateD,
                 (float* gqxpt, float* gqypt, float *dpt, float * apt,
-                float *gxpt, float *gypt, float sigma_q, float sigma_d, float epsilon,
+                float *gxpt, float *gypt,int cols, float sigma_q, float sigma_d, float epsilon,
                 float theta),
                 ( gqxpt, gqypt, dpt, apt,
-                        gxpt, gypt, sigma_q, sigma_d, epsilon, theta)) {
+                        gxpt, gypt, cols, sigma_q, sigma_d, epsilon, theta)) {
     //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
 
     //Original pseudocode for this function:

@@ -59,7 +59,8 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
 
     //For performance reasons, OpenDTAM only supports multiple of 32 image sizes with cols >= 64
     CV_Assert(image.rows % 32 == 0 && image.cols % 32 == 0 && image.cols >= 64);
-
+    CV_Assert(_layers>=8);
+    
     checkInputs(R, T, _cameraMatrix);
     fid           = _fid;
     rows          = image.rows;
@@ -225,10 +226,7 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
     assert(lo.isContinuous());
     assert(hi.isContinuous());
     assert(loInd.isContinuous());
-    //load up the constant stuff
-    loadConstants(layers, rows*cols, (float3*) (baseImage.data),
-            hits,  data, (float*) (lo.data), (float*) (hi.data), (float*) (loInd.data),
-            rows, cols,texObj);
+    
     //for each slice
     for(int y=0; y<rows; y++){
         //find projection from slice to image (3x3)
@@ -258,15 +256,19 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
     double *p = (double*)imFromCV.data;
     m34 persp;
     for(int i=0;i<12;i++) persp.data[i]=p[i];
-//    passThroughCaller(cols,rows);
-//    perspCaller(cols,rows,persp);
-//    volumeProjectCaller(cols,rows,persp);
-//    simpleCostCaller(cols,rows,persp);
-//    globalWeightedCostCaller(cols,rows,persp,.3);
+#define CONST_ARGS rows, cols, layers, rows*cols, \
+            hits,  data, (float*) (lo.data), (float*) (hi.data), (float*) (loInd.data),\
+            (float3*) (baseImage.data), (float*)baseImage.data, texObj
+        //    uint  rows, uint  cols, uint  layers, uint layerStep, float* hdata, float* cdata, float* lo, float* hi, float* loInd, float3* base,  float* bf, cudaTextureObject_t tex);
+//    passThroughCaller(CONST_ARGS);
+//    perspCaller(CONST_ARGS);
+//    volumeProjectCaller(persp,CONST_ARGS);
+//    simpleCostCaller(persp,CONST_ARGS);
+//    globalWeightedCostCaller(persp,.3,CONST_ARGS);
     float w=count+++initialWeight;//fun parse
     w/=(w+1); 
     assert(localStream);
-    globalWeightedBoundsCostCaller(cols,rows,persp,w);
+    globalWeightedBoundsCostCaller(persp,w,CONST_ARGS);
 
 }
 

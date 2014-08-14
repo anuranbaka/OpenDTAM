@@ -13,10 +13,10 @@ namespace cv { namespace gpu { namespace device { namespace dtam_optimizer{
                 float* h_a, float* h_d, float* h_cdata, float* h_lo, float* h_hi,
                 float* h_loInd);
     void updateCostColCaller(int y, m33 sliceToIm);
-    void minimizeACaller(float theta,float lambda);
+    void minimizeACaller(float*cdata,float*a, float* d, int layers,float theta,float lambda);
     void computeGCaller  (float* pp, float* g1p, float* gxp, float* gyp, float lambda, int cols);
     void updateQDCaller  (float* gqxpt, float* gqypt, float *dpt, float * apt,
-                    float *gxpt, float *gypt, float sigma_q, float sigma_d, float epsilon,
+                    float *gxpt, float *gypt, int cols, float sigma_q, float sigma_d, float epsilon,
                     float theta);
     extern cudaStream_t localStream;
 }}}}
