@@ -32,14 +32,16 @@ using namespace std;
 
 int App_main( int argc, char** argv );
 
-
-int main( int argc, char** argv ){
-    initGui();
-    return App_main(argc, argv);
-}
 void myExit(){
     ImplThread::stopAllThreads();
 }
+int main( int argc, char** argv ){
+    initGui();
+    int ret=App_main(argc, argv);
+     myExit();
+    return ret;
+}
+
 
 int App_main( int argc, char** argv )
 {
@@ -149,8 +151,7 @@ int App_main( int argc, char** argv )
         
     }
     s.waitForCompletion();
-    usleep(10000000);
-    myExit();
+   
     return 0;
 }
 
