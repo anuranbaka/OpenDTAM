@@ -1,5 +1,5 @@
 #include "Parameters.hpp"
-namespace cv::gpu::odm::params{
+namespace cv::cuda::odm::params{
 ucvScale=;
 thetaStart =    10.0;
     thetaMin   =     1.0;

@@ -4,17 +4,17 @@
 
 
 #include "ArrayTexture.hpp"
-#include <opencv2/gpu/device/common.hpp>
-
+#include <opencv2/cuda.hpp>
+#include <opencv2/core/cuda/common.hpp>
 using namespace std;
 using namespace cv;
-using namespace gpu;
-ArrayTexture::ArrayTexture(const cv::gpu::CudaMem& image, const Stream& cvStream) {
+using namespace cuda;
+ArrayTexture::ArrayTexture(const cv::cuda::CudaMem& image, const Stream& cvStream) {
     refcount=&ref_count;
     ref_count=1;
-    Mat im2=image.clone();
-    assert(image.isContinuous());
-    assert(image.type()==CV_8UC4);
+    Mat im2=image.createMatHeader().clone();
+    CV_Assert(image.isContinuous());
+    CV_Assert(image.type()==CV_8UC4);
     
     //Describe texture
     struct cudaTextureDesc texDesc;

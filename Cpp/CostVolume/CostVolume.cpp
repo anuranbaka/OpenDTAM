@@ -6,9 +6,8 @@
 #include "CostVolume.hpp"
 #include "CostVolume.cuh"
 
-#include <opencv2/core/operations.hpp>
-#include <opencv2/gpu/stream_accessor.hpp>
-#include <opencv2/gpu/device/common.hpp>
+#include <opencv2/core/cuda_stream_accessor.hpp>
+#include <opencv2/cudaimgproc.hpp>
 
 #include "utils/utils.hpp"
 #include "utils/tinyMat.hpp"
@@ -18,11 +17,13 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 
 
-
+static void memZero(GpuMat& in,Stream& cvStream){
+    cudaSafeCall(cudaMemsetAsync(in.data,0,in.rows*in.cols*sizeof(float),cv::cuda::StreamAccessor::getStream(cvStream)));
+}
 
 void CostVolume::solveProjection(const cv::Mat& R, const cv::Mat& T) {
     Mat P;
@@ -43,19 +44,20 @@ void CostVolume::solveProjection(const cv::Mat& R, const cv::Mat& T) {
 
 void CostVolume::checkInputs(const cv::Mat& R, const cv::Mat& T,
         const cv::Mat& _cameraMatrix) {
-    assert(R.size() == Size(3, 3));
-    assert(R.type() == CV_64FC1);
-    assert(T.size() == Size(1, 3));
-    assert(T.type() == CV_64FC1);
-    assert(_cameraMatrix.size() == Size(3, 3));
-    assert(_cameraMatrix.type() == CV_64FC1);
+    CV_Assert(R.size() == Size(3, 3));
+    CV_Assert(R.type() == CV_64FC1);
+    CV_Assert(T.size() == Size(1, 3));
+    CV_Assert(T.type() == CV_64FC1);
+    CV_Assert(_cameraMatrix.size() == Size(3, 3));
+    CV_Assert(_cameraMatrix.type() == CV_64FC1);
 }
 
 #define FLATUP(src,dst){GpuMat tmp;tmp.upload(src);dst.create(1,rows*cols, src.type());dst=dst.reshape(0,rows);}
 #define FLATALLOC(n) n.create(1,rows*cols, CV_32FC1);n=n.reshape(0,rows)
+
 CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
         float _far, cv::Mat R, cv::Mat T, cv::Mat _cameraMatrix,
-        float initialCost, float initialWeight): R(R),T(T),initialWeight(initialWeight),_cuArray(0) {
+        float initialCost, float initialWeight): R(R),T(T),initialWeight(initialWeight),_cuArray((char*)0) {
 
     //For performance reasons, OpenDTAM only supports multiple of 32 image sizes with cols >= 64
     CV_Assert(image.rows % 32 == 0 && image.cols % 32 == 0 && image.cols >= 64);
@@ -77,12 +79,12 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
     dataContainer.create(layers, rows * cols, CV_32FC1);
     
     GpuMat tmp;
-    baseImage.upload(image.reshape(0,1));
-    cvtColor(baseImage,baseImageGray,CV_RGB2GRAY);
+    baseImage.upload(image.reshape(0,1),cvStream);
+    cv::cuda::cvtColor(baseImage,baseImageGray,COLOR_BGR2GRAY,0,cvStream);
     baseImage=baseImage.reshape(0,rows);
     baseImageGray=baseImageGray.reshape(0,rows);
-    cvStream.enqueueMemSet(loInd,0.0);
-    cvStream.enqueueMemSet(dataContainer,initialCost);
+    cudaSafeCall(cudaMemsetAsync(loInd.data,0,rows*cols*sizeof(float),cv::cuda::StreamAccessor::getStream(cvStream)));
+    dataContainer.setTo(initialCost,cvStream);
     data = (float*) dataContainer.data;
     //hitContainer.create(layers, rows * cols, CV_32FC1);
     //hitContainer = initialWeight;
@@ -111,8 +113,8 @@ void CostVolume::simpleTex(const Mat& image,Stream cvStream){
 //         _texObj=Ptr<char>((char*)new cudaTextureObject_t);
 //     }
 //     cudaTextureObject_t texObj=*(cudaTextureObject_t*)(char*)_texObj;
-    assert(image.isContinuous());
-    assert(image.type()==CV_8UC4);
+    CV_Assert(image.isContinuous());
+    CV_Assert(image.type()==CV_8UC4);
     
     //Describe texture
     struct cudaTextureDesc texDesc;
@@ -129,7 +131,7 @@ void CostVolume::simpleTex(const Mat& image,Stream cvStream){
     cudaSafeCall(cudaMallocArray(&cuArray, &channelDesc, image.cols, image.rows));
     }
     
-    assert((image.dataend-image.datastart)==image.cols*image.rows*sizeof(uchar4));
+    CV_Assert((image.dataend-image.datastart)==image.cols*image.rows*sizeof(uchar4));
     
     cudaSafeCall(cudaMemcpyToArrayAsync(cuArray, 0, 0, image.datastart, image.dataend-image.datastart,
                                    cudaMemcpyHostToDevice,StreamAccessor::getStream(cvStream)));
@@ -149,8 +151,8 @@ void CostVolume::simpleTex(const Mat& image,Stream cvStream){
 
 
 void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& T){
-    using namespace cv::gpu::device::dtam_updateCost;
-    localStream = cv::gpu::StreamAccessor::getStream(cvStream);
+    using namespace cv::cuda::device::dtam_updateCost;
+    localStream = cv::cuda::StreamAccessor::getStream(cvStream);
     
     // 0  1  2  3
     // 4  5  6  7
@@ -181,16 +183,16 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
                 cBuffer.create(_image.rows,_image.cols,CV_8UC4);
                 Mat cm=cBuffer.createMatHeader();
                 if(_image.type()==CV_8UC1||_image.type()==CV_8SC1){
-                    cvtColor(_image,cm,CV_GRAY2BGRA);
+                    cv::cvtColor(_image,cm,COLOR_GRAY2BGRA);
                 }else if(_image.type()==CV_8UC3||_image.type()==CV_8SC3){
-                    cvtColor(_image,cm,CV_BGR2BGRA);
+                    cv::cvtColor(_image,cm,COLOR_BGR2BGRA);
                 }else{
                     image=_image;
                     if(_image.channels()==1){
-                        cvtColor(image,image,CV_GRAY2BGRA);
+                        cv::cvtColor(image,image,COLOR_GRAY2BGRA);
                     }
                     if(_image.channels()==3){
-                        cvtColor(image,image,CV_BGR2BGRA);
+                        cv::cvtColor(image,image,COLOR_BGR2BGRA);
                     }
                     //image is now 4 channel, unknown depth but not 8 bit
                     if(_image.depth()>=5){//float
@@ -222,10 +224,10 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
     Mat imFromWorld=cameraMatrixTex*viewMatrixImage;//3x4
     Mat imFromCV=imFromWorld*projection.inv();
     imFromCV.colRange(2,3)*=depthStep;
-    assert(baseImage.isContinuous());
-    assert(lo.isContinuous());
-    assert(hi.isContinuous());
-    assert(loInd.isContinuous());
+    CV_Assert(baseImage.isContinuous());
+    CV_Assert(lo.isContinuous());
+    CV_Assert(hi.isContinuous());
+    CV_Assert(loInd.isContinuous());
     
     //for each slice
     for(int y=0; y<rows; y++){
@@ -259,7 +261,7 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
 #define CONST_ARGS rows, cols, layers, rows*cols, \
             hits,  data, (float*) (lo.data), (float*) (hi.data), (float*) (loInd.data),\
             (float3*) (baseImage.data), (float*)baseImage.data, texObj
-        //    uint  rows, uint  cols, uint  layers, uint layerStep, float* hdata, float* cdata, float* lo, float* hi, float* loInd, float3* base,  float* bf, cudaTextureObject_t tex);
+
 //    passThroughCaller(CONST_ARGS);
 //    perspCaller(CONST_ARGS);
 //    volumeProjectCaller(persp,CONST_ARGS);
@@ -267,7 +269,7 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
 //    globalWeightedCostCaller(persp,.3,CONST_ARGS);
     float w=count+++initialWeight;//fun parse
     w/=(w+1); 
-    assert(localStream);
+    CV_Assert(localStream);
     globalWeightedBoundsCostCaller(persp,w,CONST_ARGS);
 
 }

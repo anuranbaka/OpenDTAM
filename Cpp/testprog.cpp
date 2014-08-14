@@ -1,5 +1,4 @@
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core.hpp>
 #include <iostream>
 #include <stdio.h>
 
@@ -25,7 +24,7 @@
 
 
 
-const static bool valgrind=0;
+
 
 //A test program to make the mapper run
 using namespace cv;
@@ -53,6 +52,7 @@ int App_main( int argc, char** argv )
     char filename[500];
     Mat image, cameraMatrix, R, T;
     vector<Mat> images,Rs,Ts;
+    
     Mat ret;//a place to return downloaded images to
 
     
@@ -77,7 +77,8 @@ int App_main( int argc, char** argv )
         Ts.push_back(T.clone());
 
     }
-    
+    cv::cuda::CudaMem cret(images[0].rows,images[0].cols,CV_32FC1);
+    ret=cret.createMatHeader();
     //Setup camera matrix
     double sx=reconstructionScale;
     double sy=reconstructionScale;
@@ -92,10 +93,10 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0);
     int layers=32;
     int imagesPerCV=2;
-    CostVolume cv(images[0],(FrameID)0,layers,0.010,0.0,Rs[0],Ts[0],cameraMatrix);;
+    CostVolume cv(images[0],(FrameID)0,layers,0.015,0.0,Rs[0],Ts[0],cameraMatrix);;
     
     int imageNum=0;
-
+    cv::cuda::Stream s;
     for (int imageNum=0;imageNum<numImg;imageNum++){//cycle through images forever
         T=Ts[imageNum];
         R=Rs[imageNum];
@@ -111,19 +112,19 @@ int App_main( int argc, char** argv )
             optimizer.initOptimization();
             
             
-            optimizer._gx.download(ret);
+            optimizer._gx.download(ret,optimizer.cvStream);
             pfShow("G function:x direction", ret, 0, cv::Vec2d(0, 1));
-            optimizer._gy.download(ret);
+            optimizer._gy.download(ret,optimizer.cvStream);
             pfShow("G function:y direction", ret, 0, cv::Vec2d(0, 1));
             
             bool doneOptimizing; int Acount=0; int QDcount=0;
             do{
 //                 cout<<"Theta: "<< optimizer.getTheta()<<endl;
-
+// 
 //                 optimizer._a.download(ret);
 //                 pfShow("A", ret, 0, cv::Vec2d(0, layers));
                 
-                
+//                 optimizer.epsilon*=optimizer.thetaStep;
 
                 for (int i = 0; i < 10; i++) {
                     optimizer.optimizeQD();
@@ -139,12 +140,16 @@ int App_main( int argc, char** argv )
                 doneOptimizing=optimizer.optimizeA();
                 Acount++;
             }while(!doneOptimizing);
-            cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
+//             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
 //             gpause();
             cv=CostVolume(images[imageNum],(FrameID)0,layers,0.010,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
+            s=optimizer.cvStream;
         }
+        
     }
+    s.waitForCompletion();
+    usleep(10000000);
     myExit();
     return 0;
 }

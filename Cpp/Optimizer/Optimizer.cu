@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <iostream>
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 #include "Optimizer.cuh"
 
 
@@ -16,7 +16,7 @@
 
 
 
-namespace cv { namespace gpu { namespace device {
+namespace cv { namespace cuda { namespace device {
     namespace dtam_optimizer{
 
 //__constant__ float sliceToIm[3 * 3];
@@ -42,7 +42,7 @@ static unsigned int arows,acols;
 #define SEND(type,sym) cudaMemcpyToSymbol(sym, &h_ ## sym, sizeof(type));
 
 void loadConstants(uint h_rows, uint h_cols, uint h_layers, uint h_layerStep,
-        float* h_a, float* h_d, float* h_cdata, float* h_lo, float* h_hi,
+        float* h_a, float* , float* h_cdata, float* h_lo, float* h_hi,
         float* h_loInd) {
         //replace from arg list to make params:
         //\s*__constant__ \s*(.*)\s(\S*);\n

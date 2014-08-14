@@ -1,9 +1,6 @@
-#include <opencv2/core/core.hpp>
-#include <opencv2/opencv.hpp> 
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #include <iostream>
-#include <unistd.h>
 #include <cmath>
 #include "graphics.hpp"
 #include "set_affinity.h"
@@ -47,7 +44,7 @@ void Cost::initOptimization(){//must be thread safe in allocations(i.e. don't do
     minv(data,loInd,loVal);
     
     loInd.convertTo(_a,CV_32FC1);
-    assert(aptr==_a.data);
+    CV_Assert(aptr==_a.data);
     _a.copyTo(_d);
     _qx.create(h,w,CV_32FC1);
     _qx=0.0;
@@ -93,7 +90,7 @@ void Cost::cacheGValues(){
     float* gl=(float*)(_gl.data);
     float* gr=(float*)(_gr.data);
     Mat im_gray;
-    cvtColor(baseImage,im_gray,CV_RGB2GRAY);
+    cvtColor(baseImage,im_gray,cv::COLOR_BGR2GRAY);
 
     //first get derivatives, but use the kind that we need for our purposes, rather than the built in scharr or sobel derivatives. We will do this by getting the absolute value of the differences to each side of the the current pixel and then taking the max along each direction. The 
     Mat gx,gy,g1,g2;
@@ -208,7 +205,7 @@ inline float Cost::aBasic(float* data,float l,float ds,float d,float& value){
    // B+(C-A)*delt/2+(A-2*B+C)*delt*delt/2
     
     //cout<<"A"<<A<<" B"<<B<<" C"<<C<<" Ret:"<<delt+float(mi)<<endl;
-    //assert(fabs(delt)<=.5);
+    //CV_Assert(fabs(delt)<=.5);
     return delt+float(mi);
 }
 
@@ -298,15 +295,15 @@ void Cost::optimizeQD(){
     float* ky=(float*)(_qy.data);
     float* d=(float*)(_d.data);
     float* a=(float*)(_a.data);
-    assert(aptr==_a.data);
+    CV_Assert(aptr==_a.data);
     float* g=(float*)(_g.data);
     float* gd=(float*)(_gd.data);
     float* gu=(float*)(_gu.data);
     float* gl=(float*)(_gl.data);
     float* gr=(float*)(_gr.data);
     computeSigmas();
-    assert(sigma_q!=0.0);
-    assert(sigma_d!=0.0);
+    CV_Assert(sigma_q!=0.0);
+    CV_Assert(sigma_d!=0.0);
     
     //q update ((4 read,1 write)*2 = 8 read, 2 write)
 tic();
@@ -314,7 +311,7 @@ tic();
     float nm,pd,kxn,kyn;
     point=0;
     for(st i=1;i<h;i++){
-        assert(point%w==0);
+        CV_Assert(point%w==0);
         pstop=i*w-1;
         
         qcore(
@@ -386,7 +383,7 @@ toc();
     pstop++;
     d[here] = (d[here]-sigma_d*(                 gdown*ky[here]+gleft*kx[left]                                 - a[here]/theta))/denom;
     point++;
-    assert(point%w==0);
+    CV_Assert(point%w==0);
 
     //core
     st corestop=w*(h-1);
@@ -405,8 +402,8 @@ toc();
         d[here] = (d[here]-sigma_d*(      gup*ky[up]+gdown*ky[here]+gleft*kx[left]                             - a[here]/theta))/denom;
         point++;
     }
-    assert(point==pstop);
-    assert(pstop==corestop);
+    CV_Assert(point==pstop);
+    CV_Assert(pstop==corestop);
     //left bottom
     pstop++;
     d[here] = (d[here]-sigma_d*(          gup*ky[up]+                              +gright*kx[here]             - a[here]/theta))/denom;
@@ -427,7 +424,7 @@ toc();
 //     pfShow("qx",abs(_qx));
 //     pfShow("d",_d);
 //     pfShow("a",_a);
-    assert(aptr==_a.data);
+    CV_Assert(aptr==_a.data);
     gcheck();
     usleep(1);
     
@@ -438,7 +435,7 @@ toc();
 }
 
 void Cost::optimizeA(){ 
-    assert(aptr==_a.data);//_a is read across threads, so needs to never be de/reallocated
+    CV_Assert(aptr==_a.data);//_a is read across threads, so needs to never be de/reallocated
     //usleep(1);
     theta=theta*thetaStep;
     if (QDruncount>1000){

@@ -5,12 +5,15 @@
 
 #include "Optimizer.hpp"
 #include "Optimizer.cuh"
-#include <opencv2/gpu/stream_accessor.hpp>
-#include <opencv2/core/core.hpp>
+#include <opencv2/core/cuda_stream_accessor.hpp>
+#include <opencv2/core.hpp>
 #include <iostream>
 
 using namespace std;
 using namespace cv;
+using namespace cuda;
+static void memZero(GpuMat& in,Stream& cvStream);
+
 void Optimizer::setDefaultParams(){
     thetaStart =    20.0;
     thetaMin   =     1.0;
@@ -18,7 +21,9 @@ void Optimizer::setDefaultParams(){
     epsilon    =       .1;
     lambda     =       .01;
 }
-
+static void memZero(GpuMat& in,Stream& cvStream){
+    cudaSafeCall(cudaMemsetAsync(in.data,0,in.rows*in.cols*sizeof(float),cv::cuda::StreamAccessor::getStream(cvStream)));
+}
 Optimizer::Optimizer(CostVolume& cv) : cv(cv), cvStream(cv.cvStream)
 {
     //For performance reasons, OpenDTAM only supports multiple of 32 image sizes with cols >= 64
@@ -28,16 +33,21 @@ Optimizer::Optimizer(CostVolume& cv) : cv(cv), cvStream(cv.cvStream)
     stableDepthEnqueued=cachedG=haveStableDepth=0;
     
 }
+void Optimizer::attach(CostVolume& cv){
+    this->cv=cv;
+    cvStream=cv.cvStream;
+}
+#define FLATALLOC( n) n.create(1,cv.rows*cv.cols, CV_32FC1); n=n.reshape(0,cv.rows);CV_Assert(n.isContinuous())
 
 void Optimizer::allocate(){
-    _a.create(cv.rows,cv.cols,CV_32FC1);assert(_a.isContinuous());
-    _d.create(cv.rows,cv.cols,CV_32FC1);assert(_d.isContinuous());
-    _qx.create(cv.rows,cv.cols,CV_32FC1);assert(_qx.isContinuous());
-    _qy.create(cv.rows,cv.cols,CV_32FC1);assert(_qy.isContinuous());
-    _g1.create(cv.rows,cv.cols,CV_32FC1);assert(_g1.isContinuous());
-    _gx.create(cv.rows,cv.cols,CV_32FC1);assert(_gx.isContinuous());
-    _gy.create(cv.rows,cv.cols,CV_32FC1);assert(_gy.isContinuous());
-    stableDepth.create(cv.rows,cv.cols,CV_32FC1);
+    FLATALLOC(_a);
+    FLATALLOC(_d);
+    FLATALLOC(_qx);
+    FLATALLOC(_qy);
+    FLATALLOC(_g1);
+    FLATALLOC(_gx);
+    FLATALLOC(_gy);
+    FLATALLOC(stableDepth);
 }
 
 void Optimizer::initOptimization(){
@@ -48,18 +58,18 @@ void Optimizer::initOptimization(){
 }
 
 void Optimizer::initQD(){
-    cvStream.enqueueCopy(cv.loInd,_d);
-    cvStream.enqueueMemSet(_qx,0.0);
-    cvStream.enqueueMemSet(_qy,0.0);
+    cv.loInd.copyTo(_d,cvStream);
+    memZero(_qx,cvStream);
+    memZero(_qy,cvStream);
     cacheGValues();
 }
 void Optimizer::initA() {
 //     cv.loInd.copyTo(_a);
-    cvStream.enqueueCopy(cv.loInd,_a);
+    cv.loInd.copyTo(_a,cvStream);
 }
 bool Optimizer::optimizeA(){
-    using namespace cv::gpu::device::dtam_optimizer;
-    localStream = cv::gpu::StreamAccessor::getStream(cvStream);
+    using namespace cv::cuda::device::dtam_optimizer;
+    localStream = cv::cuda::StreamAccessor::getStream(cvStream);
 
     bool doneOptimizing = theta <= thetaMin;
     int layerStep = cv.rows * cv.cols;
@@ -73,10 +83,9 @@ bool Optimizer::optimizeA(){
 
     theta*=thetaStep;
     if (doneOptimizing){
-        stableDepthReady=(char*)(new cudaEvent_t);
+        stableDepthReady=Ptr<char>((char*)(new cudaEvent_t));
         cudaEventCreate((cudaEvent_t*)(char*)stableDepthReady,cudaEventBlockingSync);
-//         _a.convertTo(stableDepth,CV_32FC1,cv.depthStep,cv.far);
-        cvStream.enqueueConvert(_a,stableDepth,CV_32FC1,cv.depthStep,cv.far);
+        _a.convertTo(stableDepth,CV_32FC1,cv.depthStep,cv.far,cvStream);
         cudaEventRecord(*(cudaEvent_t*)(char*)stableDepthReady,localStream);
         stableDepthEnqueued = 1;
     }
@@ -89,13 +98,13 @@ const cv::Mat Optimizer::depthMap(){
     // Currently depth is just a constant multiple of the index, so
     // infinite depth is always represented. This is likely to change.
     Mat tmp(cv.rows,cv.cols,CV_32FC1);
-    cv::gpu::Stream str;
+    cv::cuda::Stream str;
     if(stableDepthEnqueued){
         cudaEventSynchronize(*(cudaEvent_t*)(char*)stableDepthReady);
-        str.enqueueDownload(stableDepth,tmp);
+        stableDepth.download(tmp,str);
         str.waitForCompletion();
     }else{
-        str.enqueueDownload(_a,tmp);
+        _a.download(tmp,str);
         str.waitForCompletion();
         tmp = tmp * cv.depthStep + cv.far;
     }

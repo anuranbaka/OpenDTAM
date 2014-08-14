@@ -5,7 +5,7 @@
 //This file does Q and D optimization steps on the GPU
 #include "Optimizer.hpp"
 #include "Optimizer.cuh"
-#include <opencv2/gpu/stream_accessor.hpp>
+#include <opencv2/core/cuda_stream_accessor.hpp>
 #include <iostream>
 
 using namespace std;
@@ -52,7 +52,7 @@ void Optimizer::computeSigmas(){
     
         
     float lambda, alpha,gamma,delta,mu,rho,sigma;
-    float L=4.0;//lower is better(longer steps), but in theory only >=4 is guaranteed to converge
+    float L=4;//lower is better(longer steps), but in theory only >=4 is guaranteed to converge. For the adventurous, set to 2 or 1.44
     
     lambda=1.0/theta;
     alpha=epsilon;
@@ -70,8 +70,8 @@ void Optimizer::computeSigmas(){
 }
 #define FLATALLOC(n) n.create(1,cv.rows*cv.cols, CV_32FC1);n=n.reshape(0,cv.rows)
 void Optimizer::cacheGValues(){
-    using namespace cv::gpu::device::dtam_optimizer;
-    localStream = cv::gpu::StreamAccessor::getStream(cvStream);
+    using namespace cv::cuda::device::dtam_optimizer;
+    localStream = cv::cuda::StreamAccessor::getStream(cvStream);
     if(cachedG)
         return;//already cached
     int layerStep = cv.rows * cv.cols;
@@ -81,7 +81,7 @@ void Optimizer::cacheGValues(){
     
     loadConstants(cv.rows, cv.cols, cv.layers, layerStep, a, d, cv.data, (float*)cv.lo.data,
             (float*)cv.hi.data, (float*)cv.loInd.data);
-    assert(_g1.isContinuous());
+    CV_Assert(_g1.isContinuous());
     float* pp = (float*) cv.baseImageGray.data;//TODO: write a color version.
     float* g1p = (float*)_g1.data;
     float* gxp = (float*)_gx.data;
@@ -91,8 +91,8 @@ void Optimizer::cacheGValues(){
 }
 
 bool Optimizer::optimizeQD(){
-    using namespace cv::gpu::device::dtam_optimizer;
-    localStream = cv::gpu::StreamAccessor::getStream(cvStream);
+    using namespace cv::cuda::device::dtam_optimizer;
+    localStream = cv::cuda::StreamAccessor::getStream(cvStream);
 
     bool doneOptimizing = theta <= thetaMin;
     int layerStep = cv.rows * cv.cols;

@@ -1,4 +1,4 @@
-namespace cv::gpu::odm::params{
+namespace cv::cuda::odm::params{
 extern int N_UCV;
 
 }

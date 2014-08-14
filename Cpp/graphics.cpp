@@ -31,7 +31,7 @@ void gcheck(){
 }
 
 void pfShow(const string name,const Mat& _mat,int defaultscale, Vec2d autoscale){
-    assert(_mat.rows>0 && _mat.cols>0);
+    CV_Assert(_mat.rows>0 && _mat.cols>0);
 
     if (defaultscale==1){
         autoscale=Vec2d(-1,-1);
@@ -42,7 +42,7 @@ void pfShow(const string name,const Mat& _mat,int defaultscale, Vec2d autoscale)
     toShow.push(_mat.clone());
     autoScale.push(autoscale);
     ready++;
-    assert(nameShow.size()==ready);
+    CV_Assert(nameShow.size()==ready);
     
     Gmux.unlock();
     while(nameShow.size()>5||pausing){
@@ -87,7 +87,7 @@ void guiLoop(int* die){
         }
         if (ready){//deal with imshows
             Gmux.lock();
-            assert(nameShow.size()>0);
+            CV_Assert(nameShow.size()>0);
             mat=take(toShow);
             string name=take(nameShow);
             Vec2d autoscale=take(autoScale);
@@ -110,13 +110,13 @@ void guiLoop(int* die){
             }
             if(mat.rows<250){
                 name+=":small";
-                namedWindow(name, CV_WINDOW_KEEPRATIO | CV_GUI_NORMAL);
+                namedWindow(name, WINDOW_KEEPRATIO | WINDOW_NORMAL);
             }
             imshow( name, mat);
             waitKey(1);//waitkey must occur here so matrix doesn't fall out of scope because imshow is dumb that way :(
 //            cout<<name<<" queue:"<<ready<<endl;
         }else if(pausing){
-            namedWindow("control",CV_WINDOW_KEEPRATIO);
+            namedWindow("control",WINDOW_KEEPRATIO);
             cout<<"Paused: Space (in GUI window) to continue"<<endl;
             while(waitKey()!=' ');
             
