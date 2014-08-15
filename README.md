@@ -14,7 +14,7 @@ For building `OpenDTAM`, here is a brief instruction on Ubuntu 12.04 LTS.
 
     sudo apt-add-repository ppa:ubuntu-sdk-team/ppa
     sudo apt-get update
-    sudo apt-get install qt5base-dev
+    sudo apt-get install qtbase5-dev
 
 #### libopencv-dev
 
