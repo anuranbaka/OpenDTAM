@@ -10,6 +10,7 @@
 #include "CostVolume/utils/reprojectCloud.hpp"
 #include "CostVolume/Cost.h"
 #include "CostVolume/CostVolume.hpp"
+#include "DepthmapDenoiseWeightedHuber/DepthmapDenoiseWeightedHuber.hpp"
 #include "Optimizer/Optimizer.hpp"
 #include "graphics.hpp"
 #include "set_affinity.h"
@@ -28,6 +29,7 @@
 
 //A test program to make the mapper run
 using namespace cv;
+using namespace cv::cuda;
 using namespace std;
 
 int App_main( int argc, char** argv );
@@ -36,9 +38,11 @@ void myExit(){
     ImplThread::stopAllThreads();
 }
 int main( int argc, char** argv ){
+
     initGui();
+
     int ret=App_main(argc, argv);
-     myExit();
+    myExit();
     return ret;
 }
 
@@ -97,53 +101,75 @@ int App_main( int argc, char** argv )
     int imagesPerCV=2;
     CostVolume cv(images[0],(FrameID)0,layers,0.015,0.0,Rs[0],Ts[0],cameraMatrix);;
     
+    
+    
+    float thetaStart =    20.0;
+    float thetaMin   =     1.0;
+    float thetaStep  =      .97;
+    float epsilon    =       .1;
+    float lambda     =       .01;
+    
+
     int imageNum=0;
     cv::cuda::Stream s;
     for (int imageNum=0;imageNum<numImg;imageNum++){//cycle through images forever
         T=Ts[imageNum];
         R=Rs[imageNum];
         image=images[imageNum];
-
+          
         if(cv.count<imagesPerCV){
             cv.updateCost(image, R, T);
         }
         else{
-            
+
+                float theta=thetaStart;
             //Attach optimizer
+            DepthmapDenoiseWeightedHuber denoiser(cv.rows,cv.cols,cv.baseImageGray,cv.cvStream);
             Optimizer optimizer(cv);
             optimizer.initOptimization();
+            GpuMat a=cv.loInd.clone();
+            GpuMat d;
+            denoiser(a,epsilon,theta);
             
-            
-            optimizer._gx.download(ret,optimizer.cvStream);
+            denoiser._gx.download(ret,optimizer.cvStream);
             pfShow("G function:x direction", ret, 0, cv::Vec2d(0, 1));
-            optimizer._gy.download(ret,optimizer.cvStream);
+            denoiser._gy.download(ret,optimizer.cvStream);
             pfShow("G function:y direction", ret, 0, cv::Vec2d(0, 1));
+            optimizer._a.download(ret);
+                pfShow("A", ret, 0, cv::Vec2d(0, layers));
+                waitKey(0);
+                gpause();
+            
+            
             
             bool doneOptimizing; int Acount=0; int QDcount=0;
             do{
 //                 cout<<"Theta: "<< optimizer.getTheta()<<endl;
 // 
-//                 optimizer._a.download(ret);
-//                 pfShow("A", ret, 0, cv::Vec2d(0, layers));
+                optimizer._a.download(ret);
+                pfShow("A", ret, 0, cv::Vec2d(0, layers));
                 
 //                 optimizer.epsilon*=optimizer.thetaStep;
 
                 for (int i = 0; i < 10; i++) {
-                    optimizer.optimizeQD();
+                    optimizer.stableDepth.download(ret);
+                    d=denoiser(a,epsilon,theta);
+                    optimizer.stableDepth.download(ret);
                     QDcount++;
                     
 //                     optimizer._qx.download(ret);
 //                     pfShow("Q function:x direction", ret, 0, cv::Vec2d(-1, 1));
-//                     optimizer._qy.download(ret);
+//                     denoiser._qy.download(ret);
 //                     pfShow("Q function:y direction", ret, 0, cv::Vec2d(-1, 1));
-//                     optimizer._d.download(ret);
+//                     denoiser._d.download(ret);
 //                     pfShow("D function", ret, 0, cv::Vec2d(0, layers));
                 }
-                doneOptimizing=optimizer.optimizeA();
+                doneOptimizing=optimizer.optimizeA(d,a);
+                theta=theta*thetaStep;
                 Acount++;
-            }while(!doneOptimizing);
+            }while(theta>thetaMin);
 //             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
-            pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
+//             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
 //             gpause();
             cv=CostVolume(images[imageNum],(FrameID)0,layers,0.010,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             s=optimizer.cvStream;

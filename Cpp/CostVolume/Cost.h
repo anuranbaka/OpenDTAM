@@ -107,7 +107,7 @@ private:
     void maxv(float*/*(float*)*/,cv::Mat& maxIndex,cv::Mat& maxValue);   
     void minmax();    
 
-    //Optimizer functions and data
+    //DepthmapDenoiseWeightedHuber functions and data
     public:cv::Mat _qx,_qy,_d,_a,_g,_gu,_gd,_gl,_gr,_gbig;private:
     uchar* aptr;
     uchar* dptr;

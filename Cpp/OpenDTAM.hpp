@@ -15,7 +15,7 @@
 #include "CostVolume/utils/reprojectCloud.hpp"
 #include "CostVolume/Cost.h"
 #include "CostVolume/CostVolume.hpp"
-#include "Optimizer/Optimizer.hpp"
+#include "DepthmapDenoiseWeightedHuber/DepthmapDenoiseWeightedHuber.hpp"
 #include "graphics.hpp"
 #include "set_affinity.h"
 #include "Track/Track.hpp"
@@ -303,7 +303,7 @@ bool utrk(Ptr<Frame> _frame){
         int iters=3;
         for(int i=0;i<iters;i++){
             bool success = align_level_largedef_gray_forward(   (*base.pyramid)[level],//Total Mem cost ~185 load/stores of image
-                                                                base.optimizer->depthMap(),
+                                                                base.optimizer->getBestDepthSoFar(),
                                                                 (*frame.pyramid)[level],
                                                                 cameraMatrixPyr[level],//Mat_<double>
                                                                 p,                //Mat_<double>
@@ -361,8 +361,8 @@ bool ucv(Ptr<Frame> _base,Ptr<Frame> _alt){
 
 
     
-    Ptr<Optimizer> optimizerp(new Optimizer(cv));
-    Optimizer& optimizer=*optimizerp;
+    Ptr<DepthmapDenoiseWeightedHuber> optimizerp(new DepthmapDenoiseWeightedHuber(cv));
+    DepthmapDenoiseWeightedHuber& optimizer=*optimizerp;
 //     optimizer.thetaStart =    20.0;
 //     optimizer.thetaMin=0.01;
 //     optimizer.thetaStep=.99;

@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 2.6)
 set(CMAKE_BUILD_TYPE Debug) 
 project(dtam)
+cmake_policy(SET CMP0012 NEW)
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/local_store/Qt/5.3/gcc_64/lib/cmake")# "/local_store/opencv-2.4.9/debug/unix-install/")
 #message(STATUS ${CMAKE_MODULE_PATH})
@@ -38,7 +39,8 @@ set(BASEPATH "${CMAKE_SOURCE_DIR}")
 
 add_subdirectory(CostVolume)
 add_subdirectory(Track)
-add_subdirectory(Optimizer)
+add_subdirectory(Optimizer) 
+add_subdirectory(DepthmapDenoiseWeightedHuber)
 add_subdirectory(utils)
 add_subdirectory(Scheduler)
 
