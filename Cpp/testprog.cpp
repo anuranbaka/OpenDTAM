@@ -161,8 +161,8 @@ int App_main( int argc, char** argv )
 //                     pfShow("Q function:x direction", ret, 0, cv::Vec2d(-1, 1));
 //                     denoiser._qy.download(ret);
 //                     pfShow("Q function:y direction", ret, 0, cv::Vec2d(-1, 1));
-//                     denoiser._d.download(ret);
-//                     pfShow("D function", ret, 0, cv::Vec2d(0, layers));
+                    denoiser._d.download(ret);
+                    pfShow("D function", ret, 0, cv::Vec2d(0, layers));
                 }
                 doneOptimizing=optimizer.optimizeA(d,a);
                 theta=theta*thetaStep;
