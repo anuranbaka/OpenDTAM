@@ -102,13 +102,6 @@ int App_main( int argc, char** argv )
     CostVolume cv(images[0],(FrameID)0,layers,0.015,0.0,Rs[0],Ts[0],cameraMatrix);;
     
     
-    
-    float thetaStart =    20.0;
-    float thetaMin   =     1.0;
-    float thetaStep  =      .97;
-    float epsilon    =       .1;
-    float lambda     =       .01;
-    
 
     int imageNum=0;
     cv::cuda::Stream s;
@@ -121,15 +114,13 @@ int App_main( int argc, char** argv )
             cv.updateCost(image, R, T);
         }
         else{
-
-                float theta=thetaStart;
             //Attach optimizer
             DepthmapDenoiseWeightedHuber denoiser(cv.rows,cv.cols,cv.baseImageGray,cv.cvStream);
             Optimizer optimizer(cv);
             optimizer.initOptimization();
             GpuMat a=cv.loInd.clone();
             GpuMat d;
-            denoiser(a,epsilon,theta);
+            denoiser.cacheGValues();
             
             denoiser._gx.download(ret,optimizer.cvStream);
             pfShow("G function:x direction", ret, 0, cv::Vec2d(0, 1));
@@ -153,21 +144,20 @@ int App_main( int argc, char** argv )
 
                 for (int i = 0; i < 10; i++) {
                     optimizer.stableDepth.download(ret);
-                    d=denoiser(a,epsilon,theta);
+                    d=denoiser(a,optimizer.epsilon,optimizer.getTheta());
                     optimizer.stableDepth.download(ret);
                     QDcount++;
                     
-//                     optimizer._qx.download(ret);
-//                     pfShow("Q function:x direction", ret, 0, cv::Vec2d(-1, 1));
-//                     denoiser._qy.download(ret);
-//                     pfShow("Q function:y direction", ret, 0, cv::Vec2d(-1, 1));
+                    denoiser._qx.download(ret);
+                    pfShow("Q function:x direction", ret, 0, cv::Vec2d(-1, 1));
+                    denoiser._qy.download(ret);
+                    pfShow("Q function:y direction", ret, 0, cv::Vec2d(-1, 1));
                     denoiser._d.download(ret);
                     pfShow("D function", ret, 0, cv::Vec2d(0, layers));
                 }
                 doneOptimizing=optimizer.optimizeA(d,a);
-                theta=theta*thetaStep;
                 Acount++;
-            }while(theta>thetaMin);
+            }while(!doneOptimizing);
 //             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
 //             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
 //             gpause();
