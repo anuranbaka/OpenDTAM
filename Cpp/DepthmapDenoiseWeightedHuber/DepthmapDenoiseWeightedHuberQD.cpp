@@ -165,6 +165,8 @@ GpuMat DepthmapDenoiseWeightedHuber::operator()(const GpuMat& ain, float epsilon
         _a=ain;
     }
     
+
+    
     if(!alloced){
         allocate(rows,cols);
     } 
@@ -174,6 +176,10 @@ GpuMat DepthmapDenoiseWeightedHuber::operator()(const GpuMat& ain, float epsilon
     if(!cachedG){
         _gx.setTo(1,cvStream);
         _gy.setTo(1,cvStream);
+    }
+    if(!dInited){
+        _d=_a;
+        dInited=1;
     }
     computeSigmas(epsilon,theta);
     

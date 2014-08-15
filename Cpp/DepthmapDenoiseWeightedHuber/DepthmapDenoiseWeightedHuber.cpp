@@ -30,6 +30,7 @@ DepthmapDenoiseWeightedHuber::DepthmapDenoiseWeightedHuber(int rows,
     CV_Assert(rows % 32 == 0 && cols % 32 == 0 && cols >= 64);
     alloced=0;
     cachedG=0;
+    dInited=0;
 }
 
 #define FLATALLOC( n) n.create(1,cv.rows*cv.cols, CV_32FC1); n=n.reshape(0,cv.rows);CV_Assert(n.isContinuous())

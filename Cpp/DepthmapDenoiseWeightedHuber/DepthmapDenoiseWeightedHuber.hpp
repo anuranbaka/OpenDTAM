@@ -51,6 +51,7 @@ private:
     //flags
     bool cachedG;
     int alloced;
+    int dInited;
     
 
 public:
