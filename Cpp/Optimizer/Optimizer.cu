@@ -19,59 +19,19 @@
 namespace cv { namespace cuda { namespace device {
     namespace dtam_optimizer{
 
-//__constant__ float sliceToIm[3 * 3];
-// __constant__ int   rows;
-// __constant__ int   cols;
-// __constant__ int   layers;
-// __constant__ int   layerStep;
-// __constant__ float   depthStep;//Implemented as 1/(layers-1)
-//__constant__ float  theta;//NI
-//__constant__ float  lambda;//NI
-// __constant__ float* a;
-// __constant__ float* d;
-// __constant__ float* cdata;
-// __constant__ float* lo;
-// __constant__ float* hi;
-// __constant__ float* loInd;
-
-
 static unsigned int arows,acols;
-
-
 
 #define SEND(type,sym) cudaMemcpyToSymbol(sym, &h_ ## sym, sizeof(type));
 
-void loadConstants(uint h_rows, uint h_cols, uint h_layers, uint h_layerStep,
-        float* h_a, float* , float* h_cdata, float* h_lo, float* h_hi,
-        float* h_loInd) {
-        //replace from arg list to make params:
-        //\s*__constant__ \s*(.*)\s(\S*);\n
-        //\1 h_\2,
-        //replace from arg list to make body:
-        //__constant__\s*(\S*)(\s*\S*);
-        //SEND(\1,\2);
-//         SEND(uint,   rows);
-//         SEND(uint,   cols);
-//         SEND(uint,   layers);
-//         SEND(uint,   layerStep);
-//         float h_depthStep=1.0f/(h_layers-1);
-//         SEND(float, depthStep);
-//         SEND(float*, a);
-//         SEND(float*, d);
-//         SEND(float*, cdata);
-//         SEND(float*, lo);
-//         SEND(float*, hi);
-//         SEND(float*, loInd);
-
+void loadConstants(uint h_rows, uint h_cols, uint, uint,
+        float*, float* , float* , float* , float* ,
+        float*) {
 
         //special
         arows=h_rows;
         acols=h_cols;
         assert(arows>0);
-        assert(h_layers>=32);
-        assert(h_layers<=256); //make sure bit packing will work
 }
-
 
 cudaStream_t localStream=0;
 
@@ -110,12 +70,6 @@ void funcName##Caller arglist{                                                  
 };static __global__ void funcName arglist
 
 
-
-GENERATE_CUDA_FUNC1D(updateCostCol,
-                       (m33 sliceToIm, unsigned int yoff),
-                       (sliceToIm, yoff)) {
-    //Blah,Blah,Blah do stuff
-}
 __device__
 static inline float afunc(float costval,float theta,float d,float ds,float a,float lambda){
 //    return costval;
@@ -231,8 +185,6 @@ GENERATE_CUDA_FUNC1D(minimizeAshared,
     else
         *out=100;//float(mini);
 }
-
-
 
 //cool but cryptic min algo
 GENERATE_CUDA_FUNC1D(minimizeAcool,
@@ -649,13 +601,15 @@ GENERATE_CUDA_FUNC2DROWS(computeGunsafe,
         gyp[pt]=gy;
 
 }
+
 __device__ inline float saturate(float x){
     //return x;
     return x/fmaxf(1.0f,fabsf(x));
 }
-//static __global__ void updateQD  (float* gqxpt, float* gqypt, float *dpt, float * apt,
-//                float *gxpt, float *gypt, float sigma_q, float sigma_d, float epsilon,
-//                float theta);//DANGER, no interblock synchronization = weird instability
+
+__global__ void updateQD  (float* gqxpt, float* gqypt, float *dpt, float * apt,
+                float *gxpt, float *gypt, int cols, float sigma_q, float sigma_d, float epsilon,
+                float theta);//DANGER, no interblock synchronization = weird instability
 static __global__ void updateQ  (float* gqxpt, float* gqypt, float *dpt, float * apt,
                 float *gxpt, float *gypt, int cols, float sigma_q, float sigma_d, float epsilon,
                 float theta);
@@ -678,181 +632,180 @@ void updateQDCaller(float* gqxpt, float* gqypt, float *dpt, float * apt,
             gxpt, gypt, cols, sigma_q, sigma_d, epsilon, theta);
     cudaSafeCall( cudaGetLastError() );
 };
-/*
-//                            static __global__ void updateQD  (float* gqxpt, float* gqypt, float *dpt, float * apt,
-//                                            float *gxpt, float *gypt, float sigma_q, float sigma_d, float epsilon,
-//                                            float theta) {
-//                                //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
+__global__ void updateQD  (float* gqxpt, float* gqypt, float *dpt, float * apt,
+                float *gxpt, float *gypt, int cols, float sigma_q, float sigma_d, float epsilon,
+                float theta) {
+    //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
+
+    //Original pseudocode for this function:
+//void updateQD(){
+//    //shifts are shuffles!
+//    for (all x in blocks of warpsize;;){
+//        //qx update
+//        float dh,dn,qxh,gx,gqx,qyh,gy,gqy;
+//        //load(dh,dn,gxh,gqx);//load here, next(the block to the right), local constant, old x force(with cached multiply)
+//        dr=dh<<1;
+//        tmp=dn>>31;
+//        if (rt)
+//            dr=tmp;
+//        qxh=gqx/gxh;
+//        qxh = (qxh+sigma_q*gxh*(dr-dh))/(1+sigma_q*epsilon);//basic spring force equation f=k(x-x0)
+//        gqx = saturate(gxh*qxh);//spring saturates (with cached multiply), saturation force proportional to prob. of not an edge.
+//        gqxpt[pt]=gqx;
 //
-//                                //Original pseudocode for this function:
-//                            //void updateQD(){
-//                            //    //shifts are shuffles!
-//                            //    for (all x in blocks of warpsize;;){
-//                            //        //qx update
-//                            //        float dh,dn,qxh,gx,gqx,qyh,gy,gqy;
-//                            //        //load(dh,dn,gxh,gqx);//load here, next(the block to the right), local constant, old x force(with cached multiply)
-//                            //        dr=dh<<1;
-//                            //        tmp=dn>>31;
-//                            //        if (rt)
-//                            //            dr=tmp;
-//                            //        qxh=gqx/gxh;
-//                            //        qxh = (qxh+sigma_q*gxh*(dr-dh))/(1+sigma_q*epsilon);//basic spring force equation f=k(x-x0)
-//                            //        gqx = saturate(gxh*qxh);//spring saturates (with cached multiply), saturation force proportional to prob. of not an edge.
-//                            //        gqxpt[pt]=gqx;
-//                            //
-//                            //        //qy update
-//                            //        s[bpt]=dn;
-//                            //        if(!btm){
-//                            //            dd=s[bpt+bdnoff];
-//                            //        }else{
-//                            //            dd=dpt[pt+dnoff];
-//                            //        }
-//                            //        qyh=gqy/gy;
-//                            //        qyh=(qyh+sigma_q*gyh*(dd-dh))/(1+sigma_q*epsilon);
-//                            //        gqy=saturate(gyh*qyh);
-//                            //        gqypt[pt]=gqy;
-//                            //
-//                            //        //dx update
-//                            //        gqr=gqx;
-//                            //        gql=gqx>>1;
-//                            //        if (lf)
-//                            //            gql=gqsave;
-//                            //        gqsave=gqx<<31;//save for next iter
-//                            //        dacc = gqr - gql;//dx part
-//                            //
-//                            //        //dy update and d store
-//                            //        gqd=gqy;
-//                            //        s[bpt]=gqy;
-//                            //        if(!top)
-//                            //            gqu=s[bpt+bupoff];
-//                            //        else
-//                            //            gqu=gqxpt[pt + upoff];
-//                            //        dacc += gqd-gqu; //dy part
-//                            //        d = (d + sigma_d*(dacc+1/theta*ah))/(1+sigma_d/theta);
-//                            //        dpt[pt]=d;
-//                            //    }
-//                            //}
-//                                __shared__ float s[32*BLOCKY2D];
-//                                int x = threadIdx.x;
-//                                int y = blockIdx.y * blockDim.y + threadIdx.y;
-//                                bool rt=x==31;
-//                                bool lf=x==0;
-//                                bool top=y==0;
-//                                bool btm=y==rows-1;
-//                                bool btop=threadIdx.y==0;
-//                                bool bbtm=threadIdx.y==blockDim.y-1;
-//                                int pt, bpt,bdnoff ,dnoff, bupoff, upoff;
+//        //qy update
+//        s[bpt]=dn;
+//        if(!btm){
+//            dd=s[bpt+bdnoff];
+//        }else{
+//            dd=dpt[pt+dnoff];
+//        }
+//        qyh=gqy/gy;
+//        qyh=(qyh+sigma_q*gyh*(dd-dh))/(1+sigma_q*epsilon);
+//        gqy=saturate(gyh*qyh);
+//        gqypt[pt]=gqy;
 //
+//        //dx update
+//        gqr=gqx;
+//        gql=gqx>>1;
+//        if (lf)
+//            gql=gqsave;
+//        gqsave=gqx<<31;//save for next iter
+//        dacc = gqr - gql;//dx part
 //
-//                                float tmp,gqsave;
-//                                gqsave=0;
-//                                bpt = threadIdx.x+threadIdx.y*blockDim.x;
-//                                bdnoff=blockDim.x;
-//                                dnoff=(!btm)*cols;
-//                                bupoff=-blockDim.x;
-//                                upoff=-(!top)*cols;
-//
-//                                pt=x+y*cols;
-//
-//                                float dh,dn;
-//                                dn=dpt[pt];
-//
-//
-//                                for(;x<cols;x+=32){
-//                                    float qx,gx,gqx,qy,gy,gqy;
-//                                    pt=x+y*cols;
-//
-//
-//                                    //qx update
-//                                    {
-//                                        float dr;
-//                                        //load(dh,dn,gxh,gqx);//load here, next(the block to the right), local constant, old x force(with cached multiply)
-//
-//                                        //load
-//                                        {
-//                                            dh=dn;
-//                                            if(x<cols-32){
-//                                                dn=dpt[pt+32];
-//
-//                                            }
-//                                            gqx=gqxpt[pt];
-//                                            gx=gxpt[pt];
-//                            //                gx=1.0f;
-//
-//                                        }
-//
-//                                        dr=__shfl_down(dh,1);
-//                                        tmp=__shfl_up(dn,31);
-//                                        if (rt && x<cols-32)
-//                                            dr=tmp;
-//                                        qx = gqx/gx;
-//                                        qx = (qx+sigma_q*gx*(dr-dh))/(1+sigma_q*epsilon);//basic spring force equation f=k(x-x0)
-//                                        gqx = saturate(gx*qx);//spring saturates (with cached multiply), saturation force proportional to prob. of not an edge.
-//                                        //gqxpt[pt]=gqx;
-//                                    }
-//                                    dpt[pt] = dh;
-//                                    //qy update
-//                                    {
-//                                        float dd;
-//                                        //load
-//                                                {
-//                                                    gqy=gqypt[pt];
-//                                                    gy=gypt[pt];
-//                            //                        gy=1.0f;
-//                                                }
-//                                        s[bpt]=dh;
-//                                        __syncthreads();
-//                                        if(!bbtm){
-//                                            dd=s[bpt+bdnoff];
-//                                        }else{
-//                                            dd=dpt[pt+dnoff];
-//                                        }
-//                                        qy = gqy/gy;
-//                                        qy = (qy+sigma_q*gy*(dd-dh))/(1+sigma_q*epsilon);
-//                                        gqy = saturate(gy*qy);
-//                                        //gqypt[pt]=gqy;
-//                                    }
-//                                    float dacc;
-//                                    //dx update
-//                                    {
-//                                        float gqr,gql;
-//                                        gqr=gqx;
-//                                        gql=__shfl_up(gqx,1);
-//                                        if (lf)
-//                                            gql=gqsave;
-//                                        gqsave=__shfl_down(gqx,31);//save for next iter
-//                                        dacc = gqr - gql;//dx part
-//                                    }
-//                                    float d=dh;
-//                                    //dy update and d store
-//                                    {
-//                                        float a;
-//                                        //load
-//                                        {
-//                                            a=apt[pt];
-//                                        }
-//                                        float gqu,gqd;
-//
-//                                        gqd=gqy;
-//                                        s[bpt]=gqy;
-//                                        __syncthreads();
-//                                        if(!btop)
-//                                            gqu=s[bpt+bupoff];
-//                                        else
-//                                            gqu=gqypt[pt + upoff];
-//                                        if(y==0)
-//                                            gqu=0.0f;
-//                                        dacc += gqd-gqu; //dy part
-//                                        d = ( d + sigma_d*(dacc + a/theta) ) / (1 + sigma_d/theta);
-//                                        //dpt[pt] = d;
-//                                    }
-//                                    __syncthreads();
-//                                    gqxpt[pt]=gqx;
-//                                    gqypt[pt]=gqy;
-//                                    dpt[pt] = d;
-//                                    __syncthreads();
-//                                }
-//                            }*/
+//        //dy update and d store
+//        gqd=gqy;
+//        s[bpt]=gqy;
+//        if(!top)
+//            gqu=s[bpt+bupoff];
+//        else
+//            gqu=gqxpt[pt + upoff];
+//        dacc += gqd-gqu; //dy part
+//        d = (d + sigma_d*(dacc+1/theta*ah))/(1+sigma_d/theta);
+//        dpt[pt]=d;
+//    }
+//}
+    __shared__ float s[32*BLOCKY2D];
+    int x = threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    bool rt=x==31;
+    bool lf=x==0;
+    bool top=y==0;
+    bool btm=y==gridDim.y*blockDim.y-1;
+    bool btop=threadIdx.y==0;
+    bool bbtm=threadIdx.y==blockDim.y-1;
+    int pt, bpt,bdnoff ,dnoff, bupoff, upoff;
+
+
+    float tmp,gqsave;
+    gqsave=0;
+    bpt = threadIdx.x+threadIdx.y*blockDim.x;
+    bdnoff=blockDim.x;
+    dnoff=(!btm)*cols;
+    bupoff=-blockDim.x;
+    upoff=-(!top)*cols;
+
+    pt=x+y*cols;
+
+    float dh,dn;
+    dn=dpt[pt];
+
+
+    for(;x<cols;x+=32){
+        float qx,gx,gqx,qy,gy,gqy;
+        pt=x+y*cols;
+
+
+        //qx update
+        {
+            float dr;
+            //load(dh,dn,gxh,gqx);//load here, next(the block to the right), local constant, old x force(with cached multiply)
+
+            //load
+            {
+                dh=dn;
+                if(x<cols-32){
+                    dn=dpt[pt+32];
+
+                }
+                gqx=gqxpt[pt];
+                gx=gxpt[pt];
+//                gx=1.0f;
+
+            }
+
+            dr=__shfl_down(dh,1);
+            tmp=__shfl_up(dn,31);
+            if (rt && x<cols-32)
+                dr=tmp;
+            qx = gqx/gx;
+            qx = (qx+sigma_q*gx*(dr-dh))/(1+sigma_q*epsilon);//basic spring force equation f=k(x-x0)
+            gqx = saturate(gx*qx);//spring saturates (with cached multiply), saturation force proportional to prob. of not an edge.
+            //gqxpt[pt]=gqx;
+        }
+        dpt[pt] = dh;
+        //qy update
+        {
+            float dd;
+            //load
+                    {
+                        gqy=gqypt[pt];
+                        gy=gypt[pt];
+//                        gy=1.0f;
+                    }
+            s[bpt]=dh;
+            __syncthreads();
+            if(!bbtm){
+                dd=s[bpt+bdnoff];
+            }else{
+                dd=dpt[pt+dnoff];
+            }
+            qy = gqy/gy;
+            qy = (qy+sigma_q*gy*(dd-dh))/(1+sigma_q*epsilon);
+            gqy = saturate(gy*qy);
+            //gqypt[pt]=gqy;
+        }
+        float dacc;
+        //dx update
+        {
+            float gqr,gql;
+            gqr=gqx;
+            gql=__shfl_up(gqx,1);
+            if (lf)
+                gql=gqsave;
+            gqsave=__shfl_down(gqx,31);//save for next iter
+            dacc = gqr - gql;//dx part
+        }
+        float d=dh;
+        //dy update and d store
+        {
+            float a;
+            //load
+            {
+                a=apt[pt];
+            }
+            float gqu,gqd;
+
+            gqd=gqy;
+            s[bpt]=gqy;
+            __syncthreads();
+            if(!btop)
+                gqu=s[bpt+bupoff];
+            else
+                gqu=gqypt[pt + upoff];
+            if(y==0)
+                gqu=0.0f;
+            dacc += gqd-gqu; //dy part
+            d = ( d + sigma_d*(dacc + a/theta) ) / (1 + sigma_d/theta);
+            //dpt[pt] = d;
+        }
+        __syncthreads();
+        gqxpt[pt]=gqx;
+        gqypt[pt]=gqy;
+        dpt[pt] = d;
+        __syncthreads();
+    }
+}
 
 
 GENERATE_CUDA_FUNC2DROWS(updateQ,
@@ -1112,30 +1065,6 @@ GENERATE_CUDA_FUNC2DROWS(updateD,
         __syncthreads();//can't figure out why this is needed, but it is to avoid subtle errors in Qy at the ends of the warp
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 }}}}
 

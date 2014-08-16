@@ -6,7 +6,7 @@
 #ifndef DepthmapDenoiseWeightedHuber_H
 #define DepthmapDenoiseWeightedHuber_H
 #include <opencv2/core/cuda.hpp>
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 
 namespace cv{
     namespace cuda{
@@ -21,7 +21,7 @@ namespace cv{
         //! Contributed by Paul Foster for GSoC 2014
         //! Original algorithm described by Richard Newcombe, Steven J. Lovegrove, and Andrew J. Davison. 
         //! "DTAM: Dense tracking and mapping in real-time."
-        class CV_EXPORTS DepthmapDenoiseWeightedHuber : public cv::Algorithm
+        class DepthmapDenoiseWeightedHuber : public cv::Algorithm
         {
         public:
             //! This may be called repeatedly to iteratively refine the internal depthmap
@@ -50,22 +50,12 @@ namespace cv{
             cv::cuda::GpuMat operator()(InputArray ain,
                                         float epsilon,
                                         float theta);
-
-
-
-
             
-
-
-            //public parameters
-            float epsilon,theta;
-
             
             cv::cuda::GpuMat visibleLightImage;
             //buffers
             cv::cuda::GpuMat _qx,_qy,_d,_a,_g,_g1,_gx,_gy;
             cv::cuda::GpuMat stableDepth;
-            float getTheta(){return theta;}
             
             //in case you want to do these explicitly
             void allocate(int rows,int cols, InputArray gxin=cv::cuda::GpuMat(), InputArray gyin=cv::cuda::GpuMat());

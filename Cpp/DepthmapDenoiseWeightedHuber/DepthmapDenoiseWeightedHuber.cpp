@@ -34,7 +34,7 @@ namespace cv{
         }
 
         Ptr<DepthmapDenoiseWeightedHuber>
-        createDepthmapDenoiseWeightedHuber(InputArray visibleLightImage, Stream cvStream){
+        CV_EXPORTS createDepthmapDenoiseWeightedHuber(InputArray visibleLightImage, Stream cvStream){
             return Ptr<DepthmapDenoiseWeightedHuber>(new DepthmapDenoiseWeightedHuberImpl(visibleLightImage.getGpuMat(),cvStream));
         };
     }

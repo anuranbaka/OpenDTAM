@@ -40,7 +40,7 @@ set(BASEPATH "${CMAKE_SOURCE_DIR}")
 add_subdirectory(CostVolume)
 add_subdirectory(Track)
 add_subdirectory(Optimizer) 
-add_subdirectory(DepthmapDenoiseWeightedHuber)
+#add_subdirectory(DepthmapDenoiseWeightedHuber)
 add_subdirectory(utils)
 add_subdirectory(Scheduler)
 
@@ -49,7 +49,7 @@ include_directories("${BASEPATH}" ${CUDA_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_35,code=sm_35;--use_fast_math ;--restrict; -lineinfo; -O0)
 cuda_add_library(OpenDTAM SHARED ${DTAM_SOURCES} OpenDTAM.cpp)
-target_link_libraries(OpenDTAM opencv_cudaimgproc)
+target_link_libraries(OpenDTAM opencv_cudaimgproc opencv_cudastereo)
 add_executable (a.out testprog.cpp convertAhandaPovRayToStandard.cpp graphics.cpp)
 target_link_libraries( a.out  OpenDTAM ${OpenCV_LIBS} ${Boost_LIBRARIES} )
 

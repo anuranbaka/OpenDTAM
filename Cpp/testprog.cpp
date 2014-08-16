@@ -1,4 +1,5 @@
 #include <opencv2/core.hpp>
+#include <opencv2/cudastereo.hpp>
 #include <iostream>
 #include <stdio.h>
 
@@ -10,7 +11,6 @@
 #include "CostVolume/utils/reprojectCloud.hpp"
 #include "CostVolume/Cost.h"
 #include "CostVolume/CostVolume.hpp"
-#include "DepthmapDenoiseWeightedHuber/DepthmapDenoiseWeightedHuber.hpp"
 #include "Optimizer/Optimizer.hpp"
 #include "graphics.hpp"
 #include "set_affinity.h"
