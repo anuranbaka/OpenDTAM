@@ -15,13 +15,18 @@ using namespace cv::cuda;
 static void memZero(GpuMat& in,Stream& cvStream){
     cudaSafeCall(cudaMemsetAsync(in.data,0,in.rows*in.cols*sizeof(float),cv::cuda::StreamAccessor::getStream(cvStream)));
 }
-void DepthmapDenoiseWeightedHuber::allocate(int rows,int cols,const GpuMat& gxin,const GpuMat& gyin){
+
+void DepthmapDenoiseWeightedHuberImpl::allocate(int rows,int cols,InputArray _gxin,InputArray _gyin){
+    const GpuMat& gxin=_gxin.getGpuMat();
+    const GpuMat& gyin=_gyin.getGpuMat();
+    
+    this->rows=rows;
+    this->cols=cols;
     if(!(rows % 32 == 0 && cols % 32 == 0 && cols >= 64)){
         CV_Assert(!"For performance reasons, DepthmapDenoiseWeightedHuber currenty only supports multiple of 32 image sizes with cols >= 64. Pad the image to achieve this.");
     }
     
-    this->rows=rows;
-    this->cols=cols;
+
     if(!_a.data){
         _a.create(1,rows*cols, CV_32FC1);
         _a=_a.reshape(0,rows);
@@ -62,7 +67,7 @@ void DepthmapDenoiseWeightedHuber::allocate(int rows,int cols,const GpuMat& gxin
 }
 
 
-void DepthmapDenoiseWeightedHuber::computeSigmas(float epsilon,float theta){
+void DepthmapDenoiseWeightedHuberImpl::computeSigmas(float epsilon,float theta){
     /*
     //This function is my best guess of what was meant by the line:
     //"Gradient ascent/descent time-steps sigma_q , sigma_d are set optimally
@@ -123,7 +128,7 @@ void DepthmapDenoiseWeightedHuber::computeSigmas(float epsilon,float theta){
     sigma_q = sigma;
 }
 
-void DepthmapDenoiseWeightedHuber::cacheGValues(){
+void DepthmapDenoiseWeightedHuberImpl::cacheGValues(){
     using namespace cv::cuda::device::dtam_denoise;
     localStream = cv::cuda::StreamAccessor::getStream(cvStream);
     if(cachedG)
@@ -147,9 +152,15 @@ void DepthmapDenoiseWeightedHuber::cacheGValues(){
     cachedG=1;
 }
 
-GpuMat DepthmapDenoiseWeightedHuber::operator()(const GpuMat& ain, float epsilon,float theta){
+GpuMat DepthmapDenoiseWeightedHuberImpl::operator()(InputArray _ain, float epsilon,float theta){
+    const GpuMat& ain=_ain.getGpuMat();
+    
     using namespace cv::cuda::device::dtam_denoise;
     localStream = cv::cuda::StreamAccessor::getStream(cvStream);
+    
+    rows=ain.rows;
+    cols=ain.cols;
+    
     CV_Assert(ain.cols>0);
     if(!(ain.rows % 32 == 0 && ain.cols % 32 == 0 && ain.cols >= 64)){
         CV_Assert(!"For performance reasons, DepthmapDenoiseWeightedHuber currenty only supports multiple of 32 image sizes with cols >= 64. Pad the image to achieve this.");
@@ -180,6 +191,7 @@ GpuMat DepthmapDenoiseWeightedHuber::operator()(const GpuMat& ain, float epsilon
         _a.copyTo(_d,cvStream);
         dInited=1;
     }
+    
     computeSigmas(epsilon,theta);
     
     int layerStep = rows * cols;

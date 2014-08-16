@@ -12,16 +12,16 @@ Track::Track(Cost cost){
     pose=basePose.clone();
 
 }
-Track::Track(CostVolume cost, DepthmapDenoiseWeightedHuber opt){
-    rows=cost.rows;
-    cols=cost.cols;
-    cost.baseImage.download(thisFrame);
-    baseImage=lastFrame=thisFrame;
-    cameraMatrix=Mat(cost.cameraMatrix);
-    RTToLie(cost.R,cost.T,basePose);
-    pose=basePose.clone();
-
-}
+// Track::Track(CostVolume cost, DepthmapDenoiseWeightedHuberImpl opt){
+//     rows=cost.rows;
+//     cols=cost.cols;
+//     cost.baseImage.download(thisFrame);
+//     baseImage=lastFrame=thisFrame;
+//     cameraMatrix=Mat(cost.cameraMatrix);
+//     RTToLie(cost.R,cost.T,basePose);
+//     pose=basePose.clone();
+// 
+// }
 void Track::addFrame(cv::Mat frame){
     lastFrame=thisFrame;
     thisFrame=frame;

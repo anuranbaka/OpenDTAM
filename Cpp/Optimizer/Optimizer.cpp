@@ -70,7 +70,6 @@ bool Optimizer::optimizeA(const cv::cuda::GpuMat _d,cv::cuda::GpuMat _a){
    loadConstants(cv.rows, cv.cols, cv.layers, layerStep, a, d, cv.data, (float*)cv.lo.data,
            (float*)cv.hi.data, (float*)cv.loInd.data);
     minimizeACaller  ( cv.data, a, d, cv.layers, theta,lambda);
-    cout<<"Theta"<<theta<<endl;
     theta*=thetaStep;
     if (doneOptimizing){
         stableDepthReady=Ptr<char>((char*)(new cudaEvent_t));

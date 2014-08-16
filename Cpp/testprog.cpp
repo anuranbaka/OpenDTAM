@@ -115,18 +115,14 @@ int App_main( int argc, char** argv )
         }
         else{
             //Attach optimizer
-            DepthmapDenoiseWeightedHuber denoiser(cv.rows,cv.cols,cv.baseImageGray,cv.cvStream);
+            Ptr<DepthmapDenoiseWeightedHuber> dp = createDepthmapDenoiseWeightedHuber(cv.baseImageGray,cv.cvStream);
+            DepthmapDenoiseWeightedHuber& denoiser=*dp;
             Optimizer optimizer(cv);
             optimizer.initOptimization();
             GpuMat a=cv.loInd.clone();
             GpuMat d;
             denoiser.cacheGValues();
             
-            denoiser._gx.download(ret,optimizer.cvStream);
-            pfShow("G function:x direction", ret, 0, cv::Vec2d(0, 1));
-            denoiser._gy.download(ret,optimizer.cvStream);
-            pfShow("G function:y direction", ret, 0, cv::Vec2d(0, 1));
-            optimizer._a.download(ret);
                 pfShow("A", ret, 0, cv::Vec2d(0, layers));
                 waitKey(0);
                 gpause();
@@ -137,7 +133,7 @@ int App_main( int argc, char** argv )
             do{
 //                 cout<<"Theta: "<< optimizer.getTheta()<<endl;
 // 
-                optimizer._a.download(ret);
+                a.download(ret);
                 pfShow("A", ret, 0, cv::Vec2d(0, layers));
                 
 //                 optimizer.epsilon*=optimizer.thetaStep;
@@ -148,11 +144,7 @@ int App_main( int argc, char** argv )
                     optimizer.stableDepth.download(ret);
                     QDcount++;
                     
-                    denoiser._qx.download(ret);
-                    pfShow("Q function:x direction", ret, 0, cv::Vec2d(-1, 1));
-                    denoiser._qy.download(ret);
-                    pfShow("Q function:y direction", ret, 0, cv::Vec2d(-1, 1));
-                    denoiser._d.download(ret);
+                    d.download(ret);
                     pfShow("D function", ret, 0, cv::Vec2d(0, layers));
                 }
                 doneOptimizing=optimizer.optimizeA(d,a);
