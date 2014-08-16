@@ -6,7 +6,7 @@
 #include "DepthmapDenoiseWeightedHuber.hpp"
 #include "DepthmapDenoiseWeightedHuber.cuh"
 #include <opencv2/core/cuda_stream_accessor.hpp>
-#include <iostream>
+
 
 using namespace std;
 using namespace cv::cuda;
@@ -27,7 +27,6 @@ void DepthmapDenoiseWeightedHuber::allocate(int rows,int cols,const GpuMat& gxin
         _a=_a.reshape(0,rows);
     }
     FLATALLOC(_d, _a);
-    _a.copyTo(_d,cvStream);
     cachedG=1;
     if(gxin.empty()||gyin.empty()){
         if(gxin.empty()){
@@ -178,7 +177,7 @@ GpuMat DepthmapDenoiseWeightedHuber::operator()(const GpuMat& ain, float epsilon
         _gy.setTo(1,cvStream);
     }
     if(!dInited){
-        _d=_a;
+        _a.copyTo(_d,cvStream);
         dInited=1;
     }
     computeSigmas(epsilon,theta);

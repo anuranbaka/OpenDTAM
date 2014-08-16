@@ -7,7 +7,7 @@
 #include "DepthmapDenoiseWeightedHuber.cuh"
 #include <opencv2/core/cuda_stream_accessor.hpp>
 #include <opencv2/core.hpp>
-#include <iostream>
+
 
 using namespace std;
 using namespace cv;
