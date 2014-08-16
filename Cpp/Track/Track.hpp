@@ -3,7 +3,7 @@
 
 #include <CostVolume/Cost.h>
 #include <CostVolume/CostVolume.hpp>
-#include <Optimizer/Optimizer.hpp>
+#include <DepthmapDenoiseWeightedHuber/DepthmapDenoiseWeightedHuber.hpp>
 
 class Track{
 public:
@@ -22,7 +22,7 @@ public:
     cv::Mat lastFrame;
     
     Track(Cost cost);
-    Track(CostVolume cost, Optimizer opt);
+    Track(CostVolume cost, DepthmapDenoiseWeightedHuber opt);
     void addFrame(cv::Mat frame);
     void ESM();
     void cacheDerivatives();

@@ -51,7 +51,7 @@ Ptr<CostVolume> ucv(Frame& base,Frame& alt){
     Mat imageContainerRef=imageContainer;//Required by ambiguous conversion rules
     tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
     cv.updateCost(imageContainer, R, T);
-    Optimizer optimizer(cv);
+    DepthmapDenoiseWeightedHuber optimizer(cv);
     optimizer.initOptimization();
     
     bool doneOptimizing;

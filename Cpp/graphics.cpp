@@ -1,4 +1,4 @@
-#include <opencv2/opencv.hpp> 
+#include <opencv2/highgui.hpp>
 #include <boost/thread/mutex.hpp>
 #include <queue>
 #include <string>
@@ -116,7 +116,7 @@ void guiLoop(int* die){
             waitKey(1);//waitkey must occur here so matrix doesn't fall out of scope because imshow is dumb that way :(
 //            cout<<name<<" queue:"<<ready<<endl;
         }else if(pausing){
-            namedWindow("control",WINDOW_KEEPRATIO);
+            namedWindow("control",WINDOW_NORMAL);
             cout<<"Paused: Space (in GUI window) to continue"<<endl;
             while(waitKey()!=' ');
             

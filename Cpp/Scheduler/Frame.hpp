@@ -21,7 +21,7 @@ struct Frame{
     Ptr<Frame> parent;//the frame whose cv was used for registration
 //     vector<Ptr<CostVolume>> consumers;//the cost volumes using this image as inputs (non-base)
     Ptr<CostVolume> cv;// the cost volume(if any) that uses this image as the base image
-    Ptr<Optimizer> optimizer;
+    Ptr<DepthmapDenoiseWeightedHuber> optimizer;
 //     Tracker tracker;
 //     vector<Mat> pyramid;
     Ptr<vector<Mat> > pyramid;
