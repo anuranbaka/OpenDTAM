@@ -105,7 +105,7 @@ int App_main( int argc, char** argv )
 
     int imageNum=0;
     cv::cuda::Stream s;
-    for (int imageNum=0;imageNum<numImg;imageNum++){//cycle through images forever
+    for (int imageNum=0;imageNum<numImg;imageNum++){
         T=Ts[imageNum];
         R=Rs[imageNum];
         image=images[imageNum];
