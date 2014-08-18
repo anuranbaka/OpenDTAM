@@ -123,9 +123,8 @@ int App_main( int argc, char** argv )
             GpuMat d;
             denoiser.cacheGValues();
             
-                pfShow("A", ret, 0, cv::Vec2d(0, layers));
-                waitKey(0);
-                gpause();
+//                pfShow("A", ret, 0, cv::Vec2d(0, layers));
+//                gpause();
             
             
             
@@ -133,19 +132,19 @@ int App_main( int argc, char** argv )
             do{
 //                 cout<<"Theta: "<< optimizer.getTheta()<<endl;
 // 
-                a.download(ret);
-                pfShow("A", ret, 0, cv::Vec2d(0, layers));
+//                a.download(ret);
+//                pfShow("A", ret, 0, cv::Vec2d(0, layers));
                 
 //                 optimizer.epsilon*=optimizer.thetaStep;
 
                 for (int i = 0; i < 10; i++) {
                     optimizer.stableDepth.download(ret);
-                    d=denoiser(a,optimizer.epsilon,optimizer.getTheta());
-                    optimizer.stableDepth.download(ret);
+//                    d=denoiser(a,optimizer.epsilon,optimizer.getTheta());
+
+
+//                    d.download(ret);
+//                    pfShow("D function", ret, 0, cv::Vec2d(0, layers));
                     QDcount++;
-                    
-                    d.download(ret);
-                    pfShow("D function", ret, 0, cv::Vec2d(0, layers));
                 }
                 doneOptimizing=optimizer.optimizeA(d,a);
                 Acount++;
@@ -153,12 +152,12 @@ int App_main( int argc, char** argv )
 //             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
 //             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
 //             gpause();
-            cv=CostVolume(images[imageNum],(FrameID)0,layers,0.010,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
+            cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,0.010,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             s=optimizer.cvStream;
         }
         
     }
-    s.waitForCompletion();
+//    s.waitForCompletion();
    
     return 0;
 }

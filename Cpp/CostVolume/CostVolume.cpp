@@ -79,7 +79,9 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
     dataContainer.create(layers, rows * cols, CV_32FC1);
     
     GpuMat tmp;
-    baseImage.upload(image.reshape(0,1),cvStream);
+    Mat hold=image;
+    baseImage.upload((image.reshape(0,1),cout<<image.rows<<endl,image.reshape(0,1)),cvStream);
+
     cv::cuda::cvtColor(baseImage,baseImageGray,COLOR_BGR2GRAY,0,cvStream);
     baseImage=baseImage.reshape(0,rows);
     baseImageGray=baseImageGray.reshape(0,rows);
