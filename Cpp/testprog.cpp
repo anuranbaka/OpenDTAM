@@ -144,13 +144,13 @@ int App_main( int argc, char** argv )
 //                gpause();
             
             
-             gpause();
+
             bool doneOptimizing; int Acount=0; int QDcount=0;
             do{
 //                 cout<<"Theta: "<< optimizer.getTheta()<<endl;
 //
-                if(Acount==0)
-                    gpause();
+//                 if(Acount==0)
+//                     gpause();
                a.download(ret);
                pfShow("A function", ret, 0, cv::Vec2d(0, layers));
                 
@@ -175,16 +175,17 @@ int App_main( int argc, char** argv )
             optimizer.cvStream.waitForCompletion();
             a.download(ret);
                pfShow("A function loose", ret, 0, cv::Vec2d(0, layers));
-               gpause();
+//                gpause();
 //             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
 //             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
             imageNum=0;
             cv=CostVolume(images[imageNum],(FrameID)0,layers,0.010,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             s=optimizer.cvStream;
-            for (int imageNum=0;imageNum<numImg;imageNum=(imageNum+1)%numImg){
+            for (int imageNum=0;imageNum<numImg;imageNum=imageNum+1){
                 reprojectCloud(images[imageNum],images[0],optimizer.depthMap(),RTToP(Rs[0],Ts[0]),RTToP(Rs[imageNum],Ts[imageNum]),cameraMatrix);
             }
         }
+        s.waitForCompletion();// so we don't lock the whole system up forever
     }
     s.waitForCompletion();
     Stream::Null().waitForCompletion();
