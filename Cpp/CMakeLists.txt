@@ -47,7 +47,7 @@ add_subdirectory(Scheduler)
 
 include_directories("${BASEPATH}" ${CUDA_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_35,code=sm_35;--use_fast_math ;--restrict; -lineinfo; -O3)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -gencode arch=compute_30,code=sm_30; -gencode arch=compute_35,code=sm_35;--use_fast_math ;--restrict; -lineinfo; -O3)
 cuda_add_library(OpenDTAM SHARED ${DTAM_SOURCES} OpenDTAM.cpp)
 target_link_libraries(OpenDTAM opencv_cudaimgproc opencv_cudastereo)
 add_executable (a.out testprog.cpp convertAhandaPovRayToStandard.cpp graphics.cpp)
