@@ -7,6 +7,8 @@
 #include "DepthmapDenoiseWeightedHuber.cuh"
 #include <opencv2/core/cuda_stream_accessor.hpp>
 
+namespace cv{
+    namespace cuda{
 using namespace std;
 using namespace cv::cuda;
 
@@ -220,14 +222,14 @@ GpuMat DepthmapDenoiseWeightedHuberImpl::operator()(InputArray _ain, float epsil
     float* gqxpt = (float*)_qx.data;
     float* gqypt = (float*)_qy.data;
 
-   loadConstants(rows, cols, 0, 0, 0, 0, 0, 0,
+    loadConstants(rows, cols, 0, 0, 0, 0, 0, 0,
            0, 0);
     updateQDCaller  ( gqxpt, gqypt, d, a,
             gxpt, gypt, cols, sigma_q, sigma_d, epsilon, theta);
-    cudaDeviceSynchronize();
     cudaSafeCall(cudaGetLastError());
     return _d;
 }
-
+}  
+}
 
 

@@ -1,4 +1,5 @@
 #include <opencv2/imgproc.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <iostream>
 #include "utils/utils.hpp"
@@ -162,7 +163,7 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
     Mat pullback;
     Mat occluded(im.rows,im.cols,CV_8UC1);
      Mat depthPullback;
-     pfShow("zmap",zmap);
+//      pfShow("zmap",zmap);
 
      remap( zmap, depthPullback, xyLayers[0], xyLayers[1], INTER_NEAREST, BORDER_CONSTANT, Scalar(0,0, 0) );
 
@@ -174,7 +175,7 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
      zthr.convertTo(zthr,CV_32FC3,1/255.0);
     
     
-     pfShow("Occlusion",zdiff);
+//      pfShow("Occlusion",zdiff);
     
      remap( comparison, pullback, xyLayers[0], xyLayers[1], INTER_NEAREST, BORDER_CONSTANT, Scalar(0,0, 0) );
      Mat photoerr,pthr;
@@ -187,23 +188,24 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
 
  //     pullback.convertTo(pullback,CV_32FC3,1/255.0);
  //     CV_Assert(
-     pfShow("photo Error",photoerr);
+//      pfShow("photo Error",photoerr);
 
 
      Mat confidence;
      sqrt(pthr,confidence);
      confidence=Scalar(1,1,1)-confidence;
      pullback=pullback.mul(confidence).mul(zthr);
-     pfShow("Stabilized Projection",pullback,0,Vec2d(0,1));
-
+//      pfShow("Stabilized Projection",pullback,0,Vec2d(0,1));
+    static Mat fwdp2;
     static Mat fwdp=im.clone();
     remap( im, fwdp, xmap, ymap, INTER_NEAREST, BORDER_CONSTANT,Scalar(0,0,0));
-//     medianBlur(fwdp,fwdp,5);
+    medianBlur(fwdp,fwdp2,3);
 //     remap( im, fwdp, xmap, ymap, INTER_NEAREST, BORDER_TRANSPARENT);
     
-    
-
-    pfShow("Forward Projection",fwdp,0,Vec2d(0,1));
+    fwdp2.copyTo(fwdp,fwdp==0);
+    medianBlur(fwdp,fwdp2,3);
+    fwdp2.copyTo(fwdp,fwdp==0);
+    pfShow("Predicted Image",fwdp,0,Vec2d(0,1));
 //     absdiff(fwdp,comparison,zdiff);
     pfShow("Actual Image",comparison);
    

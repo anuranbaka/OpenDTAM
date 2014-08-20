@@ -33,6 +33,15 @@ namespace cv{
             //! In case you want to do these explicitly
             virtual void allocate(int rows, int cols, InputArray gx = GpuMat(),InputArray gy = GpuMat()) = 0;
             virtual void cacheGValues(InputArray visibleLightImage = GpuMat()) = 0;
+            
+            virtual void setStream(Stream) = 0;
+            virtual Stream getStream() = 0;
+            
+            virtual void setAlpha(float alpha) = 0;
+            virtual float getAlpha() = 0;
+            
+            virtual void setBeta(float beta) = 0;
+            virtual float getBeta() = 0;
         };
 
         //! The visibleLightImage is a CV_32FC1 grayscale image of the scene, which can be used as a hint for edge placement.
@@ -96,8 +105,6 @@ namespace cv{
         public:
             Stream cvStream;
         }; 
-
-        
     }
 }
 #endif // DepthmapDenoiseWeightedHuber_H

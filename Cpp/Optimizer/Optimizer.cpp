@@ -29,8 +29,6 @@ Optimizer::Optimizer(CostVolume& cv) : cv(cv), cvStream(cv.cvStream)
     //For performance reasons, OpenDTAM only supports multiple of 32 image sizes with cols >= 64
     CV_Assert(cv.rows % 32 == 0 && cv.cols % 32 == 0 && cv.cols >= 64);
     allocate();
-    Mat tmp(cv.rows,cv.cols,CV_32FC1);
-    stableDepth.download(tmp);
     setDefaultParams();
     stableDepthEnqueued=haveStableDepth=0;
     

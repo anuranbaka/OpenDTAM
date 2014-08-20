@@ -79,9 +79,7 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
     dataContainer.create(layers, rows * cols, CV_32FC1);
     
     GpuMat tmp;
-    Mat hold=image;
-    baseImage.upload((image.reshape(0,1),cout<<image.rows<<endl,image.reshape(0,1)),cvStream);
-
+    baseImage.upload(image.reshape(0,1),cvStream);
     cv::cuda::cvtColor(baseImage,baseImageGray,COLOR_BGR2GRAY,0,cvStream);
     baseImage=baseImage.reshape(0,rows);
     baseImageGray=baseImageGray.reshape(0,rows);
@@ -177,13 +175,13 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
         if(_image.type()!=CV_8UC4 || !_image.isContinuous()){
             if(!_image.isContinuous()&&_image.type()==CV_8UC4){
                 cBuffer.create(_image.rows,_image.cols,CV_8UC4);
-                image=cBuffer.createMatHeader();
+                image=cBuffer;//.createMatHeader();
                 _image.copyTo(image);//copies data
                 
             }
             if(_image.type()!=CV_8UC4){
                 cBuffer.create(_image.rows,_image.cols,CV_8UC4);
-                Mat cm=cBuffer.createMatHeader();
+                Mat cm=cBuffer;//.createMatHeader();
                 if(_image.type()==CV_8UC1||_image.type()==CV_8SC1){
                     cv::cvtColor(_image,cm,COLOR_GRAY2BGRA);
                 }else if(_image.type()==CV_8UC3||_image.type()==CV_8SC3){

@@ -22,7 +22,7 @@ public:
     cv::Mat lastFrame;
     
     Track(Cost cost);
-    //Track(CostVolume cost, DepthmapDenoiseWeightedHuberImpl opt);
+    Track(CostVolume cost);
     void addFrame(cv::Mat frame);
     void ESM();
     void cacheDerivatives();
