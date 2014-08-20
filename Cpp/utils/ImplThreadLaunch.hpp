@@ -3,7 +3,8 @@
 
 #if !defined WIN32 && !defined WINCE
 #  include <pthread.h>
-#  include <opencv2/core/core.hpp>
+//#  include <opencv2/core.hpp>
+#  include <opencv2/core/utility.hpp>//cv::getNumberOfCPUs();
 #  include <map>
 #  include <iostream>
 #include <Scheduler/ImplMutex.hpp>

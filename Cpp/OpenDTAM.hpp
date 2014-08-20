@@ -1,14 +1,12 @@
 #ifndef OPENDTAM_HPP
 #define OPENDTAM_HPP
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/gpu/gpu.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
 #include <queue>
-#include <list>
 #include <iostream>
 #include <stdio.h>
-#include <unistd.h>
+
 
 
 //Mine
@@ -17,7 +15,7 @@
 #include "CostVolume/utils/reprojectCloud.hpp"
 #include "CostVolume/Cost.h"
 #include "CostVolume/CostVolume.hpp"
-#include "Optimizer/Optimizer.hpp"
+#include "DepthmapDenoiseWeightedHuber/DepthmapDenoiseWeightedHuber.hpp"
 #include "graphics.hpp"
 #include "set_affinity.h"
 #include "Track/Track.hpp"
@@ -38,7 +36,7 @@
 
 using namespace cv;
 using namespace std;
-using namespace cv::gpu;
+using namespace cv::cuda;
 class OpenDTAM{
     int rows,cols;
     Mat cameraMatrix;
@@ -90,6 +88,8 @@ class OpenDTAM{
         ucvd(),// frames with micro cv's (stack)
         mcvd(),//frames with macro cv's (stack)
         cvd(), //frames with all cv's  (stack)
+        Ttrkid(0),
+        Tutrkid(0),
         fn(0),
         initd(0)
         {}
@@ -144,7 +144,7 @@ class OpenDTAM{
             init(image);
             initd=1;
         }
-        assert(pyrLevels>0);
+        CV_Assert(pyrLevels>0);
         //Increment frame counter
         FrameID fid = fn++;
         
@@ -157,7 +157,7 @@ class OpenDTAM{
                 tmp.fid=fid; 
                 tmp.im=new Mat(image);
                 tmp.gray=new Mat();
-                cvtColor(image, *(tmp.gray),CV_BGR2GRAY); 
+                cvtColor(image, *(tmp.gray),COLOR_BGR2GRAY); 
                 tmp.R=R.clone(); 
                 tmp.T=T.clone(); 
                 tmp.reg2d=1; 
@@ -181,6 +181,7 @@ class OpenDTAM{
             mtrkd.push( newFp);//is fine tracked
             trkd. push( newFp);//is tracked
         }
+        return fid;
     }
 
     FrameID addFrame(Mat image){
@@ -199,7 +200,7 @@ class OpenDTAM{
                 tmp.fid=fid; 
                 tmp.im=new Mat(image);
                 tmp.gray=new Mat();
-                cvtColor(image, *tmp.gray,CV_BGR2GRAY); 
+                cvtColor(image, *tmp.gray,COLOR_BGR2GRAY); 
             }
             *newFp = tmp;
         }
@@ -214,6 +215,7 @@ class OpenDTAM{
             fs   .push( newFp);//is a frame
             utrkq.push( newFp);//needs rough tracking
         }
+        return fid;
     }
 
     void createPyramid(const Mat& image,vector<Mat>& pyramid,int& levels){
@@ -240,10 +242,10 @@ bool utrk(Ptr<Frame> _frame){
     {//try for previous frame, if that doesn't work, use last utrkd frame 
         {
         ScopeLock s(fs.mutex);
-        assert(frame.fid-1>=0);
+        CV_Assert(frame.fid-1>=0);
         lfp=fs.q[frame.fid-1];
         }
-        assert(lfp->reg3d);//this must be true for relative poses to make sense, remove assert if don't care.
+        CV_Assert(lfp->reg3d);//this must be true for relative poses to make sense, remove assert if don't care.
         if(!lfp->reg3d){
         ScopeLock s(utrkd.mutex);
         lfp=utrkd.q.back();
@@ -301,7 +303,7 @@ bool utrk(Ptr<Frame> _frame){
         int iters=3;
         for(int i=0;i<iters;i++){
             bool success = align_level_largedef_gray_forward(   (*base.pyramid)[level],//Total Mem cost ~185 load/stores of image
-                                                                base.optimizer->depthMap(),
+                                                                base.optimizer->getBestDepthSoFar(),
                                                                 (*frame.pyramid)[level],
                                                                 cameraMatrixPyr[level],//Mat_<double>
                                                                 p,                //Mat_<double>
@@ -323,7 +325,7 @@ bool utrk(Ptr<Frame> _frame){
     return 1;
 }
 
-cv::gpu::CudaMem imageContainerUcv;
+cv::cuda::CudaMem imageContainerUcv;
 bool ucv(Ptr<Frame> _base,Ptr<Frame> _alt){
     Frame& base=*_base;
     Frame& alt=*_alt;
@@ -352,15 +354,15 @@ bool ucv(Ptr<Frame> _base,Ptr<Frame> _alt){
     
     imageContainerUcv.create(a.rows,a.cols,CV_8UC4);
     Mat tmp,ret;
-    cvtColor(a,tmp,CV_RGB2RGBA);
+    cvtColor(a,tmp,COLOR_RGB2RGBA);
     Mat imageContainerRef=imageContainerUcv;//Required by ambiguous conversion rules
     tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
     cv.updateCost(imageContainerUcv, alt.R, alt.T);
 
 
     
-    Ptr<Optimizer> optimizerp(new Optimizer(cv));
-    Optimizer& optimizer=*optimizerp;
+    Ptr<DepthmapDenoiseWeightedHuber> optimizerp(new DepthmapDenoiseWeightedHuber(cv));
+    DepthmapDenoiseWeightedHuber& optimizer=*optimizerp;
 //     optimizer.thetaStart =    20.0;
 //     optimizer.thetaMin=0.01;
 //     optimizer.thetaStep=.99;

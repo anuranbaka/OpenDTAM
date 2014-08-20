@@ -1,8 +1,8 @@
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/cudastereo.hpp>
 #include <iostream>
 #include <stdio.h>
-#include <unistd.h>
+
 
 
 //Mine
@@ -14,50 +14,57 @@
 #include "Optimizer/Optimizer.hpp"
 #include "graphics.hpp"
 #include "set_affinity.h"
-#include "Track/Track.hpp"
+
 #include "utils/utils.hpp"
 
 
 //debug
 #include "tictoc.h"
-#include "Scheduler/Frame.hpp"
 
-#include <cuda_profiler_api.h>
-#include <cuda_runtime.h>
 
-#include "OpenDTAM.hpp"
 
-const static bool valgrind=0;
+
+
+
 
 //A test program to make the mapper run
 using namespace cv;
+using namespace cv::cuda;
 using namespace std;
 
 int App_main( int argc, char** argv );
 
-
-int main( int argc, char** argv ){
-    initGui();
-    return App_main(argc, argv);
-}
 void myExit(){
     ImplThread::stopAllThreads();
 }
+int main( int argc, char** argv ){
+
+    initGui();
+
+    int ret=App_main(argc, argv);
+    myExit();
+    return ret;
+}
+
 
 int App_main( int argc, char** argv )
 {
-    int numImg=50;
-    cv::gpu::CudaMem imageContainer;
+    int numImg=500;
+
+#if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
+#endif
 
     char filename[500];
     Mat image, cameraMatrix, R, T;
     vector<Mat> images,Rs,Ts;
+    
+    Mat ret;//a place to return downloaded images to
 
     
     double reconstructionScale=5/5.;
 
-    for(int i=0;i<=numImg;i++){
+    for(int i=0;i<numImg;i++){
         Mat tmp;
         sprintf(filename,"../../Trajectory_30_seconds/scene_%03d.png",i);
         convertAhandaPovRayToStandard("../../Trajectory_30_seconds",
@@ -76,7 +83,8 @@ int App_main( int argc, char** argv )
         Ts.push_back(T.clone());
 
     }
-    
+    cv::cuda::CudaMem cret(images[0].rows,images[0].cols,CV_32FC1);
+    ret=cret.createMatHeader();
     //Setup camera matrix
     double sx=reconstructionScale;
     double sy=reconstructionScale;
@@ -89,146 +97,84 @@ int App_main( int argc, char** argv )
     cameraMatrix-=(Mat)(Mat_<double>(3,3) <<    0.0,0.0,0.5,
                                                 0.0,0.0,0.5,
                                                 0.0,0.0,0);
-
-    Cost cost(images[0].clone(),32, cameraMatrix, Rs[0],Ts[0]);
-
-    CostVolume cv(images[0],(FrameID)0,32,0.015,0.0,Rs[0],Ts[0],cameraMatrix);
-
-    Optimizer optimizer(cv);
-    optimizer.initOptimization();
-
-    Track tracker(cv,optimizer);
+    int layers=32;
+    int imagesPerCV=2;
+    CostVolume cv(images[0],(FrameID)0,layers,0.010,0.0,Rs[0],Ts[0],cameraMatrix);;
     
-    OpenDTAM odm(cameraMatrix);
-    odm.addFrameWithPose(images[0],Rs[0],Ts[0]);
-    odm.addFrameWithPose(images[10],Rs[10],Ts[10]);
-    for (int imageNum=2;imageNum<=numImg;imageNum++){
-        odm.addFrame(images[imageNum]);
-        usleep(100000);
-    }
-while(1){
-        for (int imageNum=2;imageNum<=numImg;imageNum++){
-            odm.addFrame(images[imageNum]);
-            
-            
-            
-            
-            if(imageNum==1){
-                cudaDeviceSynchronize();
-            //    cudaProfilerStart();
-            }
-            char filename[500];
-            Mat R,T;
-//             convertAhandaPovRayToStandard("/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds",
-//                                     imageNum,
-//                                     cameraMatrix,
-//                                     R,
-//                                     T);
-// 
-//     //         cout<<"cameraMatrix: "<<cameraMatrix<<"\n";
-//     //         cout<< "R : "<<R<<"\n";
-//     //         cout<< "T : "<<T<<"\n";
-//             sprintf(filename,"/local_store/Dropbox/Research/DTAM GSoC/OpenDTAM/Trajectory_30_seconds/scene_%03d.png",imageNum);
-//             Mat image;
-//             imread(filename, -1).convertTo(image,CV_32FC3,1.0/65535.0);   // Read the file
-            T=Ts[imageNum];
-            R=Rs[imageNum];
-            image=images[imageNum];
+    
 
-
-            if (imageNum==10    ){//ucv test
-                //init ucv
-                tic();
-                imageContainer.create(image.rows,image.cols,CV_8UC4);
-                Mat tmp,ret;
-                cvtColor(image,tmp,CV_RGB2RGBA);
-                Mat imageContainerRef=imageContainer;//Required by ambiguous conversion rules
-                tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
-                CostVolume cv2(images[0],(FrameID)0,32,0.015,0.0,Rs[0],Ts[0],cameraMatrix);
-                cv2.updateCost(imageContainer, R, T);
-                
-                Optimizer optimizer2(cv2);
-//                pfShow("ADD", cv2.downloadOldStyle(0));
-//                gpause();
-
-                optimizer2.initOptimization();
-                
-                //cudaStreamSynchronize();
-                bool doneOptimizing;
-                do{
-//                    cout<<"Theta: "<< optimizer2.theta<<endl;
-                  optimizer2._a.download(ret);
-                  pfShow("A", ret, 0, cv::Vec2d(0, 32));
-
-    //                optimizer.cacheGValues();
-    //                optimizer._gy.download(ret);
-    //                pfShow("G function", ret, 0, cv::Vec2d(0, 1));
-    //                gpause();
-                    for (int i = 0; i < 10; i++) {
-                        optimizer2.optimizeQD();
-//                        cudaDeviceSynchronize();
-//                       optimizer2._qx.download(ret);
-//                       pfShow("Qx function", ret, 0, cv::Vec2d(-1, 1));
-//                       optimizer2._gy.download(ret);
-//                       pfShow("Gy function", ret, 0, cv::Vec2d(0, 1));
-                      optimizer2._d.download(ret);
-                      pfShow("D function", ret, 0, cv::Vec2d(0, 32));
-                        //gpause();
-                        
-                    }
-//                    cudaDeviceSynchronize();
-                    doneOptimizing=optimizer2.optimizeA();
-                }while(!doneOptimizing);
-                while(!optimizer2.cvStream.queryIfComplete()){
-                    pfShow("Ongoing Solution", optimizer2.depthMap());
-                }
-                toc();
-                
-                
-//                 pfShow("Depth Solution", optimizer2.depthMap());
-//                 optimizer2._a.download(ret);
-//                 pfShow("Depth Solution", ret, 0, cv::Vec2d(0, 32));
-//                 gpause();
-                cv=cv2;
-                optimizer=optimizer2;
-
-//                 myExit();
-            }
-
-
-
-
-            if(imageNum==10){
-                tracker.pose=RTToLie(R,T);
-            }
-            //Test out the Tracker
-            {
-                Mat tp;
-//                 tracker.pose=tp.clone();//Give the answer
-                tracker.depth=optimizer.depthMap();
-                pfShow("Tdepth",tracker.depth);
-                tracker.addFrame(image);
-
-                tracker.align();
-                Mat p=tracker.pose;
-//                 {//debug
-//                     cout << "True Pose: "<< tp << endl;
-//                     cout << "True Delta: "<< LieSub(tp,tracker.basePose) << endl;
-//                     cout << "Recovered Pose: "<< p << endl;
-//                     cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
-//                     cout << "Pose Error: "<< p-tp << endl;
-//                 }
-                reprojectCloud(image,cost.baseImage, tracker.depth, Mat(cost.pose) , LieToP(tracker.pose), Mat(cost.cameraMatrix));
-
-            }
-
-    usleep(100000);
-
+    int imageNum=0;
+    cv::cuda::Stream s;
+    for (int imageNum=0;imageNum<numImg;imageNum++){
+        T=Ts[imageNum];
+        R=Rs[imageNum];
+        image=images[imageNum];
+          
+        if(cv.count<imagesPerCV){
+            cv.updateCost(image, R, T);
         }
-}
+        else{
+            //Attach optimizer
+            Ptr<DepthmapDenoiseWeightedHuber> dp = createDepthmapDenoiseWeightedHuber(cv.baseImageGray,cv.cvStream);
+            DepthmapDenoiseWeightedHuber& denoiser=*dp;
+            Optimizer optimizer(cv);
+            optimizer.initOptimization();
+            GpuMat a(cv.loInd.size(),cv.loInd.type());
+            cv.loInd.copyTo(a,cv.cvStream);
+            GpuMat d;
+            denoiser.cacheGValues();
+            ret=image*0;
+            pfShow("A function", ret, 0, cv::Vec2d(0, layers));
+            pfShow("D function", ret, 0, cv::Vec2d(0, layers));
+            pfShow("A function loose", ret, 0, cv::Vec2d(0, layers));
+            pfShow("Predicted Image",ret,0,Vec2d(0,1));
+            pfShow("Actual Image",ret);
+//                pfShow("A", ret, 0, cv::Vec2d(0, layers));
+//                waitKey(0);
+//                gpause();
+            
+            
+             gpause();
+            bool doneOptimizing; int Acount=0; int QDcount=0;
+            do{
+//                 cout<<"Theta: "<< optimizer.getTheta()<<endl;
+//
+                if(Acount==0)
+                    gpause();
+               a.download(ret);
+               pfShow("A function", ret, 0, cv::Vec2d(0, layers));
 
-end:
+//                 optimizer.epsilon*=optimizer.thetaStep;
 
+                for (int i = 0; i < 10; i++) {
+                    d=denoiser(a,optimizer.epsilon,optimizer.getTheta());
+                    QDcount++;
+
+                   d.download(ret);
+                   pfShow("D function", ret, 0, cv::Vec2d(0, layers));
+                }
+                doneOptimizing=optimizer.optimizeA(d,a);
+                Acount++;
+            }while(!doneOptimizing);
+            optimizer.lambda=.01;
+            optimizer.optimizeA(d,a);
+            optimizer.cvStream.waitForCompletion();
+            a.download(ret);
+               pfShow("A function loose", ret, 0, cv::Vec2d(0, layers));
+               gpause();
+//             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
+//             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
+            imageNum=0;
+            cv=CostVolume(images[imageNum],(FrameID)0,layers,0.010,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
+            s=optimizer.cvStream;
+            for (int imageNum=0;imageNum<numImg;imageNum=(imageNum+1)%numImg){
+                reprojectCloud(images[imageNum],images[0],optimizer.depthMap(),RTToP(Rs[0],Ts[0]),RTToP(Rs[imageNum],Ts[imageNum]),cameraMatrix);
+            }
+        }
+        
+    }
+    s.waitForCompletion();
+    Stream::Null().waitForCompletion();
     return 0;
 }
 

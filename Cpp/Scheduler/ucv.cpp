@@ -21,7 +21,7 @@ Tucv{
     }
 }
 
-cv::gpu::CudaMem imageContainer;
+cv::cuda::CudaMem imageContainer;
 
 Ptr<CostVolume> ucv(Frame& base,Frame& alt){
     Mat cameraMatrix=this->cameraMatrix.clone();
@@ -47,11 +47,11 @@ Ptr<CostVolume> ucv(Frame& base,Frame& alt){
     CostVolume& cv=*cvp;
     imageContainer.create(a.rows,a.cols,CV_8UC4);
     Mat tmp,ret;
-    cvtColor(b,tmp,CV_RGB2RGBA);
+    cvtColor(b,tmp,COLOR_RGB2RGBA);
     Mat imageContainerRef=imageContainer;//Required by ambiguous conversion rules
     tmp.convertTo(imageContainerRef,CV_8UC4,255.0);
     cv.updateCost(imageContainer, R, T);
-    Optimizer optimizer(cv);
+    DepthmapDenoiseWeightedHuber optimizer(cv);
     optimizer.initOptimization();
     
     bool doneOptimizing;

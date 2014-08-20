@@ -1,5 +1,6 @@
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 #include "utils/utils.hpp"
 #include "reprojectCloud.hpp"
@@ -162,48 +163,49 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
     Mat pullback;
     Mat occluded(im.rows,im.cols,CV_8UC1);
      Mat depthPullback;
-     pfShow("zmap",zmap);
+//      pfShow("zmap",zmap);
 
-     remap( zmap, depthPullback, xyLayers[0], xyLayers[1], CV_INTER_NN, BORDER_CONSTANT, Scalar(0,0, 0) );
+     remap( zmap, depthPullback, xyLayers[0], xyLayers[1], INTER_NEAREST, BORDER_CONSTANT, Scalar(0,0, 0) );
 
      //do a depth test
      Mat zthr,zdiff;
      absdiff(depthPullback,depth,zdiff);
      zthr=(zdiff<.001);
-     cvtColor(zthr,zthr,CV_GRAY2BGR,3);
+     cvtColor(zthr,zthr,COLOR_GRAY2BGR,3);
      zthr.convertTo(zthr,CV_32FC3,1/255.0);
     
     
-     pfShow("Occlusion",zdiff);
+//      pfShow("Occlusion",zdiff);
     
-     remap( comparison, pullback, xyLayers[0], xyLayers[1], CV_INTER_NN, BORDER_CONSTANT, Scalar(0,0, 0) );
+     remap( comparison, pullback, xyLayers[0], xyLayers[1], INTER_NEAREST, BORDER_CONSTANT, Scalar(0,0, 0) );
      Mat photoerr,pthr;
      absdiff(im,pullback,photoerr);
 
-     cvtColor(photoerr,photoerr,CV_BGR2GRAY);
+     cvtColor(photoerr,photoerr,COLOR_BGR2GRAY);
      pthr=photoerr>.1;
-     cvtColor(pthr,pthr,CV_GRAY2RGB);
+     cvtColor(pthr,pthr,COLOR_GRAY2RGB);
      pthr.convertTo(pthr,CV_32FC3,1/255.0);
 
  //     pullback.convertTo(pullback,CV_32FC3,1/255.0);
- //     assert(
-     pfShow("photo Error",photoerr);
+ //     CV_Assert(
+//      pfShow("photo Error",photoerr);
 
 
      Mat confidence;
      sqrt(pthr,confidence);
      confidence=Scalar(1,1,1)-confidence;
      pullback=pullback.mul(confidence).mul(zthr);
-     pfShow("Stabilized Projection",pullback,0,Vec2d(0,1));
-
+//      pfShow("Stabilized Projection",pullback,0,Vec2d(0,1));
+    static Mat fwdp2;
     static Mat fwdp=im.clone();
-    remap( im, fwdp, xmap, ymap, CV_INTER_NN, BORDER_CONSTANT,Scalar(0,0,0));
-//     medianBlur(fwdp,fwdp,5);
-//     remap( im, fwdp, xmap, ymap, CV_INTER_NN, BORDER_TRANSPARENT);
+    remap( im, fwdp, xmap, ymap, INTER_NEAREST, BORDER_CONSTANT,Scalar(0,0,0));
+    medianBlur(fwdp,fwdp2,3);
+//     remap( im, fwdp, xmap, ymap, INTER_NEAREST, BORDER_TRANSPARENT);
     
-    
-
-    pfShow("Forward Projection",fwdp,0,Vec2d(0,1));
+    fwdp2.copyTo(fwdp,fwdp==0);
+    medianBlur(fwdp,fwdp2,3);
+    fwdp2.copyTo(fwdp,fwdp==0);
+    pfShow("Predicted Image",fwdp,0,Vec2d(0,1));
 //     absdiff(fwdp,comparison,zdiff);
     pfShow("Actual Image",comparison);
    

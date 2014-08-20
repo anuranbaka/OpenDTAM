@@ -11,7 +11,6 @@
 #include "Track.hpp"
 #include "Align_part.cpp"
 #include "tictoc.h"
-#include <opencv2/opencv.hpp>
 #include <vector>
 #include <algorithm>
 //needs: 
@@ -60,7 +59,7 @@ void createPyramid(const Mat& image,vector<Mat>& pyramid,int& levels){
     if(levels==0){//auto size to end at >=15px tall (use height because shortest dim usually)
         for (float scale=1.0; scale>=15.0/image.rows; scale/=2, levels++);
     }
-    assert(levels>0);
+    CV_Assert(levels>0);
     int l2=levels-1;
     pyramid.resize(levels);
     pyramid[l2--]=in;
@@ -69,7 +68,7 @@ void createPyramid(const Mat& image,vector<Mat>& pyramid,int& levels){
         Mat out;
 
         
-        resize(in,out,Size(),.5,.5,CV_INTER_AREA);
+        resize(in,out,Size(),.5,.5,INTER_AREA);
         pyramid[l2]=out;
         in=out;
     }
@@ -103,7 +102,7 @@ static void createPyramids(const Mat& base,
 }
 void Track::align(){
     align_gray(baseImage, depth, thisFrame);
-};
+}
 
 void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     Mat input,base,lastFrameGray;
@@ -175,7 +174,7 @@ void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     
     pose=LieAdd(p,basePose);
     static int runs=0;
-    //assert(runs++<2);
+    //CV_Assert(runs++<2);
     toc();
     
 }

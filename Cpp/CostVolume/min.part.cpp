@@ -1,5 +1,5 @@
 #include "min.part.hpp"
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 
 void Cost::minv(uchar* _data,cv::Mat& _minIndex,cv::Mat& _minValue){
     minv((float*) _data, _minIndex, _minValue);
@@ -8,7 +8,7 @@ void Cost::minv(uchar* _data,cv::Mat& _minIndex,cv::Mat& _minValue){
 
 
 void Cost::minv(float* _data,cv::Mat& _minIndex,cv::Mat& _minValue){
-    assert(_minIndex.type()==CV_32SC1);
+    CV_Assert(_minIndex.type()==CV_32SC1);
     int r=rows;
     int c=cols;
     int l=layers;
@@ -38,7 +38,7 @@ void Cost::minv(float* _data,cv::Mat& _minIndex,cv::Mat& _minValue){
 
 
 void Cost::maxv(float* _data,cv::Mat& _maxIndex,cv::Mat& _maxValue){
-    assert(_maxIndex.type()==CV_32SC1);
+    CV_Assert(_maxIndex.type()==CV_32SC1);
     
     int r=rows;
     int c=cols;

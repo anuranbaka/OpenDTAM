@@ -34,7 +34,7 @@ bool utrk(Frame& frame){
     Ptr<Frame> lfp;
     {
         fs.mutex.lock();
-        assert(frame.fid-1>=0)
+        CV_Assert(frame.fid-1>=0)
         lfp=fs.q[frame.fid-1];
         fs.mutex.unlock();
     }
