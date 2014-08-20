@@ -7,7 +7,7 @@ cmake_policy(SET CMP0012 NEW)
 #message(STATUS ${CMAKE_MODULE_PATH})
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -ggdb ")
 
-find_package( OpenCV 3.0 REQUIRED )
+find_package( OpenCV 2.4 REQUIRED )
 find_package( Qt5Core REQUIRED)
 find_package(CUDA REQUIRED)
 find_package(Boost COMPONENTS system thread)
@@ -39,8 +39,8 @@ set(BASEPATH "${CMAKE_SOURCE_DIR}")
 
 add_subdirectory(CostVolume)
 add_subdirectory(Track)
-add_subdirectory(Optimizer) 
-#add_subdirectory(DepthmapDenoiseWeightedHuber)
+add_subdirectory(Optimizer)
+add_subdirectory(DepthmapDenoiseWeightedHuber)
 add_subdirectory(utils)
 add_subdirectory(Scheduler)
 
@@ -51,5 +51,5 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_35,code=sm_35;--use
 cuda_add_library(OpenDTAM SHARED ${DTAM_SOURCES} OpenDTAM.cpp)
 target_link_libraries(OpenDTAM opencv_cudaimgproc opencv_cudastereo)
 add_executable (a.out testprog.cpp convertAhandaPovRayToStandard.cpp graphics.cpp)
-target_link_libraries( a.out  OpenDTAM ${OpenCV_LIBS} ${Boost_LIBRARIES} )
+target_link_libraries( a.out  OpenDTAM ${OpenCV_LIBS} ${Boost_LIBRARIES})
 

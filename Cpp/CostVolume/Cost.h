@@ -1,6 +1,6 @@
 #ifndef COST_H
 #define COST_H
-#include <opencv2/core.hpp>
+#include <opencv2/core/core.hpp>
 #include <vector>
 #include "tictoc.h"
 // The cost volume. Conceptually arranged as an image plane, corresponding
@@ -71,7 +71,7 @@ private:
 
     //Initializer functions
     void init(){
-        CV_Assert(baseImage.data);//make sure not trying to init an imageless object
+        assert(baseImage.data);//make sure not trying to init an imageless object
         depthStep=((depth.back()-depth[0])/layers);
         near = depth.back();
         far  = depth.front();

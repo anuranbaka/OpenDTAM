@@ -4,10 +4,9 @@
  *
  *
  */
-
+#include <opencv2/opencv.hpp>
 using namespace cv;
 using namespace std;
-#include <opencv2/imgproc.hpp>
 #include "utils/utils.hpp"
 #include "graphics.hpp"
 #include "Track.hpp"
@@ -40,14 +39,14 @@ static void getGradient(const Mat& image,Mat & grad);
 
 static Mat paramsToProjection(const Mat & p,const Mat& _cameraMatrix){
     //Build the base transform
-    CV_Assert(p.type()==CV_64FC1);
+    assert(p.type()==CV_64FC1);
     Mat dR=rodrigues(p.colRange(Range(0,3)));
     Mat dT=p.colRange(Range(3,6)).t();
     Mat dA;
     hconcat(dR,dT,dA);
     dA=make4x4(dA);
     Mat cameraMatrix=make4x4(_cameraMatrix);
-    CV_Assert(cameraMatrix.type()==CV_64FC1);
+    assert(cameraMatrix.type()==CV_64FC1);
     Mat proj=cameraMatrix*dA*cameraMatrix.inv();
 //     cout<<"p: "<<"\n"<< p<< endl;
 //     cout<<"Proj: "<<"\n"<< proj<< endl;
@@ -62,7 +61,7 @@ static Mat paramsToProjection(const Mat & p,const Mat& _cameraMatrix){
 
 static Mat&  makeGray(Mat& image){
     if (image.channels()!=1) {
-        cvtColor(image, image, COLOR_BGR2GRAY);
+        cvtColor(image, image, CV_BGR2GRAY);
     }
     return image;
 }
@@ -78,7 +77,7 @@ static void getGradient(const Mat& image,Mat & grad){
     if (image.type()==CV_32FC1) {
         gray=image;
     }else {
-        cvtColor(image, gray, COLOR_BGR2GRAY);
+        cvtColor(image, gray, CV_BGR2GRAY);
         gray.convertTo(gray,CV_32FC1);
     }
     Mat grad_x(image.rows,image.cols,CV_32FC1,grad.row(0).data);
@@ -98,7 +97,7 @@ static void getGradient_8(const Mat& image,Mat & grad){
     if (image.type()==CV_32FC1) {
         gray=image;
     }else {
-        cvtColor(image, gray, COLOR_BGR2GRAY);
+        cvtColor(image, gray, CV_BGR2GRAY);
         gray.convertTo(gray,CV_32FC1);
     }
     Mat grad_x(image.rows,image.cols,CV_32FC1,grad.row(0).data);
@@ -118,7 +117,7 @@ static void getGradientInterleave(const Mat& image,Mat & grad){
     if (image.type()==CV_32FC1) {
         gray=image;
     }else {
-        cvtColor(image, gray, COLOR_BGR2GRAY);
+        cvtColor(image, gray, CV_BGR2GRAY);
         gray.convertTo(gray,CV_32FC1);
     }
     Mat gradX(image.rows,image.cols,CV_32FC1);
@@ -174,7 +173,7 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
         Mat tmp=_p.clone();
         Mat baseProj=paramsToProjection(_p,cameraMatrix);
         perspectiveTransform(idMap3,baseMap,baseProj);
-        CV_Assert(baseMap.type()==CV_32FC2);
+        assert(baseMap.type()==CV_32FC2);
     }
     
     
@@ -190,7 +189,7 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
         merge(toMerge,3,packed); //(Mem cost: min 3 load, 3 store :6)
         Mat pulledBack;
         
-        remap( packed, pulledBack, baseMap,Mat(), INTER_LINEAR, BORDER_CONSTANT,0.0 );//(Mem cost:?? 5load, 3 store:8)
+        remap( packed, pulledBack, baseMap,Mat(), CV_INTER_LINEAR, BORDER_CONSTANT,0.0 );//(Mem cost:?? 5load, 3 store:8)
         gradI.create(r,c,CV_32FC2);
 
         int from_to[] = { 0,0, 1,1, 2,2 };
@@ -261,7 +260,7 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
         
         
         //Build the incremented transform
-        CV_Assert(_p.type()==CV_64FC1);
+        assert(_p.type()==CV_64FC1);
         Mat_<double> p=_p.clone();
         p(0,paramNum)+=small;
         Mat proj=paramsToProjection(p,cameraMatrix);

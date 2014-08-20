@@ -5,9 +5,10 @@
 
 #ifndef DepthmapDenoiseWeightedHuber_H
 #define DepthmapDenoiseWeightedHuber_H
-
+#include <opencv2/core/core.hpp>//for CV_EXPORTS
+#include <opencv2/gpu/gpu.hpp>
 namespace cv{
-    namespace cuda{
+    namespace gpu{
         /////////////////////////////////////////
         // DepthMapDenoiseWeightedHuber
 
@@ -26,15 +27,15 @@ namespace cv{
         {
         public:
             //! This may be called repeatedly to iteratively refine the internal depthmap
-            virtual cv::cuda::GpuMat operator()(InputArray input,
-                                                float epsilon,
-                                                float theta) = 0;
+            virtual GpuMat operator()(InputArray input,
+                                      float epsilon,
+                                      float theta) = 0;
 
             //! In case you want to do these explicitly
             virtual void allocate(int rows, int cols, InputArray gx = GpuMat(),InputArray gy = GpuMat()) = 0;
             virtual void cacheGValues(InputArray visibleLightImage = GpuMat()) = 0;
             
-            virtual void setStream(Stream) = 0;
+            virtual void setStream(Stream s) = 0;
             virtual Stream getStream() = 0;
             
             virtual void setAlpha(float alpha) = 0;
@@ -51,11 +52,10 @@ namespace cv{
 }
 
     
-#include <opencv2/core/cuda.hpp>
-#include <opencv2/core.hpp>
+#include <opencv2/gpu/gpu.hpp>
 
 namespace cv{
-    namespace cuda{
+    namespace gpu{
         /////////////////////////////////////////
         // DepthMapDenoiseWeightedHuber
 
@@ -73,10 +73,8 @@ namespace cv{
         public:
             //CostVolume cv;//The cost volume we are attached to
             
-            DepthmapDenoiseWeightedHuberImpl(const cv::cuda::GpuMat& visibleLightImage=GpuMat(),Stream cvStream=Stream::Null());
-            cv::cuda::GpuMat operator()(InputArray ain,
-                                        float epsilon,
-                                        float theta);
+            DepthmapDenoiseWeightedHuberImpl(const GpuMat& visibleLightImage=GpuMat(),Stream cvStream=Stream::Null());
+            GpuMat operator()(InputArray ain, float epsilon, float theta);
 
             GpuMat visibleLightImage;
             //buffers
@@ -101,8 +99,15 @@ namespace cv{
             bool cachedG;
             int alloced;
             int dInited;
+            void setStream(Stream s){CV_Assert(!"Not Implemented");};
+            Stream getStream(){CV_Assert(!"Not Implemented");};
+            
+            void setAlpha(float alpha){CV_Assert(!"Not Implemented");};
+            float getAlpha(){CV_Assert(!"Not Implemented");};
+            
+            void setBeta(float beta){CV_Assert(!"Not Implemented");};
+            float getBeta(){CV_Assert(!"Not Implemented");};
 
-        public:
             Stream cvStream;
         }; 
     }

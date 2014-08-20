@@ -1,11 +1,11 @@
 #include <assert.h>
 #include <iostream>
-#include <opencv2/core.hpp>
+#include <opencv2/core/core.hpp>
 #include "CostVolume.cuh"
 
 
 
-namespace cv { namespace cuda { namespace device {
+namespace cv { namespace gpu { namespace device {
     namespace dtam_updateCost{
 
 cudaStream_t localStream;

@@ -5,12 +5,12 @@
 //This file does Q and D optimization steps on the GPU
 #include "DepthmapDenoiseWeightedHuber.hpp"
 #include "DepthmapDenoiseWeightedHuber.cuh"
-#include <opencv2/core/cuda_stream_accessor.hpp>
+#include <opencv2/gpu/stream_accessor.hpp>
 
 namespace cv{
-    namespace cuda{
+    namespace gpu{
 using namespace std;
-using namespace cv::cuda;
+using namespace cv::gpu;
 
 DepthmapDenoiseWeightedHuberImpl::DepthmapDenoiseWeightedHuberImpl(const GpuMat& _visibleLightImage,
                                                         Stream _cvStream) : 
@@ -32,7 +32,7 @@ CV_EXPORTS createDepthmapDenoiseWeightedHuber(InputArray visibleLightImage, Stre
 
 #define FLATALLOC(n,cv) n.create(1,cv.rows*cv.cols, CV_32FC1);n=n.reshape(0,cv.rows)
 static void memZero(GpuMat& in,Stream& cvStream){
-    cudaSafeCall(cudaMemsetAsync(in.data,0,in.rows*in.cols*sizeof(float),cv::cuda::StreamAccessor::getStream(cvStream)));
+    cudaSafeCall(cudaMemsetAsync(in.data,0,in.rows*in.cols*sizeof(float),cv::gpu::StreamAccessor::getStream(cvStream)));
 }
 
 void DepthmapDenoiseWeightedHuberImpl::allocate(int _rows,int _cols,InputArray _gxin,InputArray _gyin){
@@ -69,11 +69,13 @@ void DepthmapDenoiseWeightedHuberImpl::allocate(int _rows,int _cols,InputArray _
         
         if(!gxin.isContinuous()){
             FLATALLOC(_gx,_d);
-            gxin.copyTo(_gx,cvStream);
+//             gxin.copyTo(_gx,cvStream);
+            cvStream.enqueueCopy(gxin,_gx);
         }
         if(!gyin.isContinuous()){
             FLATALLOC(_gy,_d);
-            gyin.copyTo(_gy,cvStream);
+//             gyin.copyTo(_gy,cvStream);
+            cvStream.enqueueCopy(gyin,_gy);
         }
     }
     FLATALLOC(_qx, _d);
@@ -138,7 +140,7 @@ void DepthmapDenoiseWeightedHuberImpl::computeSigmas(float epsilon,float theta){
     gamma=lambda;
     delta=alpha;
     
-    mu=2.0*sqrt(gamma*delta)/L;
+    mu=2.0*std::sqrt(gamma*delta)/L;
 
     rho= mu/(2.0*gamma);
     sigma=mu/(2.0*delta);
@@ -148,8 +150,8 @@ void DepthmapDenoiseWeightedHuberImpl::computeSigmas(float epsilon,float theta){
 }
 
 void DepthmapDenoiseWeightedHuberImpl::cacheGValues(InputArray _visibleLightImage){
-    using namespace cv::cuda::device::dtam_denoise;
-    localStream = cv::cuda::StreamAccessor::getStream(cvStream);
+    using namespace cv::gpu::device::dtam_denoise;
+    localStream = cv::gpu::StreamAccessor::getStream(cvStream);
     if (!_visibleLightImage.empty()){
         visibleLightImage=_visibleLightImage.getGpuMat();
         cachedG=0;
@@ -176,8 +178,8 @@ void DepthmapDenoiseWeightedHuberImpl::cacheGValues(InputArray _visibleLightImag
 GpuMat DepthmapDenoiseWeightedHuberImpl::operator()(InputArray _ain, float epsilon,float theta){
     const GpuMat& ain=_ain.getGpuMat();
     
-    using namespace cv::cuda::device::dtam_denoise;
-    localStream = cv::cuda::StreamAccessor::getStream(cvStream);
+    using namespace cv::gpu::device::dtam_denoise;
+    localStream = cv::gpu::StreamAccessor::getStream(cvStream);
     
     rows=ain.rows;
     cols=ain.cols;
@@ -191,7 +193,8 @@ GpuMat DepthmapDenoiseWeightedHuberImpl::operator()(InputArray _ain, float epsil
     if(!ain.isContinuous()){
         _a.create(1,rows*cols, CV_32FC1);
         _a=_a.reshape(0,rows);
-        ain.copyTo(_a,cvStream);
+//         ain.copyTo(_a,cvStream);
+        cvStream.enqueueCopy(ain,_a);
     }else{
         _a=ain;
     }
@@ -205,11 +208,14 @@ GpuMat DepthmapDenoiseWeightedHuberImpl::operator()(InputArray _ain, float epsil
     if(!visibleLightImage.empty())
         cacheGValues();
     if(!cachedG){
-        _gx.setTo(1,cvStream);
-        _gy.setTo(1,cvStream);
+//         _gx.setTo(1,cvStream);
+        _gx=1;
+//         _gy.setTo(1,cvStream);
+        _gy=1;
     }
     if(!dInited){
-        _a.copyTo(_d,cvStream);
+//         _a.copyTo(_d,cvStream);
+        cvStream.enqueueCopy(_a,_d);
         dInited=1;
     }
     

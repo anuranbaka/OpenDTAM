@@ -1,4 +1,4 @@
-#include <opencv2/core.hpp>
+#include <opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include "reproject.hpp"
@@ -16,7 +16,7 @@ void reproject( const Mat& src,
                 Mat& mask){
     Mat cameraAffinePoseBase=cameraAffinePoseBaseIn.clone();
     Mat cameraAffinePoseAlternate=cameraAffinePoseAlternateIn.clone();
-    CV_Assert(cameraMatrix.rows==3 && cameraMatrix.cols==3);
+    assert(cameraMatrix.rows==3 && cameraMatrix.cols==3);
     if (cameraAffinePoseBase.rows==3)
         vconcat(cameraAffinePoseBase,Mat()=(Mat_<double>(1,4) << 0,0,0,1),cameraAffinePoseBase);
     if (cameraAffinePoseAlternate.rows==3)

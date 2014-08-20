@@ -1,6 +1,5 @@
-#include <opencv2/imgproc.hpp>
-#include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include <iostream>
 #include "utils/utils.hpp"
 #include "reprojectCloud.hpp"
@@ -171,19 +170,19 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
      Mat zthr,zdiff;
      absdiff(depthPullback,depth,zdiff);
      zthr=(zdiff<.001);
-     cvtColor(zthr,zthr,COLOR_GRAY2BGR,3);
+     cvtColor(zthr,zthr,CV_GRAY2BGR,3);
      zthr.convertTo(zthr,CV_32FC3,1/255.0);
     
     
 //      pfShow("Occlusion",zdiff);
     
-     remap( comparison, pullback, xyLayers[0], xyLayers[1], INTER_NEAREST, BORDER_CONSTANT, Scalar(0,0, 0) );
+     remap( comparison, pullback, xyLayers[0], xyLayers[1], CV_INTER_NN, BORDER_CONSTANT, Scalar(0,0, 0) );
      Mat photoerr,pthr;
      absdiff(im,pullback,photoerr);
 
-     cvtColor(photoerr,photoerr,COLOR_BGR2GRAY);
+     cvtColor(photoerr,photoerr,CV_BGR2GRAY);
      pthr=photoerr>.1;
-     cvtColor(pthr,pthr,COLOR_GRAY2RGB);
+     cvtColor(pthr,pthr,CV_GRAY2RGB);
      pthr.convertTo(pthr,CV_32FC3,1/255.0);
 
  //     pullback.convertTo(pullback,CV_32FC3,1/255.0);

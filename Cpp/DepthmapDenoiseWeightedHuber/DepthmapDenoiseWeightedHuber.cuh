@@ -1,8 +1,8 @@
 
 #ifndef COSTVOLUME_CUH
 #define COSTVOLUME_CUH
-#include <opencv2/core/cuda/common.hpp>//for cudaStream_t
-namespace cv { namespace cuda { namespace device { namespace dtam_denoise{
+#include <opencv2/gpu/device/common.hpp>//for cudaStream_t
+namespace cv { namespace gpu { namespace device { namespace dtam_denoise{
     struct m33{
             float data[9];
         };

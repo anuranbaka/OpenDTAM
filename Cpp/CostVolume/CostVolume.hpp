@@ -7,8 +7,8 @@
 #define COSTVOLUME_HPP
 
 
-#include <opencv2/cuda.hpp>
-
+#include <opencv2/gpu/gpu.hpp>
+#include <opencv2/gpu/stream_accessor.hpp>
 typedef  int FrameID;
 
 class CostVolume
@@ -27,20 +27,20 @@ public:
     cv::Mat T;
     cv::Mat projection;//projects world coordinates (x,y,z) into (rows,cols,layers)
 
-    cv::cuda::GpuMat baseImage;
-    cv::cuda::GpuMat baseImageGray;
-    cv::cuda::GpuMat lo;
-    cv::cuda::GpuMat hi;
-    cv::cuda::GpuMat loInd;
+    cv::gpu::GpuMat baseImage;
+    cv::gpu::GpuMat baseImageGray;
+    cv::gpu::GpuMat lo;
+    cv::gpu::GpuMat hi;
+    cv::gpu::GpuMat loInd;
 
     float * data;
     float * hits;
 
-    cv::cuda::GpuMat dataContainer;
-    cv::cuda::GpuMat hitContainer;
+    cv::gpu::GpuMat dataContainer;
+    cv::gpu::GpuMat hitContainer;
 
     int count;
-    cv::cuda::Stream cvStream;
+    cv::gpu::Stream cvStream;
 
     void updateCost(const cv::Mat& image, const cv::Mat& R, const cv::Mat& T);//Accepts pinned RGBA8888 or BGRA8888 for high speed
     
@@ -52,7 +52,7 @@ public:
     //HACK: remove this function in release
     cv::Mat downloadOldStyle( int layer){
         cv::Mat cost;
-        cv::cuda::GpuMat tmp=dataContainer.rowRange(layer,layer+1);
+        cv::gpu::GpuMat tmp=dataContainer.rowRange(layer,layer+1);
         tmp.download(cost);
         cost=cost.reshape(0,rows);
         return cost;
@@ -62,13 +62,13 @@ private:
     void solveProjection(const cv::Mat& R, const cv::Mat& T);
     void checkInputs(const cv::Mat& R, const cv::Mat& T,
             const cv::Mat& _cameraMatrix);
-    void simpleTex(const cv::Mat& image,cv::cuda::Stream cvStream=cv::cuda::Stream::Null());
+    void simpleTex(const cv::Mat& image,cv::gpu::Stream cvStream=cv::gpu::Stream::Null());
 
 private:
     //temp variables ("static" containers)
     cv::Ptr<char> _cuArray;//Ptr<cudaArray*> really
     cv::Ptr<char> _texObj;//Ptr<cudaTextureObject_t> really
-    cv::Mat cBuffer;
+    cv::gpu::CudaMem cBuffer;
     
 };
 

@@ -4,7 +4,7 @@ void createPyramid(const Mat& image,vector<Mat>& pyramid,int& levels){
     if(levels==0){//auto size to end at >=15px tall (use height because shortest dim usually)
         for (float scale=1.0; scale>=15.0/image.rows; scale/=2, levels++);
     }
-    CV_Assert(levels>0);
+    assert(levels>0);
     int l2=levels-1;
     pyramid.resize(levels);
     pyramid[l2--]=in;

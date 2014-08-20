@@ -1,8 +1,8 @@
-#include <opencv2/core/cuda/common.hpp>//for cudaSafeCall,CV_Assert
-
+#include <opencv2/gpu/device/common.hpp>//for cudaSafeCall
+#include <opencv2/core/core.hpp>//for CV_Assert
 #include "DepthmapDenoiseWeightedHuber.cuh"
 
-namespace cv { namespace cuda { namespace device {
+namespace cv { namespace gpu { namespace device {
     namespace dtam_denoise{
 
 

@@ -5,9 +5,8 @@
 
 #ifndef ARRAYTEXTURE_HPP
 #define ARRAYTEXTURE_HPP
-#include <opencv2/cuda.hpp>
+#include <opencv2/gpu/gpu.hpp>
 #include <cuda_runtime.h>
-struct cudaArray;
 class ArrayTexture {
 public:
     int* refcount;
@@ -15,8 +14,8 @@ public:
     cudaArray* cuArray;
     cudaTextureObject_t texObj;
     
-    ArrayTexture(const cv::cuda::CudaMem& image, const cv::cuda::Stream& cvStream =
-    cv::cuda::Stream::Null());
+    ArrayTexture(const cv::gpu::CudaMem& image, const cv::gpu::Stream& cvStream =
+    cv::gpu::Stream::Null());
     
     ArrayTexture& operator = (const ArrayTexture& tex) {
         if (this != &tex) {

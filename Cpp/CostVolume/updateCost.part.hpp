@@ -7,6 +7,7 @@
 
 //debugs
 #include <iostream>
+#include <opencv2/highgui/highgui.hpp>
 #include "../tictoc.h"
 
 //in Cost.hpp
