@@ -15,11 +15,13 @@ using namespace gpu;
 static void memZero(GpuMat& in,Stream& cvStream);
 
 void Optimizer::setDefaultParams(){
-    thetaStart =    20.0;
-    thetaMin   =     1.0;
-    thetaStep  =      .97;
-    epsilon    =       .1;
-    lambda     =       .01;
+    
+    float off=cv.layers;
+    thetaStart =    20.0/32*off;
+    thetaMin   =     1.0/32*off;
+    thetaStep  =      .99;
+    epsilon    =       .1/32*off;
+    lambda     =       .1*32/off;
 }
 
 static void memZero(GpuMat& in,Stream& cvStream){

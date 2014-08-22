@@ -50,7 +50,7 @@ int main( int argc, char** argv ){
 
 int App_main( int argc, char** argv )
 {
-    int numImg=50;
+    int numImg=300;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -97,9 +97,9 @@ int App_main( int argc, char** argv )
     cameraMatrix-=(Mat)(Mat_<double>(3,3) <<    0.0,0.0,0.5,
                                                 0.0,0.0,0.5,
                                                 0.0,0.0,0);
-    int layers=32;
-    int imagesPerCV=2;
-    CostVolume cv(images[0],(FrameID)0,layers,0.010,0.0,Rs[0],Ts[0],cameraMatrix);;
+    int layers=512;
+    int imagesPerCV=200;
+    CostVolume cv(images[50],(FrameID)0,layers,0.010,0.0,Rs[50],Ts[50],cameraMatrix);;
 
 //     //New Way (Needs work)
 //     OpenDTAM odm(cameraMatrix);
@@ -114,15 +114,20 @@ int App_main( int argc, char** argv )
     int imageNum=0;
     
     cv::gpu::Stream s;
-    for (int imageNum=0;imageNum<numImg;imageNum++){
+    for (int imageNum=51;imageNum<numImg;imageNum++){
         T=Ts[imageNum];
         R=Rs[imageNum];
         image=images[imageNum];
 
         if(cv.count<imagesPerCV){
             cv.updateCost(image, R, T);
+            cudaDeviceSynchronize();
+//             for( int i=0;i<layers;i++){
+//                 pfShow("layer",cv.downloadOldStyle(i));
+//             }
         }
         else{
+            cudaDeviceSynchronize();
             //Attach optimizer
             Ptr<DepthmapDenoiseWeightedHuber> dp = createDepthmapDenoiseWeightedHuber(cv.baseImageGray,cv.cvStream);
             DepthmapDenoiseWeightedHuber& denoiser=*dp;
@@ -139,7 +144,9 @@ int App_main( int argc, char** argv )
             pfShow("A function loose", ret, 0, cv::Vec2d(0, layers));
             pfShow("Predicted Image",ret,0,Vec2d(0,1));
             pfShow("Actual Image",ret);
-//                pfShow("A", ret, 0, cv::Vec2d(0, layers));
+            
+            cv.loInd.download(ret);
+            pfShow("loInd", ret, 0, cv::Vec2d(0, layers));
 //                waitKey(0);
 //                gpause();
             
@@ -170,7 +177,7 @@ int App_main( int argc, char** argv )
                 doneOptimizing=optimizer.optimizeA(d,a);
                 Acount++;
             }while(!doneOptimizing);
-            optimizer.lambda=.01;
+            optimizer.lambda=.05;
             optimizer.optimizeA(d,a);
             optimizer.cvStream.waitForCompletion();
             a.download(ret);
@@ -178,11 +185,11 @@ int App_main( int argc, char** argv )
 //                gpause();
 //             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
 //             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
-            imageNum=0;
-            cv=CostVolume(images[imageNum],(FrameID)0,layers,0.010,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
+            imageNum=50;
+            cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,0.010,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             s=optimizer.cvStream;
             for (int imageNum=0;imageNum<numImg;imageNum=imageNum+1){
-                reprojectCloud(images[imageNum],images[0],optimizer.depthMap(),RTToP(Rs[0],Ts[0]),RTToP(Rs[imageNum],Ts[imageNum]),cameraMatrix);
+                reprojectCloud(images[imageNum],images[50],optimizer.depthMap(),RTToP(Rs[50],Ts[50]),RTToP(Rs[imageNum],Ts[imageNum]),cameraMatrix);
             }
         }
         s.waitForCompletion();// so we don't lock the whole system up forever

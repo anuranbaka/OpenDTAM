@@ -59,7 +59,7 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
 
     //For performance reasons, OpenDTAM only supports multiple of 32 image sizes with cols >= 64
     CV_Assert(image.rows % 32 == 0 && image.cols % 32 == 0 && image.cols >= 64);
-    CV_Assert(_layers>=8);
+//     CV_Assert(_layers>=8);
     
     checkInputs(R, T, _cameraMatrix);
     fid           = _fid;

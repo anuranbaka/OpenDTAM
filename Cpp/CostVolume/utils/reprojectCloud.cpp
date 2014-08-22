@@ -174,7 +174,7 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
      zthr.convertTo(zthr,CV_32FC3,1/255.0);
     
     
-//      pfShow("Occlusion",zdiff);
+//      pfShow("Occlusion",zdiff,0,Vec2d(0,.015/32));
     
      remap( comparison, pullback, xyLayers[0], xyLayers[1], CV_INTER_NN, BORDER_CONSTANT, Scalar(0,0, 0) );
      Mat photoerr,pthr;
@@ -187,7 +187,7 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
 
  //     pullback.convertTo(pullback,CV_32FC3,1/255.0);
  //     CV_Assert(
-//      pfShow("photo Error",photoerr);
+     pfShow("photo Error",photoerr);
 
 
      Mat confidence;

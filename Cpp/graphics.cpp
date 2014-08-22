@@ -99,15 +99,13 @@ void guiLoop(int* die){
                 cv::minMaxIdx(mat, &min, &max);
                 float scale = 1.0/ (max-min);
                 mat.convertTo(mat,CV_MAKETYPE(CV_32F,mat.channels()), scale, -min*scale);
-
-                
-                mat.convertTo(mat,CV_MAKETYPE(CV_8U,mat.channels()), 255.0);//use 8 bit so we can have the nice mouse over
 //                 cout<<name<<": view scale: "<<max-min<<endl;
 //                 cout<<name<<": min: "<<min<<"  max: "<< max<<endl;
             }else if (autoscale[0]!=autoscale[1]){
                 double scale= 1.0/(autoscale[1]-autoscale[0]);
                 mat.convertTo(mat,CV_MAKETYPE(mat.type(),mat.channels()),scale,-autoscale[0]*scale);
             }
+            mat.convertTo(mat,CV_MAKETYPE(CV_8U,mat.channels()), 255.0);//use 8 bit so we can have the nice mouse over
             if(mat.rows<250){
                 name+=":small";
                 namedWindow(name, CV_WINDOW_KEEPRATIO | CV_GUI_NORMAL);

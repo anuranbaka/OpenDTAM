@@ -68,7 +68,14 @@ __global__ void globalWeightedBoundsCost(m34 p,float weight, CONSTT)
         float v1 = fabsf(c.x - B.x);
         float v2 = fabsf(c.y - B.y);
         float v3 = fabsf(c.z - B.z);
-        float ns=c0*weight+(v1+v2+v3)*(1-weight);
+        float del=v1+v2+v3;
+        float ns;
+//         if(del>.03){
+//             del=0;
+//         }
+        del=fminf(del,.01f)*1.0f/.01f;
+        ns=c0*weight+(del)*(1-weight);
+//         ns=del;
         cdata[offset+z*layerStep]=ns;
         if (ns < minv) {
         minv = ns;
