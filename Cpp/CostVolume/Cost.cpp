@@ -22,7 +22,9 @@ hi(cv::Mat(baseImage.rows,baseImage.cols,cv::DataType<float>::type, cv::Scalar(C
 dataContainer(cv::Mat(baseImage.rows*baseImage.cols*layers,1,cv::DataType<float>::type, cv::Scalar(COST_CPP_DATA_MIN))),//allocate enough data to hold all of the cost volume
 hitContainer(cv::Mat(baseImage.rows*baseImage.cols*layers,1,cv::DataType<float>::type, cv::Scalar(COST_CPP_INITIAL_WEIGHT)))//allocate enough data to hold all of the hits info in cost volume
 {
+    std::cout << "Constructing CostVolume..." << std::endl;
     init();
+    std::cout << "CostVolume constuction complete!" << std::endl;
 }
 
 
@@ -39,7 +41,9 @@ hitContainer(cv::Mat(baseImage.rows*baseImage.cols*layers,1,cv::DataType<float>:
 lo(cv::Mat(baseImage.rows,baseImage.cols,cv::DataType<float>::type, cv::Scalar(COST_CPP_DATA_MIN))),
 hi(cv::Mat(baseImage.rows,baseImage.cols,cv::DataType<float>::type, cv::Scalar(COST_CPP_DATA_MIN)))
 {
+    std::cout << "Constructing CostVolume..." << std::endl;
     init();
+    std::cout << "CostVolume constuction complete!" << std::endl;
 }
 
 

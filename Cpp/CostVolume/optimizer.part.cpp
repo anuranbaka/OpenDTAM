@@ -236,9 +236,13 @@ static void launch_optimzer_thread(Cost& cost);
 
 
 static void launch_optimzer_threads(const Cost* cost){
+    std::cout << "Lauching optimizer threads..." << std::endl;
+
     pthread_t threadQD,threadA;
     pthread_create( &threadQD, NULL, Cost_optimizeQD, (void*) cost);
     pthread_create( &threadA, NULL, Cost_optimizeA, (void*) cost);
+
+    std::cout << "Optimizer begins!" << std::endl;
 }
 static void* Cost_optimizeQD(void* object){
     pthread_setname_np(pthread_self(),"QDthread");

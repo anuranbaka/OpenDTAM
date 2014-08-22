@@ -26,10 +26,17 @@ For building `OpenDTAM`, here is a brief instruction on Ubuntu 12.04 LTS.
 
     sudo apt-get install libboost1.48-all-dev
 
+#### CUDA
+
+     sudo add-apt-repository ppa:ubuntu-x-swat/x-updates
+     sudo apt-get update
+     sudo apt-get install nvidia-current nvidia-cuda-dev
+
 ### Build OpenDTAM
 
     cd OpenDTAM/Cpp
     mkdir Build
+    cd Build
     cmake ..
     make
 

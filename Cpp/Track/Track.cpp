@@ -3,6 +3,8 @@
 using namespace cv;
 using namespace std;
 Track::Track(Cost cost){
+    std::cout << "Construting the Tracker..." << std::endl;
+
     rows=cost.rows;
     cols=cost.cols;
     baseImage=lastFrame=thisFrame=cost.baseImage;
@@ -11,6 +13,7 @@ Track::Track(Cost cost){
     PToLie(Mat(cost.pose),basePose);
     pose=basePose.clone();
 
+    std::cout << "Tracker construction complete!" << std::endl;
 }
 Track::Track(CostVolume cost){
     rows=cost.rows;
