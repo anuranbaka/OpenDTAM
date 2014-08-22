@@ -68,7 +68,7 @@ private:
     //temp variables ("static" containers)
     cv::Ptr<char> _cuArray;//Ptr<cudaArray*> really
     cv::Ptr<char> _texObj;//Ptr<cudaTextureObject_t> really
-    cv::gpu::CudaMem cBuffer;
+    cv::Mat cBuffer;//Must be pagable
     
 };
 
