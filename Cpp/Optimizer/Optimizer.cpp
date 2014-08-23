@@ -26,37 +26,35 @@ static void memZero(GpuMat& in,Stream& cvStream){
     cudaSafeCall(cudaMemsetAsync(in.data,0,in.rows*in.cols*sizeof(float),cv::gpu::StreamAccessor::getStream(cvStream)));
 }
 
-Optimizer::Optimizer(CostVolume& cv) : cv(cv), cvStream(cv.cvStream)
+Optimizer::Optimizer(CostVolume& cv)
 {
+    attach(cv);
+    initOptimization();
+    
+}
+void Optimizer::attach(CostVolume& cv){
     //For performance reasons, OpenDTAM only supports multiple of 32 image sizes with cols >= 64
     CV_Assert(cv.rows % 32 == 0 && cv.cols % 32 == 0 && cv.cols >= 64);
     allocate();
     setDefaultParams();
     stableDepthEnqueued=haveStableDepth=0;
-    
-}
-void Optimizer::attach(CostVolume& cv){
     this->cv=cv;
     cvStream=cv.cvStream;
 }
 #define FLATALLOC( n) n.create(1,cv.rows*cv.cols, CV_32FC1); n=n.reshape(0,cv.rows);CV_Assert(n.isContinuous())
 
 void Optimizer::allocate(){
-    FLATALLOC(_a);
-    FLATALLOC(_d);
 }
 
 void Optimizer::initOptimization(){
     theta=thetaStart;
-    initA();
 }
 
 void Optimizer::initA() {
-//     cv.loInd.copyTo(_a,cvStream);
-    cvStream.enqueueCopy(cv.loInd,_a);
 }
 
 bool Optimizer::optimizeA(const cv::gpu::GpuMat _d,cv::gpu::GpuMat _a){
+    CV_Assert(cv.data||!"Not attached to a CostVolume. Try callling attach() when doing delayed initialization.");
     using namespace cv::gpu::device::dtam_optimizer;
     localStream = cv::gpu::StreamAccessor::getStream(cvStream);
     this->_a=_a;
