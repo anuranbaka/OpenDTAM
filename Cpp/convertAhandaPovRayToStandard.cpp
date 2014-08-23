@@ -3,7 +3,7 @@
 // It is based on a file they provided there, but makes the world coordinate system right handed, with z up,
 // x right, and y forward.
 
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
 #include <iostream>
 #include <fstream>
 #include <string.h>

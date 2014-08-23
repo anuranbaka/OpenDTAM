@@ -7,7 +7,7 @@
 #define COSTVOLUME_HPP
 
 
-#include <opencv2/cuda.hpp>
+#include <opencv2/core/cuda.hpp>
 
 typedef  int FrameID;
 
