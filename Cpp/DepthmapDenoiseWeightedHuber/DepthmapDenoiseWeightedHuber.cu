@@ -60,7 +60,7 @@ void computeGCaller  (float* pp, float* g1p, float* gxp, float* gyp, int cols){
 GENERATE_CUDA_FUNC2DROWS(computeG1,
                      (float* pp, float* g1p, float* gxp, float* gyp, int cols),
                      (pp, g1p, gxp, gyp, cols)) {
-    #if __CUDA_ARCH__>300
+    #if __CUDA_ARCH__>=300
 //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
 
 //Original pseudocode for this function:
@@ -174,7 +174,7 @@ GENERATE_CUDA_FUNC2DROWS(computeG1,
 GENERATE_CUDA_FUNC2DROWS(computeG2,
                      (float* pp, float* g1p, float* gxp, float* gyp, int cols),
                      (pp, g1p, gxp, gyp, cols)) {
-    #if __CUDA_ARCH__>300
+    #if __CUDA_ARCH__>=300
     int x = threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     int dnoff=(y<gridDim.y*blockDim.y-1)*cols;
@@ -251,7 +251,7 @@ GENERATE_CUDA_FUNC2DROWS(computeG2,
 GENERATE_CUDA_FUNC2DROWS(computeGunsafe,
                      (float* pp, float* g1p, float* gxp, float* gyp, int cols),
                      (pp, g1p, gxp, gyp, cols)) {
-    #if __CUDA_ARCH__>300
+    #if __CUDA_ARCH__>=300
 //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
 //TODO: rerun kernel on lines with y%32==31 or y%32==0 to fix stitch lines
 
@@ -685,7 +685,7 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
 //        dpt[pt]=d;
 //    }
 //}
-#if __CUDA_ARCH__>300
+#if __CUDA_ARCH__>=300
     __shared__ float s[32*BLOCKY2D];
     int x = threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -772,7 +772,7 @@ GENERATE_CUDA_FUNC2DROWS(updateD,
                 float theta),
                 ( gqxpt, gqypt, dpt, apt,
                         gxpt, gypt, cols, sigma_q, sigma_d, epsilon, theta)) {
-    #if __CUDA_ARCH__>300
+    #if __CUDA_ARCH__>=300
     //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
 
     //Original pseudocode for this function:
