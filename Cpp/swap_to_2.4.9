@@ -1,0 +1,6 @@
+#! /bin/bash
+mypwd=`pwd`;
+cd /local_store/opencv-2.4.9/debug/
+sudo rm -R /usr/local/*/opencv*
+sudo make install
+cd "$mypwd"
