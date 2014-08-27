@@ -18,8 +18,8 @@ public:
     int rows;
     int cols;
     int layers;
-    float near;
-    float far;
+    float near; //inverse depth of center of voxels in layer layers-1
+    float far;  //inverse depth of center of voxels in layer 0
     float depthStep;
     float initialWeight;
     cv::Mat cameraMatrix;//Note! should be in OpenCV format

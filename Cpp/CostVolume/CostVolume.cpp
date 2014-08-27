@@ -36,7 +36,10 @@ void CostVolume::solveProjection(const cv::Mat& R, const cv::Mat& T) {
 //    {//debug
 //        cout<<"Augmented Camera Matrix:\n"<<projection<<endl;
 //    }
-    projection=projection*P;
+    
+    projection=projection*P;//projection now goes x_world,y_world,z_world -->x_cv_px, y_cv_px , 1/z_from_camera_center
+    projection.at<double>(2,2)=-far;//put the origin at 1/z_from_camera_center=near
+    projection.row(2)/=depthStep;//stretch inverse depth so now x_world,y_world,z_world -->x_cv_px, y_cv_px , 1/z_cv_px
     
    // exit(0);
 }
@@ -49,6 +52,9 @@ void CostVolume::checkInputs(const cv::Mat& R, const cv::Mat& T,
     assert(T.type() == CV_64FC1);
     assert(_cameraMatrix.size() == Size(3, 3));
     assert(_cameraMatrix.type() == CV_64FC1);
+    CV_Assert(_cameraMatrix.at<double>(2,0)==0.0);
+    CV_Assert(_cameraMatrix.at<double>(2,1)==0.0);
+    CV_Assert(_cameraMatrix.at<double>(2,2)==1.0);
 }
 
 #define FLATUP(src,dst){GpuMat tmp;tmp.upload(src);dst.create(1,rows*cols, src.type());dst=dst.reshape(0,rows);}
@@ -221,7 +227,6 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
 
     Mat imFromWorld=cameraMatrixTex*viewMatrixImage;//3x4
     Mat imFromCV=imFromWorld*projection.inv();
-    imFromCV.colRange(2,3)*=depthStep;
     assert(baseImage.isContinuous());
     assert(lo.isContinuous());
     assert(hi.isContinuous());
