@@ -198,12 +198,12 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
     static Mat fwdp2;
     static Mat fwdp=im.clone();
     remap( im, fwdp, xmap, ymap, INTER_NEAREST, BORDER_CONSTANT,Scalar(0,0,0));
-    medianBlur(fwdp,fwdp2,3);
-//     remap( im, fwdp, xmap, ymap, INTER_NEAREST, BORDER_TRANSPARENT);
-    
-    fwdp2.copyTo(fwdp,fwdp==0);
-    medianBlur(fwdp,fwdp2,3);
-    fwdp2.copyTo(fwdp,fwdp==0);
+//     medianBlur(fwdp,fwdp2,3);
+// //     remap( im, fwdp, xmap, ymap, INTER_NEAREST, BORDER_TRANSPARENT);
+//     
+//     fwdp2.copyTo(fwdp,fwdp==0);
+//     medianBlur(fwdp,fwdp2,3);
+//     fwdp2.copyTo(fwdp,fwdp==0);
     pfShow("Predicted Image",fwdp,0,Vec2d(0,1));
 //     absdiff(fwdp,comparison,zdiff);
     pfShow("Actual Image",comparison);
@@ -213,6 +213,7 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
     
 //     pfShow("diff",zdiff.mul(fwdp));
     
+
 
 
     return xyout;

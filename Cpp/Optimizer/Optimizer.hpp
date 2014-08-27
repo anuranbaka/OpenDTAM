@@ -29,7 +29,7 @@ public:
     cv::gpu::GpuMat _d,_a;
     cv::gpu::GpuMat stableDepth;
     float getTheta(){return theta;}
-private:
+// private:
     void allocate();
     void initA();
 

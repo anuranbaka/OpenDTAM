@@ -50,7 +50,7 @@ int main( int argc, char** argv ){
 
 int App_main( int argc, char** argv )
 {
-    int numImg=50;
+    int numImg=600;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -97,8 +97,8 @@ int App_main( int argc, char** argv )
     cameraMatrix-=(Mat)(Mat_<double>(3,3) <<    0.0,0.0,0.5,
                                                 0.0,0.0,0.5,
                                                 0.0,0.0,0);
-    int layers=512;
-    int imagesPerCV=40;
+    int layers=256;
+    int imagesPerCV=500;
     CostVolume cv(images[0],(FrameID)0,layers,0.010,0.0,Rs[0],Ts[0],cameraMatrix);;
 
 //     //New Way (Needs work)
@@ -177,20 +177,24 @@ int App_main( int argc, char** argv )
                 doneOptimizing=optimizer.optimizeA(d,a);
                 Acount++;
             }while(!doneOptimizing);
-            optimizer.lambda=.05;
-            optimizer.optimizeA(d,a);
+//             optimizer.lambda=.05;
+//             optimizer.theta=10000;
+//             optimizer.optimizeA(a,a);
             optimizer.cvStream.waitForCompletion();
             a.download(ret);
                pfShow("A function loose", ret, 0, cv::Vec2d(0, layers));
 //                gpause();
 //             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
 //             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
+               imwrite("outz.png",ret);
             imageNum=0;
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,0.010,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             s=optimizer.cvStream;
             for (int imageNum=0;imageNum<numImg;imageNum=imageNum+1){
                 reprojectCloud(images[imageNum],images[0],optimizer.depthMap(),RTToP(Rs[0],Ts[0]),RTToP(Rs[imageNum],Ts[imageNum]),cameraMatrix);
             }
+            a.download(ret);
+            
         }
         s.waitForCompletion();// so we don't lock the whole system up forever
     }
