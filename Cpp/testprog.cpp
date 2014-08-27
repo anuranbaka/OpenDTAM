@@ -50,7 +50,7 @@ int main( int argc, char** argv ){
 
 int App_main( int argc, char** argv )
 {
-    int numImg=300;
+    int numImg=50;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -98,8 +98,8 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0.5,
                                                 0.0,0.0,0);
     int layers=512;
-    int imagesPerCV=200;
-    CostVolume cv(images[50],(FrameID)0,layers,0.010,0.0,Rs[50],Ts[50],cameraMatrix);;
+    int imagesPerCV=40;
+    CostVolume cv(images[0],(FrameID)0,layers,0.010,0.0,Rs[0],Ts[0],cameraMatrix);;
 
 //     //New Way (Needs work)
 //     OpenDTAM odm(cameraMatrix);
@@ -114,7 +114,7 @@ int App_main( int argc, char** argv )
     int imageNum=0;
     
     cv::gpu::Stream s;
-    for (int imageNum=51;imageNum<numImg;imageNum++){
+    for (int imageNum=1;imageNum<numImg;imageNum++){
         T=Ts[imageNum];
         R=Rs[imageNum];
         image=images[imageNum];
@@ -185,11 +185,11 @@ int App_main( int argc, char** argv )
 //                gpause();
 //             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
 //             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
-            imageNum=50;
+            imageNum=0;
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,0.010,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             s=optimizer.cvStream;
             for (int imageNum=0;imageNum<numImg;imageNum=imageNum+1){
-                reprojectCloud(images[imageNum],images[50],optimizer.depthMap(),RTToP(Rs[50],Ts[50]),RTToP(Rs[imageNum],Ts[imageNum]),cameraMatrix);
+                reprojectCloud(images[imageNum],images[0],optimizer.depthMap(),RTToP(Rs[0],Ts[0]),RTToP(Rs[imageNum],Ts[imageNum]),cameraMatrix);
             }
         }
         s.waitForCompletion();// so we don't lock the whole system up forever

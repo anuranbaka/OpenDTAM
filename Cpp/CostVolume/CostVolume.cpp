@@ -274,14 +274,14 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
 
 
 CostVolume::~CostVolume(){
-    cudaArray*& cuArray=*((cudaArray**)(char*)_cuArray);
-    cudaTextureObject_t& texObj=*((cudaTextureObject_t*)(char*)_texObj);
-    if (cuArray){
-        cudaFreeArray(cuArray);
-    }
-    if (texObj){
-        cudaDestroyTextureObject(texObj);
-    }
+//     cudaArray*& cuArray=*((cudaArray**)(char*)_cuArray);
+//     cudaTextureObject_t& texObj=*((cudaTextureObject_t*)(char*)_texObj);
+//     if (cuArray){
+//         cudaFreeArray(cuArray);
+//     }
+//     if (texObj){
+//         cudaDestroyTextureObject(texObj);
+//     }
     
 }
 
