@@ -114,7 +114,7 @@ void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     tic();
     int levels=6; // 6 levels on a 640x480 image is 20x15
     int startlevel=0;
-    int endlevel=4;
+    int endlevel=6;
 
     Mat p=LieSub(pose,basePose);// the Lie parameters 
     cout<<"pose: "<<p<<endl;
