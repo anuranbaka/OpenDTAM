@@ -105,8 +105,6 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
 
 
 
-// static cudaArray* cuArray=0;
-// static cudaTextureObject_t texObj=0;
 
 void CostVolume::simpleTex(const Mat& image,Stream cvStream){
     cudaArray*& cuArray=*((cudaArray**)(char*)_cuArray);
@@ -279,14 +277,19 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
 
 
 CostVolume::~CostVolume(){
-//     cudaArray*& cuArray=*((cudaArray**)(char*)_cuArray);
-//     cudaTextureObject_t& texObj=*((cudaTextureObject_t*)(char*)_texObj);
-//     if (cuArray){
-//         cudaFreeArray(cuArray);
-//     }
-//     if (texObj){
-//         cudaDestroyTextureObject(texObj);
-//     }
+    cudaArray* cuArray=*((cudaArray**)(char*)_cuArray);
+    cudaTextureObject_t& texObj=*((cudaTextureObject_t*)(char*)_texObj);
+    _cuArray.release();//see if we would free the pointer
+    if(_cuArray.empty()){//no one else has a copy of the cv, so we must clean up
+        if (cuArray){
+            cudaFreeArray(cuArray);
+        }
+        if (texObj){
+            cudaDestroyTextureObject(texObj);
+        }
+    }else{//put the reference back so the destructor doesn't double free
+        _cuArray.addref();
+    }
     
 }
 
