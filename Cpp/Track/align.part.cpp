@@ -143,14 +143,14 @@ void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
                                                 CV_DTAM_FWD,
                                                 1,
                                                 3);
-            if(tocq()>.01)
-                break;
+//             if(tocq()>.01)
+//                 break;
         }
     }
     p=LieAdd(p2d,p);
 //     cout<<"3D iteration:"<<endl;
     for (level=startlevel; level<levels && level<endlevel; level++){
-        int iters=3;
+        int iters=1;
         for(int i=0;i<iters;i++){
             float thr = (levels-level)>=2 ? .05 : .2; //more stringent matching on last two levels 
             bool improved;
@@ -162,10 +162,11 @@ void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
                                                             CV_DTAM_FWD,
                                                             thr,
                                                             6);
-            if(tocq()>.5){
-                cout<<"completed up to level: "<<level-startlevel+1<<"   iter: "<<i+1<<endl;
-                goto loopend;//olny sactioned use of goto, the double break
-            }
+            
+//             if(tocq()>.5){
+//                 cout<<"completed up to level: "<<level-startlevel+1<<"   iter: "<<i+1<<endl;
+//                 goto loopend;//olny sactioned use of goto, the double break
+//             }
 //             if(!improved){
 //                 break;
 //             }
