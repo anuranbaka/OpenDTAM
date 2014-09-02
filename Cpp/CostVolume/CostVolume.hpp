@@ -69,7 +69,7 @@ private:
     cv::Ptr<char> _cuArray;//Ptr<cudaArray*> really
     cv::Ptr<char> _texObj;//Ptr<cudaTextureObject_t> really
     cv::Mat cBuffer;//Must be pagable
-    
+    cv::Ptr<char> ref;
 };
 
 #endif // COSTVOLUME_HPP

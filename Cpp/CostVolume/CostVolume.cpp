@@ -96,18 +96,18 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
     count = 0;
     
     //messy way to disguise cuda objects
-    _cuArray=Ptr<char>((char*)(new cudaArray*));
+    _cuArray=Ptr<char>((char*)(new cudaArray_t));
     *((cudaArray**)(char*)_cuArray)=0;
     _texObj=Ptr<char>((char*)(new cudaTextureObject_t));
     *((cudaTextureObject_t*)(char*)_texObj)=0;
-    
+    ref=Ptr<char>(new char);
 }
 
 
 
 
 void CostVolume::simpleTex(const Mat& image,Stream cvStream){
-    cudaArray*& cuArray=*((cudaArray**)(char*)_cuArray);
+    cudaArray_t& cuArray=*((cudaArray_t*)(char*)_cuArray);
     cudaTextureObject_t& texObj=*((cudaTextureObject_t*)(char*)_texObj);
     
 //     cudaArray*& cuArray=*((cudaArray**)((char*)_cuArray));
@@ -277,19 +277,27 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
 
 
 CostVolume::~CostVolume(){
-    cudaArray* cuArray=*((cudaArray**)(char*)_cuArray);
+    cudaArray_t& cuArray=*((cudaArray_t*)(char*)_cuArray);
     cudaTextureObject_t& texObj=*((cudaTextureObject_t*)(char*)_texObj);
-    _cuArray.release();//see if we would free the pointer
-    if(_cuArray.empty()){//no one else has a copy of the cv, so we must clean up
+    //copy the Ptr without adding to refcount
+    Ptr<char>* R=(Ptr<char>*)malloc(sizeof(Ptr<char>));
+    memcpy(R,&ref,sizeof(Ptr<char>));
+    int* rc=(((int**)(&ref))[1]);
+    ref.release();
+    cout<<"destructor!: "<<*rc<<" arr: "<<cuArray<<endl;
+    if(*rc<=0){//no one else has a copy of the cv, so we must clean up
+        assert(cuArray);
+        assert(_cuArray);
         if (cuArray){
             cudaFreeArray(cuArray);
+            cuArray=0;
         }
         if (texObj){
             cudaDestroyTextureObject(texObj);
+            texObj=0;
         }
     }else{//put the reference back so the destructor doesn't double free
-        _cuArray.addref();
     }
-    
+    free(R);
 }
 
