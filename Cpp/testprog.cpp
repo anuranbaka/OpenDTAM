@@ -100,8 +100,8 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0.5,
                                                 0.0,0.0,0);
     int layers=32;
-    int imagesPerCV=10;
-    CostVolume cv(images[0],(FrameID)0,layers,0.010,0.0,Rs[0],Ts[0],cameraMatrix);;
+    int imagesPerCV=20;
+    CostVolume cv(images[0],(FrameID)0,layers,0.015,0.0,Rs[0],Ts[0],cameraMatrix);;
 
 //     //New Way (Needs work)
 //     OpenDTAM odm(cameraMatrix);
@@ -118,19 +118,23 @@ int App_main( int argc, char** argv )
     int inc=1;
     
     cv::gpu::Stream s;
+    
     for (int imageNum=1;imageNum<numImg;imageNum++){
         if (inc==-1 && imageNum<4){
             inc=1;
         }
-        T=Ts[imageNum];
-        R=Rs[imageNum];
+        T=Ts[imageNum].clone();
+        R=Rs[imageNum].clone();
         image=images[imageNum];
 
         if(cv.count<imagesPerCV){
+            
             cv.updateCost(image, R, T);
             cudaDeviceSynchronize();
+//             gpause();
 //             for( int i=0;i<layers;i++){
-//                 pfShow("layer",cv.downloadOldStyle(i));
+//                 pfShow("layer",cv.downloadOldStyle(i), 0, cv::Vec2d(0, .5));
+//                 usleep(1000000);
 //             }
         }
         else{
@@ -165,8 +169,8 @@ int App_main( int argc, char** argv )
 //
 //                 if(Acount==0)
 //                     gpause();
-//                a.download(ret);
-//                pfShow("A function", ret, 0, cv::Vec2d(0, layers));
+               a.download(ret);
+               pfShow("A function", ret, 0, cv::Vec2d(0, layers));
                 
                 
 
@@ -174,12 +178,12 @@ int App_main( int argc, char** argv )
                     d=denoiser(a,optimizer.epsilon,optimizer.getTheta());
                     QDcount++;
                     
-//                     denoiser._qx.download(ret);
-//                     pfShow("Q function:x direction", ret, 0, cv::Vec2d(-1, 1));
-//                     denoiser._qy.download(ret);
-//                     pfShow("Q function:y direction", ret, 0, cv::Vec2d(-1, 1));
-//                    d.download(ret);
-//                    pfShow("D function", ret, 0, cv::Vec2d(0, layers));
+//                    denoiser._qx.download(ret);
+//                    pfShow("Q function:x direction", ret, 0, cv::Vec2d(-1, 1));
+//                    denoiser._qy.download(ret);
+//                    pfShow("Q function:y direction", ret, 0, cv::Vec2d(-1, 1));
+                   d.download(ret);
+                   pfShow("D function", ret, 0, cv::Vec2d(0, layers));
                 }
                 doneOptimizing=optimizer.optimizeA(d,a);
                 Acount++;
@@ -196,13 +200,15 @@ int App_main( int argc, char** argv )
 //             imwrite("outz.png",ret);
             
             Track tracker(cv);
-            tracker.depth=optimizer.depthMap();
+            Mat out=optimizer.depthMap();
+            double m;
+            minMaxLoc(out,NULL,&m);
+            tracker.depth=out*(.66*cv.near/m);
             if (imageNum+imagesPerCV+1>=numImg){
-                imageNum=imagesPerCV+1;
                 inc=-1;
             }
             imageNum-=imagesPerCV+1-inc;
-            for(int i=imageNum;i<numImg&&i<=imageNum+imagesPerCV+10;i++){
+            for(int i=imageNum;i<numImg&&i<=imageNum+imagesPerCV+1;i++){
                 tracker.addFrame(images[i]);
                 tracker.align();
                 LieToRT(tracker.pose,R,T);
@@ -221,9 +227,9 @@ int App_main( int argc, char** argv )
                 }
                 cout<<i<<endl;
                 cout<<Rs0[i]<<Rs[i];
-                reprojectCloud(images[i],images[imageNum-1],tracker.depth,RTToP(Rs[imageNum-1],Ts[imageNum-1]),RTToP(Rs[i],Ts[i]),cameraMatrix);
+                reprojectCloud(images[i],images[cv.fid],tracker.depth,RTToP(Rs[cv.fid],Ts[cv.fid]),RTToP(Rs[i],Ts[i]),cameraMatrix);
             }
-            cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,0.010,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
+            cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,0.015,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             s=optimizer.cvStream;
 //             for (int imageNum=0;imageNum<numImg;imageNum=imageNum+1){
 //                 reprojectCloud(images[imageNum],images[0],optimizer.depthMap(),RTToP(Rs[0],Ts[0]),RTToP(Rs[imageNum],Ts[imageNum]),cameraMatrix);
