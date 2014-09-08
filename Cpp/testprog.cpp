@@ -213,7 +213,7 @@ int App_main( int argc, char** argv )
             Mat out=optimizer.depthMap();
             double m;
             minMaxLoc(out,NULL,&m);
-//             m=mean(out)[0];
+            m=mean(out)[0]*3;
 
             double sf=(.66*cv.near/m);
             tracker.depth=out;
