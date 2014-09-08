@@ -723,7 +723,7 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
 
                 }
                 gqx=gqxpt[pt];
-                gx=gxpt[pt]+.01f;
+                gx=gxpt[pt]+.002f;
 //                gx=1.0f;
             }
 
@@ -745,7 +745,7 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
             //load
                     {
                         gqy=gqypt[pt];
-                        gy=gypt[pt]+.01f;
+                        gy=gypt[pt]+.002f;
 //                        gy=1.0f;
                     }
             s[bpt]=dh;

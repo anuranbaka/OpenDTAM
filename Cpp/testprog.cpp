@@ -1,6 +1,7 @@
 #include <opencv2/core/core.hpp>
 #include <iostream>
 #include <stdio.h>
+#include <ctime>
 
 
 
@@ -51,6 +52,10 @@ int main( int argc, char** argv ){
 
 int App_main( int argc, char** argv )
 {
+    srand(time(NULL));
+    rand();
+    rand();
+    cv::theRNG().state = rand();
     int numImg=50;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
@@ -80,11 +85,16 @@ int App_main( int argc, char** argv )
         resize(image,image,Size(),reconstructionScale,reconstructionScale);
         
         images.push_back(image.clone());
-        Rs.push_back(R.clone());
-        Ts.push_back(T.clone());
+        Rs.push_back(R.clone()*(i<3));
+        Ts.push_back(T.clone()*(i<3));
         Rs0.push_back(R.clone());
         Ts0.push_back(T.clone());
     }
+    cout<<LieSub(RTToLie(Rs[0],Ts[0]),RTToLie(Rs[1],Ts[1]))<<endl;
+    randu(Ts[1] ,Scalar(-1),Scalar(1));
+    Ts[1]=Ts[0]+Ts[1];
+    cout<<Ts[1]-Ts[0]<<endl;
+    Rs[1]=Rs[0].clone();
     CudaMem cret(images[0].rows,images[0].cols,CV_32FC1);
     ret=cret.createMatHeader();
     //Setup camera matrix
@@ -100,7 +110,7 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0.5,
                                                 0.0,0.0,0);
     int layers=32;
-    int imagesPerCV=20;
+    int imagesPerCV=1;
     CostVolume cv(images[0],(FrameID)0,layers,0.015,0.0,Rs[0],Ts[0],cameraMatrix);;
 
 //     //New Way (Needs work)
@@ -182,8 +192,8 @@ int App_main( int argc, char** argv )
 //                    pfShow("Q function:x direction", ret, 0, cv::Vec2d(-1, 1));
 //                    denoiser._qy.download(ret);
 //                    pfShow("Q function:y direction", ret, 0, cv::Vec2d(-1, 1));
-                   d.download(ret);
-                   pfShow("D function", ret, 0, cv::Vec2d(0, layers));
+//                    d.download(ret);
+//                    pfShow("D function", ret, 0, cv::Vec2d(0, layers));
                 }
                 doneOptimizing=optimizer.optimizeA(d,a);
                 Acount++;
@@ -198,16 +208,21 @@ int App_main( int argc, char** argv )
 //             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
 //             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
 //             imwrite("outz.png",ret);
-            
+
             Track tracker(cv);
             Mat out=optimizer.depthMap();
             double m;
             minMaxLoc(out,NULL,&m);
-            tracker.depth=out*(.66*cv.near/m);
+//             m=mean(out)[0];
+
+            double sf=(.66*cv.near/m);
+            tracker.depth=out;
             if (imageNum+imagesPerCV+1>=numImg){
                 inc=-1;
             }
             imageNum-=imagesPerCV+1-inc;
+            imagesPerCV=5;
+
             for(int i=imageNum;i<numImg&&i<=imageNum+imagesPerCV+1;i++){
                 tracker.addFrame(images[i]);
                 tracker.align();
@@ -229,7 +244,7 @@ int App_main( int argc, char** argv )
                 cout<<Rs0[i]<<Rs[i];
                 reprojectCloud(images[i],images[cv.fid],tracker.depth,RTToP(Rs[cv.fid],Ts[cv.fid]),RTToP(Rs[i],Ts[i]),cameraMatrix);
             }
-            cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,0.015,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
+            cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             s=optimizer.cvStream;
 //             for (int imageNum=0;imageNum<numImg;imageNum=imageNum+1){
 //                 reprojectCloud(images[imageNum],images[0],optimizer.depthMap(),RTToP(Rs[0],Ts[0]),RTToP(Rs[imageNum],Ts[imageNum]),cameraMatrix);
@@ -239,6 +254,7 @@ int App_main( int argc, char** argv )
         }
         s.waitForCompletion();// so we don't lock the whole system up forever
     }
+    exit:
     s.waitForCompletion();
     Stream::Null().waitForCompletion();
     return 0;
