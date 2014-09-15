@@ -56,7 +56,7 @@ int App_main( int argc, char** argv )
     rand();
     rand();
     cv::theRNG().state = rand();
-    int numImg=50;
+    int numImg=110;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -85,8 +85,8 @@ int App_main( int argc, char** argv )
         resize(image,image,Size(),reconstructionScale,reconstructionScale);
         
         images.push_back(image.clone());
-        Rs.push_back(R.clone()*(i<3));
-        Ts.push_back(T.clone()*(i<3));
+        Rs.push_back(R.clone()*Mat::eye(3,3,R.type()));
+        Ts.push_back(T.clone()*0.0);
         Rs0.push_back(R.clone());
         Ts0.push_back(T.clone());
     }
@@ -179,8 +179,8 @@ int App_main( int argc, char** argv )
 //
 //                 if(Acount==0)
 //                     gpause();
-               a.download(ret);
-               pfShow("A function", ret, 0, cv::Vec2d(0, layers));
+//                a.download(ret);
+//                pfShow("A function", ret, 0, cv::Vec2d(0, layers));
                 
                 
 
@@ -221,9 +221,10 @@ int App_main( int argc, char** argv )
                 inc=-1;
             }
             imageNum-=imagesPerCV+1-inc;
-            imagesPerCV=5;
+//             if (imageNum>5)
+//             imagesPerCV=50;
 
-            for(int i=imageNum;i<numImg&&i<=imageNum+imagesPerCV+1;i++){
+            for(int i=imageNum;i>0&&i<numImg&&abs(i-imageNum)<=imagesPerCV;i+=inc){
                 tracker.addFrame(images[i]);
                 tracker.align();
                 LieToRT(tracker.pose,R,T);
