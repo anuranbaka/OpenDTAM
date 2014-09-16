@@ -2,6 +2,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <ctime>
+#include <fstream>
 
 
 
@@ -66,8 +67,8 @@ int App_main( int argc, char** argv )
     Mat image, cameraMatrix, R, T;
     vector<Mat> images,Rs,Ts,Rs0,Ts0;
     Mat ret;//a place to return downloaded images to
-
     
+    ofstream file("outscale.csv");
     double reconstructionScale=5/5.;
 
     for(int i=0;i<numImg;i++){
@@ -109,7 +110,7 @@ int App_main( int argc, char** argv )
     cameraMatrix-=(Mat)(Mat_<double>(3,3) <<    0.0,0.0,0.5,
                                                 0.0,0.0,0.5,
                                                 0.0,0.0,0);
-    int layers=32;
+    int layers=256;
     int imagesPerCV=1;
     CostVolume cv(images[0],(FrameID)0,layers,0.015,0.0,Rs[0],Ts[0],cameraMatrix);;
 
@@ -128,7 +129,8 @@ int App_main( int argc, char** argv )
     int inc=1;
     
     cv::gpu::Stream s;
-    
+    double totalscale=1.0;
+    int tcount=0;
     for (int imageNum=1;imageNum<numImg;imageNum++){
         if (inc==-1 && imageNum<4){
             inc=1;
@@ -222,9 +224,12 @@ int App_main( int argc, char** argv )
             }
             imageNum-=imagesPerCV+1-inc;
 //             if (imageNum>5)
-//             imagesPerCV=50;
+//                 if(imagesPerCV==1)
+//                     imagesPerCV=20;
+//                 else
+//                     imagesPerCV=1;
 
-            for(int i=imageNum;i>0&&i<numImg&&abs(i-imageNum)<=imagesPerCV;i+=inc){
+            for(int i=imageNum-inc;i>0 && i<numImg && abs(i-imageNum)<=imagesPerCV ;i+=inc){
                 tracker.addFrame(images[i]);
                 tracker.align();
                 LieToRT(tracker.pose,R,T);
@@ -246,6 +251,14 @@ int App_main( int argc, char** argv )
                 reprojectCloud(images[i],images[cv.fid],tracker.depth,RTToP(Rs[cv.fid],Ts[cv.fid]),RTToP(Rs[i],Ts[i]),cameraMatrix);
             }
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
+            totalscale*=sf;
+            file<<sf<<", "<<endl;
+//             file.sync_with_stdio();
+            if(tcount==7){
+                totalscale=1.0f;
+            }
+            tcount++;
+            cout<<"CV #: "<<tcount<<" Total Scale: "<<totalscale<<endl;
             s=optimizer.cvStream;
 //             for (int imageNum=0;imageNum<numImg;imageNum=imageNum+1){
 //                 reprojectCloud(images[imageNum],images[0],optimizer.depthMap(),RTToP(Rs[0],Ts[0]),RTToP(Rs[imageNum],Ts[imageNum]),cameraMatrix);

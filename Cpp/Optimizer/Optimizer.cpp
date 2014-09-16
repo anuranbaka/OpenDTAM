@@ -16,12 +16,12 @@ static void memZero(GpuMat& in,Stream& cvStream);
 
 void Optimizer::setDefaultParams(){
     
-    float off=cv.layers;
-    thetaStart =    200.0;
-    thetaMin   =     0.1;
+    float off=cv.layers/32;
+    thetaStart =    200.0*off;
+    thetaMin   =     0.1*off;
     thetaStep  =      .97;
-    epsilon    =       .1;
-    lambda     =       .005;
+    epsilon    =       .1*off;
+    lambda     =       .005/off;
 }
 
 static void memZero(GpuMat& in,Stream& cvStream){
