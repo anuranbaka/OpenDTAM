@@ -7,8 +7,8 @@
 
 class Track{
 public:
-    void align();
-    void align_gray(cv::Mat& base, cv::Mat& depth, cv::Mat& input);
+    bool align();
+    bool align_gray(cv::Mat& base, cv::Mat& depth, cv::Mat& input);
     cv::Mat cameraMatrix;
     int rows;
     int cols;

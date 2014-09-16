@@ -101,11 +101,11 @@ static void createPyramids(const Mat& base,
     }
     
 }
-void Track::align(){
-    align_gray(baseImage, depth, thisFrame);
+bool Track::align(){
+    return align_gray(baseImage, depth, thisFrame);
 };
 
-void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
+bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     Mat input,base,lastFrameGray;
     input=makeGray(_input);
     base=makeGray(_base);
@@ -149,12 +149,11 @@ void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     }
     p=LieAdd(p2d,p);
 //     cout<<"3D iteration:"<<endl;
+    bool improved;
     for (level=startlevel; level<levels && level<endlevel; level++){
         int iters=3;
         for(int i=0;i<iters;i++){
             float thr = (levels-level)>=2 ? .2 : .05; //more stringent matching on last two levels
-            
-            bool improved;
             improved = align_level_largedef_gray_forward(   basePyr[level],//Total Mem cost ~185 load/stores of image
                                                             depthPyr[level],
                                                             inPyr[level],
@@ -179,6 +178,7 @@ void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     static int runs=0;
     //assert(runs++<2);
     toc();
+    return improved;
     
 }
 

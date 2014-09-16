@@ -225,13 +225,14 @@ int App_main( int argc, char** argv )
             imageNum-=imagesPerCV+1-inc;
 //             if (imageNum>5)
 //                 if(imagesPerCV==1)
-//                     imagesPerCV=20;
+                    imagesPerCV=20;
 //                 else
 //                     imagesPerCV=1;
 
-            for(int i=imageNum-inc;i>0 && i<numImg && abs(i-imageNum)<=imagesPerCV ;i+=inc){
+            for(int i=imageNum;i>=0 && i<numImg && abs(i-imageNum)<=imagesPerCV ;i+=inc){
                 tracker.addFrame(images[i]);
-                tracker.align();
+                if(!tracker.align())
+                    imagesPerCV=max(abs(i-imageNum),1);
                 LieToRT(tracker.pose,R,T);
                 Rs[i]=R.clone();
                 Ts[i]=T.clone();

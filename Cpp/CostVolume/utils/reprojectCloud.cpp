@@ -184,7 +184,12 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
      pthr=photoerr>.1;
      cvtColor(pthr,pthr,CV_GRAY2RGB);
      pthr.convertTo(pthr,CV_32FC3,1/255.0);
-
+    float* d2=(float*)pullback.data;
+    float* d3=(float*)pullback.data+im.rows*im.cols*3;
+    float* e=(float*)photoerr.data;
+    for(;d2 < d3;d2+=3,e++){
+        *e= d2[0]==0 & d2[1]==0 & d2[2]==0;
+    }
  //     pullback.convertTo(pullback,CV_32FC3,1/255.0);
  //     CV_Assert(
      pfShow("photo Error",photoerr);
