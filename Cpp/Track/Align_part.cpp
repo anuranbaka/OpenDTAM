@@ -14,11 +14,11 @@ using namespace std;
 
 
 //debug
-#define QUIET_DTAM 1
-#include "quiet.hpp"
+// #define QUIET_DTAM 1
+// #include "quiet.hpp"
 
 
-const static float FAIL_FRACTION=0.30;
+const static float FAIL_FRACTION=0.70;
 
 enum alignment_modes{CV_DTAM_REV,CV_DTAM_FWD,CV_DTAM_ESM};
 const double small0=.1;//~6deg, not trivial, but hopefully enough to make the translation matter
@@ -199,9 +199,6 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
         mixChannels(src,1,dst,2,from_to,3);// extract the image and the resampled gradient //(Mem cost: min 3 load, 3 store :6)
         
         
-        if(cv::countNonZero(I)<rows*cols*FAIL_FRACTION){//tracking failed!
-            return false;
-        }
         
     }
     
@@ -209,6 +206,12 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
     Mat fit;
     absdiff(T,I,fit);
     Mat mask=(fit<threshold)&(I>0);
+    
+    cout<<"Quality: "<<cv::countNonZero(mask)/(rows*cols*1.0f)<<" r: "<<rows<<endl;
+    if(cv::countNonZero(mask)<rows*cols*FAIL_FRACTION){//tracking failed!
+        return false;
+    }
+    
     Mat err=T-I;
     
 //     //debug

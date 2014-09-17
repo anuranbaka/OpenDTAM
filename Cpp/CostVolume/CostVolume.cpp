@@ -284,7 +284,6 @@ CostVolume::~CostVolume(){
     memcpy(R,&ref,sizeof(Ptr<char>));
     int* rc=(((int**)(&ref))[1]);
     ref.release();
-    cout<<"destructor!: "<<*rc<<" arr: "<<cuArray<<endl;
     if(*rc<=0){//no one else has a copy of the cv, so we must clean up
         assert(cuArray);
         assert(_cuArray);

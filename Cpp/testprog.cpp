@@ -57,7 +57,7 @@ int App_main( int argc, char** argv )
     rand();
     rand();
     cv::theRNG().state = rand();
-    int numImg=110;
+    int numImg=500;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -70,8 +70,8 @@ int App_main( int argc, char** argv )
     
     ofstream file("outscale.csv");
     double reconstructionScale=5/5.;
-
-    for(int i=0;i<numImg;i++){
+    int inc=1;
+    for(int i=0;i>0||inc>0;i+=inc){
         Mat tmp;
         sprintf(filename,"../../Trajectory_30_seconds/scene_%03d.png",i);
         convertAhandaPovRayToStandard("../../Trajectory_30_seconds",
@@ -81,16 +81,24 @@ int App_main( int argc, char** argv )
                                       T);
         Mat image;
         cout<<"Opening: "<< filename << endl;
-        
+        if(inc>0){
         imread(filename, -1).convertTo(image,CV_32FC3,1.0/65535.0);
         resize(image,image,Size(),reconstructionScale,reconstructionScale);
         
         images.push_back(image.clone());
+        }
+        else
+        {
+            images.push_back(images[i]);
+        }
         Rs.push_back(R.clone()*Mat::eye(3,3,R.type()));
         Ts.push_back(T.clone()*0.0);
         Rs0.push_back(R.clone());
         Ts0.push_back(T.clone());
+        if(i==numImg-1)
+            inc=-1;
     }
+    numImg=numImg*2-2;
     cout<<LieSub(RTToLie(Rs[0],Ts[0]),RTToLie(Rs[1],Ts[1]))<<endl;
     randu(Ts[1] ,Scalar(-1),Scalar(1));
     Ts[1]=Ts[0]+Ts[1];
@@ -112,6 +120,7 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0);
     int layers=256;
     int imagesPerCV=1;
+    int desiredImagesPerCV=500;
     CostVolume cv(images[0],(FrameID)0,layers,0.015,0.0,Rs[0],Ts[0],cameraMatrix);;
 
 //     //New Way (Needs work)
@@ -126,15 +135,12 @@ int App_main( int argc, char** argv )
     //Old Way
     int imageNum=0;
     
-    int inc=1;
     
     cv::gpu::Stream s;
     double totalscale=1.0;
     int tcount=0;
-    for (int imageNum=1;imageNum<numImg;imageNum++){
-        if (inc==-1 && imageNum<4){
-            inc=1;
-        }
+    for (int imageNum=1;imageNum<numImg;imageNum=(++imageNum)%numImg){
+
         T=Ts[imageNum].clone();
         R=Rs[imageNum].clone();
         image=images[imageNum];
@@ -219,20 +225,21 @@ int App_main( int argc, char** argv )
 
             double sf=(.66*cv.near/m);
             tracker.depth=out;
-            if (imageNum+imagesPerCV+1>=numImg){
-                inc=-1;
-            }
-            imageNum-=imagesPerCV+1-inc;
+           
+            imageNum=((imageNum-imagesPerCV)%numImg+numImg)%numImg;
+            assert(imageNum>=0);
 //             if (imageNum>5)
 //                 if(imagesPerCV==1)
-                    imagesPerCV=20;
+            if (tcount>10)
+                    imagesPerCV=desiredImagesPerCV;
 //                 else
 //                     imagesPerCV=1;
 
-            for(int i=imageNum;i>=0 && i<numImg && abs(i-imageNum)<=imagesPerCV ;i+=inc){
+            for(int i0=0;i0<=imagesPerCV;i0++){
+                int i=(imageNum+i0)%numImg;
                 tracker.addFrame(images[i]);
                 if(!tracker.align())
-                    imagesPerCV=max(abs(i-imageNum),1);
+                    imagesPerCV=max(abs(i-imageNum)-1,1);
                 LieToRT(tracker.pose,R,T);
                 Rs[i]=R.clone();
                 Ts[i]=T.clone();
@@ -248,7 +255,6 @@ int App_main( int argc, char** argv )
                     cout << "Pose Error: "<< p-tp << endl;
                 }
                 cout<<i<<endl;
-                cout<<Rs0[i]<<Rs[i];
                 reprojectCloud(images[i],images[cv.fid],tracker.depth,RTToP(Rs[cv.fid],Ts[cv.fid]),RTToP(Rs[i],Ts[i]),cameraMatrix);
             }
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
