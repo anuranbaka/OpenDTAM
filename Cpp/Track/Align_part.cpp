@@ -18,7 +18,7 @@ using namespace std;
 // #include "quiet.hpp"
 
 
-const static float FAIL_FRACTION=0.70;
+const static float FAIL_FRACTION=0.50;
 
 enum alignment_modes{CV_DTAM_REV,CV_DTAM_FWD,CV_DTAM_ESM};
 const double small0=.1;//~6deg, not trivial, but hopefully enough to make the translation matter
@@ -214,16 +214,16 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
     
     Mat err=T-I;
     
-    //debug
-    {
-
-        pfShow("Before iteration",_I,0,Vec2d(0,1));
-            Mask(I,fit<threshold,I);
-            pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
-
-            pfShow("After Iteration",I,0,Vec2d(0,1));
-            pfShow("To match",T);
-    }
+//     //debug
+//     {
+// 
+//         pfShow("Before iteration",_I,0,Vec2d(0,1));
+//             Mask(I,fit<threshold,I);
+//             pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
+// 
+//             pfShow("After Iteration",I,0,Vec2d(0,1));
+//             pfShow("To match",T);
+//     }
 
     
    

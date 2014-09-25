@@ -57,7 +57,7 @@ int App_main( int argc, char** argv )
     rand();
     rand();
     cv::theRNG().state = rand();
-    int numImg=300;
+    int numImg=110;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -120,12 +120,12 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0);
     int layers=256;
     int imagesPerCV=1;
-    int desiredImagesPerCV=4;
+    int desiredImagesPerCV=50;
     int startAt=170;
-    Rs[startAt]=Rs[0];
-    Rs[startAt+1]=Rs[1];
-    Ts[startAt]=Ts[0];
-    Ts[startAt+1]=Ts[1];
+    Rs[startAt]=Rs[0].clone();
+    Rs[startAt+1]=Rs[1].clone();
+    Ts[startAt]=Ts[0].clone();
+    Ts[startAt+1]=Ts[1].clone();
     CostVolume cv(images[startAt],(FrameID)startAt,layers,0.015,0.0,Rs[startAt],Ts[startAt],cameraMatrix);;
 
 //     //New Way (Needs work)
@@ -239,7 +239,7 @@ int App_main( int argc, char** argv )
 //                 gpause();
             }
             tracker.depth=out;
-           
+            medianBlur(out,tracker.depth,3);
             imageNum=((imageNum-imagesPerCV)%numImg+numImg)%numImg;
             assert(imageNum>=0);
 //             if (imageNum>5)
@@ -270,7 +270,6 @@ int App_main( int argc, char** argv )
                 }
                 cout<<i<<endl;
                 reprojectCloud(images[i],images[cv.fid],tracker.depth,RTToP(Rs[cv.fid],Ts[cv.fid]),RTToP(Rs[i],Ts[i]),cameraMatrix);
-//                 gpause();
             }
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             totalscale*=sf;
