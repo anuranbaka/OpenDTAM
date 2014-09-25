@@ -57,7 +57,7 @@ int App_main( int argc, char** argv )
     rand();
     rand();
     cv::theRNG().state = rand();
-    int numImg=500;
+    int numImg=300;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -120,8 +120,13 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0);
     int layers=256;
     int imagesPerCV=1;
-    int desiredImagesPerCV=500;
-    CostVolume cv(images[0],(FrameID)0,layers,0.015,0.0,Rs[0],Ts[0],cameraMatrix);;
+    int desiredImagesPerCV=4;
+    int startAt=170;
+    Rs[startAt]=Rs[0];
+    Rs[startAt+1]=Rs[1];
+    Ts[startAt]=Ts[0];
+    Ts[startAt+1]=Ts[1];
+    CostVolume cv(images[startAt],(FrameID)startAt,layers,0.015,0.0,Rs[startAt],Ts[startAt],cameraMatrix);;
 
 //     //New Way (Needs work)
 //     OpenDTAM odm(cameraMatrix);
@@ -139,7 +144,7 @@ int App_main( int argc, char** argv )
     cv::gpu::Stream s;
     double totalscale=1.0;
     int tcount=0;
-    for (int imageNum=1;imageNum<numImg;imageNum=(++imageNum)%numImg){
+    for (int imageNum=startAt+1;imageNum<numImg;imageNum=(++imageNum)%numImg){
 
         T=Ts[imageNum].clone();
         R=Rs[imageNum].clone();
@@ -205,6 +210,8 @@ int App_main( int argc, char** argv )
                 }
                 doneOptimizing=optimizer.optimizeA(d,a);
                 Acount++;
+//                 d.download(ret);
+//                 pfShow("D function", ret, 0, cv::Vec2d(0, layers));
             }while(!doneOptimizing);
 //             optimizer.lambda=.05;
 //             optimizer.theta=10000;
@@ -221,9 +228,16 @@ int App_main( int argc, char** argv )
             Mat out=optimizer.depthMap();
             double m;
             minMaxLoc(out,NULL,&m);
-            m=mean(out)[0]*3;
-
-            double sf=(.66*cv.near/m);
+            m=mean(out)[0];
+            
+                
+            double sf=(.25*cv.near/m);
+            if(!(fabsf(sf)<2&&fabsf(sf)>.5)){
+                file<<sf<<", fail!, "<<endl;
+                cout<<"FAIL CV #: "<<tcount<<" sf: "<<sf<<endl;
+                sf=1.0+.1-.2*(sf<1.0);
+//                 gpause();
+            }
             tracker.depth=out;
            
             imageNum=((imageNum-imagesPerCV)%numImg+numImg)%numImg;
@@ -256,6 +270,7 @@ int App_main( int argc, char** argv )
                 }
                 cout<<i<<endl;
                 reprojectCloud(images[i],images[cv.fid],tracker.depth,RTToP(Rs[cv.fid],Ts[cv.fid]),RTToP(Rs[i],Ts[i]),cameraMatrix);
+//                 gpause();
             }
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             totalscale*=sf;

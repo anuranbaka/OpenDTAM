@@ -145,7 +145,7 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
                           int numParams
                                       )
 {
-
+    bool ret=1;
     int r=_I.rows;
     int rows=r;
     int c=_I.cols;
@@ -209,26 +209,22 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
     
     cout<<"Quality: "<<cv::countNonZero(mask)/(rows*cols*1.0f)<<" r: "<<rows<<endl;
     if(cv::countNonZero(mask)<rows*cols*FAIL_FRACTION){//tracking failed!
-        return false;
+        ret=0;
     }
     
     Mat err=T-I;
     
-//     //debug
-//     {
-//         if (numParams==6){
-//         pfShow("Before iteration",_I);
-// //         if(I.rows==480){
-// //             Mask(I,fit<.05,I);
-// //             pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
-// // //             gpause();
-// //         }
-// //         else{
-//             pfShow("After Iteration",I,0,Vec2d(0,1));
-//             pfShow("To match",T);
-// //         }
-//         }
-//     }
+    //debug
+    {
+
+        pfShow("Before iteration",_I,0,Vec2d(0,1));
+            Mask(I,fit<threshold,I);
+            pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
+
+            pfShow("After Iteration",I,0,Vec2d(0,1));
+            pfShow("To match",T);
+    }
+
     
    
     
@@ -337,5 +333,5 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
 //             return false;
 //     }
     _p.colRange(0,numParams)+=dp;
-    return true;
+    return ret;
 }

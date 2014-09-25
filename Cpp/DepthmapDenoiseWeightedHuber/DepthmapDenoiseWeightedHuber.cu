@@ -724,7 +724,7 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
                 }
                 gqx=gqxpt[pt];
                 gx=gxpt[pt]+.005f;
-//                gx=1.0f;
+               gx=1.0f;
             }
 
             dr=__shfl_down(dh,1);
@@ -746,7 +746,7 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
                     {
                         gqy=gqypt[pt];
                         gy=gypt[pt]+.005f;
-//                        gy=1.0f;
+                       gy=1.0f;
                     }
             s[bpt]=dh;
             __syncthreads();
