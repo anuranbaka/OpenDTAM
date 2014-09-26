@@ -20,7 +20,7 @@ public:
     cv::Mat pose;
     cv::Mat thisFrame;
     cv::Mat lastFrame;
-    
+    double quality;
     Track(Cost cost);
     Track(CostVolume cost);
     void addFrame(cv::Mat frame);

@@ -21,7 +21,7 @@ void Optimizer::setDefaultParams(){
     thetaMin   =     0.1*off;
     thetaStep  =      .98;
     epsilon    =       .1*off;
-    lambda     =       .005/off;
+    lambda     =       .001/off;
 }
 
 static void memZero(GpuMat& in,Stream& cvStream){

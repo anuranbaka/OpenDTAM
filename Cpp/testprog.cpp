@@ -57,7 +57,7 @@ int App_main( int argc, char** argv )
     rand();
     rand();
     cv::theRNG().state = rand();
-    int numImg=110;
+    int numImg=300;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -91,19 +91,22 @@ int App_main( int argc, char** argv )
         {
             images.push_back(images[i]);
         }
-        Rs.push_back(R.clone()*Mat::eye(3,3,R.type()));
-        Ts.push_back(T.clone()*0.0);
+        Rs.push_back(Mat());
+        Ts.push_back(Mat());
         Rs0.push_back(R.clone());
         Ts0.push_back(T.clone());
         if(i==numImg-1)
             inc=-1;
     }
     numImg=numImg*2-2;
-    cout<<LieSub(RTToLie(Rs[0],Ts[0]),RTToLie(Rs[1],Ts[1]))<<endl;
+    cout<<LieSub(RTToLie(Rs0[0],Ts0[0]),RTToLie(Rs0[1],Ts0[1]))<<endl;
+    Ts[0]=Ts0[1].clone();
+    Ts[1]=Ts0[1].clone();
     randu(Ts[1] ,Scalar(-1),Scalar(1));
-    Ts[1]=Ts[0]+Ts[1];
-    cout<<Ts[1]-Ts[0]<<endl;
-    Rs[1]=Rs[0].clone();
+    Ts[1]=Ts0[0]+Ts[1];
+    cout<<Ts[1]-Ts0[0]<<endl;
+    Rs[0]=Rs0[0].clone();
+    Rs[1]=Rs0[0].clone();
     CudaMem cret(images[0].rows,images[0].cols,CV_32FC1);
     ret=cret.createMatHeader();
     //Setup camera matrix
@@ -120,8 +123,8 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0);
     int layers=256;
     int imagesPerCV=1;
-    int desiredImagesPerCV=50;
-    int startAt=170;
+    int desiredImagesPerCV=200;
+    int startAt=190;
     Rs[startAt]=Rs[0].clone();
     Rs[startAt+1]=Rs[1].clone();
     Ts[startAt]=Ts[0].clone();
@@ -144,14 +147,15 @@ int App_main( int argc, char** argv )
     cv::gpu::Stream s;
     double totalscale=1.0;
     int tcount=0;
+    int sincefail=0;
     for (int imageNum=startAt+1;imageNum<numImg;imageNum=(++imageNum)%numImg){
-
+        cout<<dec;
         T=Ts[imageNum].clone();
         R=Rs[imageNum].clone();
         image=images[imageNum];
 
         if(cv.count<imagesPerCV){
-            
+            cout<<"using: "<< imageNum<<endl;
             cv.updateCost(image, R, T);
             cudaDeviceSynchronize();
 //             gpause();
@@ -179,8 +183,7 @@ int App_main( int argc, char** argv )
 //             pfShow("Predicted Image",ret,0,Vec2d(0,1));
 //             pfShow("Actual Image",ret);
             
-            cv.loInd.download(ret);
-            pfShow("loInd", ret, 0, cv::Vec2d(0, layers));
+           
 //                waitKey(0);
 //                gpause();
             
@@ -217,8 +220,14 @@ int App_main( int argc, char** argv )
 //             optimizer.theta=10000;
 //             optimizer.optimizeA(a,a);
             optimizer.cvStream.waitForCompletion();
+             cv.loInd.download(ret);
+            pfShow("loInd", ret, 0, cv::Vec2d(0, layers));
             a.download(ret);
-               pfShow("A function loose", ret, 0, cv::Vec2d(0, layers));
+            pfShow("A function loose", ret, 0, cv::Vec2d(0, layers));
+            Mat diff=ret.clone();
+            cv.loInd.download(ret);
+            diff-=ret;
+            pfShow("difference by reg", diff, 0, cv::Vec2d(-layers, layers));
 //                gpause();
 //             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
 //             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
@@ -226,38 +235,65 @@ int App_main( int argc, char** argv )
 
             Track tracker(cv);
             Mat out=optimizer.depthMap();
+//             if (tcount==3){
+//                 out=cv.near-out;
+//             }
             double m;
             minMaxLoc(out,NULL,&m);
             m=mean(out)[0];
             
                 
             double sf=(.25*cv.near/m);
-            if(!(fabsf(sf)<2&&fabsf(sf)>.5)){
-                file<<sf<<", fail!, "<<endl;
+            if(!(sf<100&&sf>.001)){
+//                 file<<sf<<", fail!, "<<endl;
                 cout<<"FAIL CV #: "<<tcount<<" sf: "<<sf<<endl;
-                sf=1.0+.1-.2*(sf<1.0);
+                if(sf>100||sf<.001)
+                    sf=1.0+.1-.2*(sf<1.0);
 //                 gpause();
             }
             tracker.depth=out;
             medianBlur(out,tracker.depth,3);
+//             if(imageNum>180)
             imageNum=((imageNum-imagesPerCV)%numImg+numImg)%numImg;
+//             else if (tcount>6)
+//                  imageNum=((imageNum-imagesPerCV*2/3)%numImg+numImg)%numImg;
+//                 if(imageNum<185)
+//                 imageNum=180;
+            
+//             imageNum=30;
             assert(imageNum>=0);
 //             if (imageNum>5)
 //                 if(imagesPerCV==1)
-            if (tcount>10)
+            if (tcount>5)
                     imagesPerCV=desiredImagesPerCV;
 //                 else
 //                     imagesPerCV=1;
-
+            sincefail++;
             for(int i0=0;i0<=imagesPerCV;i0++){
                 int i=(imageNum+i0)%numImg;
                 tracker.addFrame(images[i]);
-                if(!tracker.align())
-                    imagesPerCV=max(abs(i-imageNum)-1,1);
+                if(!tracker.align()){
+                    imagesPerCV=max(i0-1,1);
+                    if(i0==0&&sincefail>4){
+                        cout<<"TRACKFAIL! RESTART RANDOM"<<endl;
+                        sf=cv.near/.15;//failed so bad we need a new start
+//                         randu(tracker.depth ,Scalar(0),Scalar(.15));
+                        tracker.depth=.10;
+                        tracker.pose=RTToLie(Rs[i-1],Ts[i-1]);
+                        tracker.align();
+                        sincefail=0;
+                        Ts[i]=Ts[(i-1+numImg)%numImg].clone();
+                        randu(Ts[i] ,Scalar(-1),Scalar(1));
+                        Ts[i]=Ts[(i-1+numImg)%numImg]+Ts[i];
+                        Rs[i]=Rs[(i-1+numImg)%numImg].clone();
+//                         goto skip;
+                    }
+                }
+               
                 LieToRT(tracker.pose,R,T);
                 Rs[i]=R.clone();
                 Ts[i]=T.clone();
-                
+                skip:
                 Mat p,tp;
                 p=tracker.pose;
                 tp=RTToLie(Rs0[i],Ts0[i]);
@@ -271,9 +307,16 @@ int App_main( int argc, char** argv )
                 cout<<i<<endl;
                 reprojectCloud(images[i],images[cv.fid],tracker.depth,RTToP(Rs[cv.fid],Ts[cv.fid]),RTToP(Rs[i],Ts[i]),cameraMatrix);
             }
+            if (tcount>6&&imagesPerCV>20)
+            {
+                int jump=imagesPerCV*2/3;
+                imageNum=(imageNum+jump)%numImg;
+                imagesPerCV-=jump;
+                assert(imagesPerCV>0);
+            }
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             totalscale*=sf;
-            file<<sf<<", "<<endl;
+            file<<imageNum<<", "<<sf<<", "<<imagesPerCV<<endl;
 //             file.sync_with_stdio();
             if(tcount==7){
                 totalscale=1.0f;

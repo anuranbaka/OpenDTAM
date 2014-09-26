@@ -18,7 +18,7 @@ using namespace std;
 // #include "quiet.hpp"
 
 
-const static float FAIL_FRACTION=0.50;
+const static float FAIL_FRACTION=0.70;
 
 enum alignment_modes{CV_DTAM_REV,CV_DTAM_FWD,CV_DTAM_ESM};
 const double small0=.1;//~6deg, not trivial, but hopefully enough to make the translation matter
@@ -206,9 +206,14 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
     Mat fit;
     absdiff(T,I,fit);
     Mat mask=(fit<threshold)&(I>0);
-    
-    cout<<"Quality: "<<cv::countNonZero(mask)/(rows*cols*1.0f)<<" r: "<<rows<<endl;
-    if(cv::countNonZero(mask)<rows*cols*FAIL_FRACTION){//tracking failed!
+    Mat mask2=(I>0);
+    double vis=cv::countNonZero(mask2)/(rows*cols*1.0f);
+    double good=cv::countNonZero(mask)/(rows*cols*1.0f);
+    double qual=good/vis;
+    cout<<"Visibility: "<<vis;
+    cout<<" Accepted: "<<good<<" Quality: "<<qual<<" r: "<<rows<<endl;
+    quality=qual;
+    if(qual<FAIL_FRACTION){//tracking failed!
         ret=0;
     }
     
