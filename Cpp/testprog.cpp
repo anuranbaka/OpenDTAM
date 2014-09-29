@@ -124,7 +124,7 @@ int App_main( int argc, char** argv )
     int layers=256;
     int imagesPerCV=1;
     int desiredImagesPerCV=200;
-    int startAt=190;
+    int startAt=0;
     Rs[startAt]=Rs[0].clone();
     Rs[startAt+1]=Rs[1].clone();
     Ts[startAt]=Ts[0].clone();
@@ -274,20 +274,20 @@ int App_main( int argc, char** argv )
                 tracker.addFrame(images[i]);
                 if(!tracker.align()){
                     imagesPerCV=max(i0-1,1);
-                    if(i0==0&&sincefail>4){
-                        cout<<"TRACKFAIL! RESTART RANDOM"<<endl;
-                        sf=cv.near/.15;//failed so bad we need a new start
-//                         randu(tracker.depth ,Scalar(0),Scalar(.15));
-                        tracker.depth=.10;
-                        tracker.pose=RTToLie(Rs[i-1],Ts[i-1]);
-                        tracker.align();
-                        sincefail=0;
-                        Ts[i]=Ts[(i-1+numImg)%numImg].clone();
-                        randu(Ts[i] ,Scalar(-1),Scalar(1));
-                        Ts[i]=Ts[(i-1+numImg)%numImg]+Ts[i];
-                        Rs[i]=Rs[(i-1+numImg)%numImg].clone();
-//                         goto skip;
-                    }
+//                     if(i0==0&&sincefail>4){
+//                         cout<<"TRACKFAIL! RESTART RANDOM"<<endl;
+//                         sf=cv.near/.15;//failed so bad we need a new start
+// //                         randu(tracker.depth ,Scalar(0),Scalar(.15));
+//                         tracker.depth=.10;
+//                         tracker.pose=RTToLie(Rs[i-1],Ts[i-1]);
+//                         tracker.align();
+//                         sincefail=0;
+//                         Ts[i]=Ts[(i-1+numImg)%numImg].clone();
+//                         randu(Ts[i] ,Scalar(-1),Scalar(1));
+//                         Ts[i]=Ts[(i-1+numImg)%numImg]+Ts[i];
+//                         Rs[i]=Rs[(i-1+numImg)%numImg].clone();
+// //                         goto skip;
+//                     }
                 }
                
                 LieToRT(tracker.pose,R,T);
@@ -305,15 +305,15 @@ int App_main( int argc, char** argv )
                     cout << "Pose Error: "<< p-tp << endl;
                 }
                 cout<<i<<endl;
-                reprojectCloud(images[i],images[cv.fid],tracker.depth,RTToP(Rs[cv.fid],Ts[cv.fid]),RTToP(Rs[i],Ts[i]),cameraMatrix);
+                reprojectCloud(images[i],images[cv.fid],tracker.depth,RTToP(Rs[cv.fid]*rodrigues((Mat)(Mat_<double>(3,3) << 30,0,0)*3.1415/180.0),Ts[cv.fid]),RTToP(Rs[i],Ts[i]),cameraMatrix);
             }
-            if (tcount>6&&imagesPerCV>20)
-            {
-                int jump=imagesPerCV*2/3;
-                imageNum=(imageNum+jump)%numImg;
-                imagesPerCV-=jump;
-                assert(imagesPerCV>0);
-            }
+//             if (tcount>6&&imagesPerCV>20)
+//             {
+//                 int jump=imagesPerCV*2/3;
+//                 imageNum=(imageNum+jump)%numImg;
+//                 imagesPerCV-=jump;
+//                 assert(imagesPerCV>0);
+//             }
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             totalscale*=sf;
             file<<imageNum<<", "<<sf<<", "<<imagesPerCV<<endl;

@@ -154,6 +154,10 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
         int iters=3;
         for(int i=0;i<iters;i++){
             float thr = (levels-level)>=2 ? .2 : .05; //more stringent matching on last two levels
+            thr=(levels-level)>=3 ?.5:thr;
+            thr=(levels-level)>=4 ?.7:thr;
+            thr=(levels-level)>=5 ?.9:thr;
+            thr=(levels-level)>=6 ?1:thr;
             improved = align_level_largedef_gray_forward(   basePyr[level],//Total Mem cost ~185 load/stores of image
                                                             depthPyr[level],
                                                             inPyr[level],
