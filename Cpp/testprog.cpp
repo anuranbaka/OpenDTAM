@@ -127,8 +127,8 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0.5,
                                                 0.0,0.0,0);
     int layers=256;
-    int imagesPerCV=1;
-    int desiredImagesPerCV=500;
+    int desiredImagesPerCV=numImg/2;
+    int imagesPerCV=desiredImagesPerCV;
     int startAt=0;
     {//offset init
         Rs[startAt]=Rs[0].clone();
@@ -271,7 +271,7 @@ int App_main( int argc, char** argv )
             assert(imageNum>=0);
 //             if (imageNum>5)
 //                 if(imagesPerCV==1)
-            if (tcount>5)
+            if (tcount>2)
                     imagesPerCV=desiredImagesPerCV;
 //                 else
 //                     imagesPerCV=1;
@@ -330,15 +330,20 @@ int App_main( int argc, char** argv )
 //                 imagesPerCV-=jump;
 //                 assert(imagesPerCV>0);
 //             }
+            for (int a=0;a<360;a++){
             Mat tran1=Mat::eye(4,4,CV_64FC1);
-            ((Mat)(Mat_<double>(4,1) <<    0,0,-1.0/m,1)).copyTo(tran1.col(3));
-            Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,-45,0)*3.1415/180.0));
+            ((Mat)(Mat_<double>(4,1) <<    0,-200,-400,1)).copyTo(tran1.col(3));
+            Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,a,0)*3.1415926535/180.0)*
+                rodrigues((Mat)(Mat_<double>(3,1) << 90,0,0)*3.1415926535/180.0)
+            );
             Mat tran2=Mat::eye(4,4,CV_64FC1);
             ((Mat)(Mat_<double>(4,1) <<    0,0,3/m,1)).copyTo(tran2.col(3));
             Mat view=tran2*rotor*tran1;
             Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
             Mat foundPose=make4x4(RTToP(Rs[imageNum],Ts[imageNum]));
-            reprojectCloud(images[imageNum],images[cv.fid],tracker.depth,basePose,view*foundPose,cameraMatrix);
+            reprojectCloud(images[imageNum],images[cv.fid],tracker.depth,basePose,view,cameraMatrix);
+            cout<<"R:\n"<<rodrigues(Rs[imageNum])*180/3.1415<<endl;
+            }
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             totalscale*=sf;
             file<<imageNum<<", "<<sf<<", "<<imagesPerCV<<endl;
