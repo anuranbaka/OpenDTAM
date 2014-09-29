@@ -86,7 +86,7 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
     Mat cameraMatrix=make4x4(_cameraMatrix);
     Mat  proj(4,4,CV_64FC1);
     Mat_<Vec3f> xyin(im.rows,im.cols);
-    Mat_<Vec2f> xyout(im.rows,im.cols);
+    Mat_<Vec3f> xyout(im.rows,im.cols);
 
 //     cout<<cameraMatrix<<endl;
 //     cout<<newPose<<endl;
@@ -112,7 +112,12 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
     Mat tmp=proj.colRange(2,4).clone();
     tmp.col(1).copyTo(proj.col(2));
     tmp.col(0).copyTo(proj.col(3));
-    proj=proj.rowRange(0,3).clone();
+    
+    tmp=proj.rowRange(2,4).clone();
+    tmp.row(0).copyTo(proj.row(3));
+    tmp.row(1).copyTo(proj.row(2));
+    proj.row(2)*=100000;//HACK: need to blow up z values for the buffer
+//     proj=proj.rowRange(0,3).clone();
 //     cout<<"Proj: "<<"\n"<< proj<< endl;
 
     
@@ -134,28 +139,28 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
     perspectiveTransform(xyin,xyout,proj);
 
     Mat xy;
-    xyout.convertTo(xy,CV_32SC2);//rounds! 
+    xyout.convertTo(xy,CV_32SC3);//rounds! 
     int* xyd=(int *)(xy.data);
     Mat_<float> xmap(im.rows,im.cols,-9999.9);//9999.9's are to guarantee that pixels are invalid 
     Mat_<float> ymap(im.rows,im.cols,-9999.9);//9999.9's are to guarantee that pixels are invalid 
-    Mat_<float> zmap(im.rows,im.cols,-9999.9);//9999.9's are to guarantee that pixels are invalid 
+    Mat_<float> zmap(im.rows,im.cols,-1.0/0.0);//9999.9's are to guarantee that pixels are invalid 
     float* xm=(float*)(xmap.data);
     float* ym=(float*)(ymap.data);
 
     for(int i=0;i<im.rows;i++){
-        for(int j=0;j<im.cols;j++,xyd+=2){
+        for(int j=0;j<im.cols;j++,xyd+=3){
             if(xyd[1]<im.rows && xyd[1]>=0 && xyd[0]>=0 && xyd[0]<im.cols){
-                if (zmap(xyd[1],xyd[0])<depth.at<float>(i,j)){
+                if (zmap(xyd[1],xyd[0])<xyd[2]){
                     xmap(xyd[1],xyd[0])=j;
                     ymap(xyd[1],xyd[0])=i;
-                    zmap(xyd[1],xyd[0])=depth.at<float>(i,j);
+                    zmap(xyd[1],xyd[0])=xyd[2];
                 }
             }
         }
     }
     
     //calculate the pullback image, with zbuffering to determine occlusion
-    Mat xyLayers[2];
+    Mat xyLayers[3];
     split(xyout,xyLayers);
     xyLayers[0].reshape(1,im.rows);
     xyLayers[1].reshape(1,im.rows);
