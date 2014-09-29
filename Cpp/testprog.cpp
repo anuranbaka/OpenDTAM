@@ -1,5 +1,6 @@
 #include <opencv2/core/core.hpp>
 #include <iostream>
+#include <iomanip>
 #include <stdio.h>
 #include <ctime>
 #include <fstream>
@@ -57,7 +58,7 @@ int App_main( int argc, char** argv )
     rand();
     rand();
     cv::theRNG().state = rand();
-    int numImg=300;
+    int numImg=500;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -91,22 +92,26 @@ int App_main( int argc, char** argv )
         {
             images.push_back(images[i]);
         }
-        Rs.push_back(Mat());
-        Ts.push_back(Mat());
+        Rs.push_back(R.clone());
+        Ts.push_back(T.clone());
+//         Rs.push_back(Mat());
+//         Ts.push_back(Mat());
         Rs0.push_back(R.clone());
         Ts0.push_back(T.clone());
         if(i==numImg-1)
             inc=-1;
     }
     numImg=numImg*2-2;
-    cout<<LieSub(RTToLie(Rs0[0],Ts0[0]),RTToLie(Rs0[1],Ts0[1]))<<endl;
-    Ts[0]=Ts0[1].clone();
-    Ts[1]=Ts0[1].clone();
-    randu(Ts[1] ,Scalar(-1),Scalar(1));
-    Ts[1]=Ts0[0]+Ts[1];
-    cout<<Ts[1]-Ts0[0]<<endl;
-    Rs[0]=Rs0[0].clone();
-    Rs[1]=Rs0[0].clone();
+//     {//random first image
+//         cout<<LieSub(RTToLie(Rs0[0],Ts0[0]),RTToLie(Rs0[1],Ts0[1]))<<endl;
+//         Ts[0]=Ts0[1].clone();
+//         Ts[1]=Ts0[1].clone();
+//         randu(Ts[1] ,Scalar(-1),Scalar(1));
+//         Ts[1]=Ts0[0]+Ts[1];
+//         cout<<Ts[1]-Ts0[0]<<endl;
+//         Rs[0]=Rs0[0].clone();
+//         Rs[1]=Rs0[0].clone();
+//     }
     CudaMem cret(images[0].rows,images[0].cols,CV_32FC1);
     ret=cret.createMatHeader();
     //Setup camera matrix
@@ -123,12 +128,14 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0);
     int layers=256;
     int imagesPerCV=1;
-    int desiredImagesPerCV=200;
+    int desiredImagesPerCV=500;
     int startAt=0;
-    Rs[startAt]=Rs[0].clone();
-    Rs[startAt+1]=Rs[1].clone();
-    Ts[startAt]=Ts[0].clone();
-    Ts[startAt+1]=Ts[1].clone();
+    {//offset init
+        Rs[startAt]=Rs[0].clone();
+        Rs[startAt+1]=Rs[1].clone();
+        Ts[startAt]=Ts[0].clone();
+        Ts[startAt+1]=Ts[1].clone();
+    }
     CostVolume cv(images[startAt],(FrameID)startAt,layers,0.015,0.0,Rs[startAt],Ts[startAt],cameraMatrix);;
 
 //     //New Way (Needs work)
@@ -269,44 +276,53 @@ int App_main( int argc, char** argv )
 //                 else
 //                     imagesPerCV=1;
             sincefail++;
-            for(int i0=0;i0<=imagesPerCV;i0++){
-                int i=(imageNum+i0)%numImg;
-                tracker.addFrame(images[i]);
-                if(!tracker.align()){
-                    imagesPerCV=max(i0-1,1);
-//                     if(i0==0&&sincefail>4){
-//                         cout<<"TRACKFAIL! RESTART RANDOM"<<endl;
-//                         sf=cv.near/.15;//failed so bad we need a new start
-// //                         randu(tracker.depth ,Scalar(0),Scalar(.15));
-//                         tracker.depth=.10;
-//                         tracker.pose=RTToLie(Rs[i-1],Ts[i-1]);
-//                         tracker.align();
-//                         sincefail=0;
-//                         Ts[i]=Ts[(i-1+numImg)%numImg].clone();
-//                         randu(Ts[i] ,Scalar(-1),Scalar(1));
-//                         Ts[i]=Ts[(i-1+numImg)%numImg]+Ts[i];
-//                         Rs[i]=Rs[(i-1+numImg)%numImg].clone();
-// //                         goto skip;
-//                     }
-                }
-               
-                LieToRT(tracker.pose,R,T);
-                Rs[i]=R.clone();
-                Ts[i]=T.clone();
-                skip:
-                Mat p,tp;
-                p=tracker.pose;
-                tp=RTToLie(Rs0[i],Ts0[i]);
-                {//debug
-                    cout << "True Pose: "<< tp << endl;
-                    cout << "True Delta: "<< LieSub(tp,tracker.basePose) << endl;
-                    cout << "Recovered Pose: "<< p << endl;
-                    cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
-                    cout << "Pose Error: "<< p-tp << endl;
-                }
-                cout<<i<<endl;
-                reprojectCloud(images[i],images[cv.fid],tracker.depth,RTToP(Rs[cv.fid]*rodrigues((Mat)(Mat_<double>(3,3) << 30,0,0)*3.1415/180.0),Ts[cv.fid]),RTToP(Rs[i],Ts[i]),cameraMatrix);
-            }
+//             for(int i0=0;i0<=imagesPerCV;i0++){
+//                 int i=(imageNum+i0)%numImg;
+//                 tracker.addFrame(images[i]);
+//                 if(!tracker.align()){
+//                     imagesPerCV=max(i0-1,1);
+// //                     if(i0==0&&sincefail>4){
+// //                         cout<<"TRACKFAIL! RESTART RANDOM"<<endl;
+// //                         sf=cv.near/.15;//failed so bad we need a new start
+// // //                         randu(tracker.depth ,Scalar(0),Scalar(.15));
+// //                         tracker.depth=.10;
+// //                         tracker.pose=RTToLie(Rs[i-1],Ts[i-1]);
+// //                         tracker.align();
+// //                         sincefail=0;
+// //                         Ts[i]=Ts[(i-1+numImg)%numImg].clone();
+// //                         randu(Ts[i] ,Scalar(-1),Scalar(1));
+// //                         Ts[i]=Ts[(i-1+numImg)%numImg]+Ts[i];
+// //                         Rs[i]=Rs[(i-1+numImg)%numImg].clone();
+// // //                         goto skip;
+// //                     }
+//                 }
+//                
+//                 LieToRT(tracker.pose,R,T);
+//                 Rs[i]=R.clone();
+//                 Ts[i]=T.clone();
+//                 skip:
+//                 Mat p,tp;
+//                 p=tracker.pose;
+//                 tp=RTToLie(Rs0[i],Ts0[i]);
+//                 {//debug
+//                     cout << "True Pose: "<< tp << endl;
+//                     cout << "True Delta: "<< LieSub(tp,tracker.basePose) << endl;
+//                     cout << "Recovered Pose: "<< p << endl;
+//                     cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
+//                     cout << "Pose Error: "<< p-tp << endl;
+//                 }
+//                 cout<<i<<endl;
+//                 Mat tran1=Mat::eye(4,4,CV_64FC1);
+//                 ((Mat)(Mat_<double>(4,1) <<    0,0,-1.0/m,1)).copyTo(tran1.col(3));
+//                 Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,-45,0)*3.1415/180.0));
+//                 Mat tran2=Mat::eye(4,4,CV_64FC1);
+//                 ((Mat)(Mat_<double>(4,1) <<    0,0,3/m,1)).copyTo(tran2.col(3));
+//                 Mat view=tran2*rotor*tran1;
+//                 Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
+//                 Mat foundPose=make4x4(RTToP(Rs[i],Ts[i]));
+//                 cout<<"view:\n"<< fixed << setprecision(3)<< view<<endl;
+//                 reprojectCloud(images[i],images[cv.fid],tracker.depth,basePose,view*foundPose,cameraMatrix);
+//             }
 //             if (tcount>6&&imagesPerCV>20)
 //             {
 //                 int jump=imagesPerCV*2/3;
@@ -314,6 +330,15 @@ int App_main( int argc, char** argv )
 //                 imagesPerCV-=jump;
 //                 assert(imagesPerCV>0);
 //             }
+            Mat tran1=Mat::eye(4,4,CV_64FC1);
+            ((Mat)(Mat_<double>(4,1) <<    0,0,-1.0/m,1)).copyTo(tran1.col(3));
+            Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,-45,0)*3.1415/180.0));
+            Mat tran2=Mat::eye(4,4,CV_64FC1);
+            ((Mat)(Mat_<double>(4,1) <<    0,0,3/m,1)).copyTo(tran2.col(3));
+            Mat view=tran2*rotor*tran1;
+            Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
+            Mat foundPose=make4x4(RTToP(Rs[imageNum],Ts[imageNum]));
+            reprojectCloud(images[imageNum],images[cv.fid],tracker.depth,basePose,view*foundPose,cameraMatrix);
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             totalscale*=sf;
             file<<imageNum<<", "<<sf<<", "<<imagesPerCV<<endl;
