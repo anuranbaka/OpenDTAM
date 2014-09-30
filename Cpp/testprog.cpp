@@ -58,7 +58,7 @@ int App_main( int argc, char** argv )
     rand();
     rand();
     cv::theRNG().state = rand();
-    int numImg=500;
+    int numImg=40;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -74,9 +74,9 @@ int App_main( int argc, char** argv )
     int inc=1;
     for(int i=0;i>0||inc>0;i+=inc){
         Mat tmp;
-        sprintf(filename,"../../Trajectory_30_seconds/scene_%03d.png",i);
+        sprintf(filename,"../../Trajectory_30_seconds/scene_%03d.png",i+180);
         convertAhandaPovRayToStandard("../../Trajectory_30_seconds",
-                                      i,
+                                      i+180,
                                       cameraMatrix,
                                       R,
                                       T);
@@ -127,25 +127,17 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0.5,
                                                 0.0,0.0,0);
     int layers=256;
-    int desiredImagesPerCV=numImg/2;
+    int desiredImagesPerCV=30;
     int imagesPerCV=desiredImagesPerCV;
     int startAt=0;
-    {//offset init
-        Rs[startAt]=Rs[0].clone();
-        Rs[startAt+1]=Rs[1].clone();
-        Ts[startAt]=Ts[0].clone();
-        Ts[startAt+1]=Ts[1].clone();
-    }
-    CostVolume cv(images[startAt],(FrameID)startAt,layers,0.015,0.0,Rs[startAt],Ts[startAt],cameraMatrix);;
-
-//     //New Way (Needs work)
-//     OpenDTAM odm(cameraMatrix);
-//     odm.addFrameWithPose(images[0],Rs[0],Ts[0]);
-//     odm.addFrameWithPose(images[10],Rs[10],Ts[10]);
-//     for (int imageNum=2;imageNum<=numImg;imageNum++){
-//         odm.addFrame(images[imageNum]);
-//         usleep(100000);
+//     {//offset init
+//         Rs[startAt]=Rs[0].clone();
+//         Rs[startAt+1]=Rs[1].clone();
+//         Ts[startAt]=Ts[0].clone();
+//         Ts[startAt+1]=Ts[1].clone();
 //     }
+    
+    CostVolume cv(images[startAt],(FrameID)startAt,layers,0.015,0.0,Rs[startAt],Ts[startAt],cameraMatrix);
     
     //Old Way
     int imageNum=0;
@@ -155,7 +147,7 @@ int App_main( int argc, char** argv )
     double totalscale=1.0;
     int tcount=0;
     int sincefail=0;
-    for (int imageNum=startAt+1;imageNum<numImg;imageNum=(++imageNum)%numImg){
+    for (int imageNum=startAt+1;imageNum<numImg;imageNum=(imageNum+5)%numImg){
         cout<<dec;
         T=Ts[imageNum].clone();
         R=Rs[imageNum].clone();
@@ -276,11 +268,12 @@ int App_main( int argc, char** argv )
 //                 else
 //                     imagesPerCV=1;
             sincefail++;
+            
 //             for(int i0=0;i0<=imagesPerCV;i0++){
 //                 int i=(imageNum+i0)%numImg;
 //                 tracker.addFrame(images[i]);
 //                 if(!tracker.align()){
-//                     imagesPerCV=max(i0-1,1);
+//                     imagesPerCV=max(i0-1,100);
 // //                     if(i0==0&&sincefail>4){
 // //                         cout<<"TRACKFAIL! RESTART RANDOM"<<endl;
 // //                         sf=cv.near/.15;//failed so bad we need a new start
@@ -304,24 +297,24 @@ int App_main( int argc, char** argv )
 //                 Mat p,tp;
 //                 p=tracker.pose;
 //                 tp=RTToLie(Rs0[i],Ts0[i]);
-//                 {//debug
-//                     cout << "True Pose: "<< tp << endl;
-//                     cout << "True Delta: "<< LieSub(tp,tracker.basePose) << endl;
-//                     cout << "Recovered Pose: "<< p << endl;
-//                     cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
-//                     cout << "Pose Error: "<< p-tp << endl;
-//                 }
+// //                 {//debug
+// //                     cout << "True Pose: "<< tp << endl;
+// //                     cout << "True Delta: "<< LieSub(tp,tracker.basePose) << endl;
+// //                     cout << "Recovered Pose: "<< p << endl;
+// //                     cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
+// //                     cout << "Pose Error: "<< p-tp << endl;
+// //                 }
 //                 cout<<i<<endl;
-//                 Mat tran1=Mat::eye(4,4,CV_64FC1);
-//                 ((Mat)(Mat_<double>(4,1) <<    0,0,-1.0/m,1)).copyTo(tran1.col(3));
-//                 Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,-45,0)*3.1415/180.0));
-//                 Mat tran2=Mat::eye(4,4,CV_64FC1);
-//                 ((Mat)(Mat_<double>(4,1) <<    0,0,3/m,1)).copyTo(tran2.col(3));
-//                 Mat view=tran2*rotor*tran1;
-//                 Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
-//                 Mat foundPose=make4x4(RTToP(Rs[i],Ts[i]));
-//                 cout<<"view:\n"<< fixed << setprecision(3)<< view<<endl;
-//                 reprojectCloud(images[i],images[cv.fid],tracker.depth,basePose,view*foundPose,cameraMatrix);
+// //                 Mat tran1=Mat::eye(4,4,CV_64FC1);
+// //                 ((Mat)(Mat_<double>(4,1) <<    0,0,-1.0/m,1)).copyTo(tran1.col(3));
+// //                 Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,-45,0)*3.1415/180.0));
+// //                 Mat tran2=Mat::eye(4,4,CV_64FC1);
+// //                 ((Mat)(Mat_<double>(4,1) <<    0,0,3/m,1)).copyTo(tran2.col(3));
+// //                 Mat view=tran2*rotor*tran1;
+// //                 Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
+// //                 Mat foundPose=make4x4(RTToP(Rs[i],Ts[i]));
+// // //                 cout<<"view:\n"<< fixed << setprecision(3)<< view<<endl;
+// //                 reprojectCloud(images[i],images[cv.fid],tracker.depth,basePose,view*foundPose,cameraMatrix);
 //             }
 //             if (tcount>6&&imagesPerCV>20)
 //             {
@@ -330,9 +323,9 @@ int App_main( int argc, char** argv )
 //                 imagesPerCV-=jump;
 //                 assert(imagesPerCV>0);
 //             }
-            for (int a=0;a<360;a++){
+            for (int a=0;a<360;a+=1){
             Mat tran1=Mat::eye(4,4,CV_64FC1);
-            ((Mat)(Mat_<double>(4,1) <<    0,-200,-400,1)).copyTo(tran1.col(3));
+            ((Mat)(Mat_<double>(4,1) <<    0,-100,-400,1)).copyTo(tran1.col(3));
             Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,a,0)*3.1415926535/180.0)*
                 rodrigues((Mat)(Mat_<double>(3,1) << 90,0,0)*3.1415926535/180.0)
             );
@@ -342,7 +335,7 @@ int App_main( int argc, char** argv )
             Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
             Mat foundPose=make4x4(RTToP(Rs[imageNum],Ts[imageNum]));
             reprojectCloud(images[imageNum],images[cv.fid],tracker.depth,basePose,view,cameraMatrix);
-            cout<<"R:\n"<<rodrigues(Rs[imageNum])*180/3.1415<<endl;
+//             cout<<"R:\n"<<rodrigues(Rs[imageNum])*180/3.1415<<endl;
             }
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             totalscale*=sf;
