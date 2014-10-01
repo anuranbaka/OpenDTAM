@@ -65,6 +65,7 @@ __global__ void globalWeightedBoundsCost(m34 p,float weight, CONSTT)
         float xiz = xi+p.data[2] *z;
         float yiz = yi+p.data[6] *z;
         float4 c = tex2D<float4>(tex, xiz/wiz, yiz/wiz);
+
         float v1 = fabsf(c.x - B.x);
         float v2 = fabsf(c.y - B.y);
         float v3 = fabsf(c.z - B.z);
@@ -74,9 +75,11 @@ __global__ void globalWeightedBoundsCost(m34 p,float weight, CONSTT)
 //             del=0;
 //         }
 //         del=sqrt(del);
-        del=fminf(del,.01f)*1.0f/.01f/*+.00001*del*/;
+//         del=fminf(del,.01f)*1.0f/.01f/*+.00001*del*/;
         ns=c0*weight+(del)*(1-weight);
 //         ns=del;
+        if(c.x+c.y+c.z==0)
+            ns=c0;
         cdata[offset+z*layerStep]=ns;
         if (ns < minv) {
         minv = ns;
