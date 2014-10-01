@@ -734,8 +734,8 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
             qx = gqx/gx;
             //qx+=(gx*(dr-dh)-epsilon*qx)*.5f;//simplified step
             qx = (qx+sigma_q*gx*(dr-dh))/(1+sigma_q*epsilon);//basic spring force equation f=k(x-x0)
-            gqx = gx*saturate(qx);
-//             gqx = saturate(gx*qx);//spring saturates (with cached multiply), saturation force proportional to prob. of not an edge.
+//             gqx = gx*saturate(qx);
+            gqx = saturate(gx*qx);//spring saturates (with cached multiply), saturation force proportional to prob. of not an edge.
             gqxpt[pt]=gqx;
         }
 
@@ -758,8 +758,8 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
             qy = gqy/gy;
             //qy+=(gy*(dd-dh)-epsilon*qy)*.5f;//simplified step
             qy = (qy+sigma_q*gy*(dd-dh))/(1+sigma_q*epsilon);
-            gqy = gy*saturate(qy);
-//             gqy = saturate(gy*qy);
+//             gqy = gy*saturate(qy);
+            gqy = saturate(gy*qy);
 
             gqypt[pt]=gqy;
         }

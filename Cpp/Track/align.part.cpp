@@ -158,8 +158,9 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
             thr=(levels-level)>=4 ?.7:thr;
             thr=(levels-level)>=5 ?.9:thr;
             thr=(levels-level)>=6 ?1:thr;
+            thr=1;
             improved = align_level_largedef_gray_forward(   basePyr[level],//Total Mem cost ~185 load/stores of image
-                                                            depthPyr[level],
+                                                            depthPyr[level]*0+.005,
                                                             inPyr[level],
                                                             cameraMatrixPyr[level],//Mat_<double>
                                                             p,                //Mat_<double>
