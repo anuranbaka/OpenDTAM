@@ -121,8 +121,8 @@ void CostVolume::simpleTex(const Mat& image,Stream cvStream){
     //Describe texture
     struct cudaTextureDesc texDesc;
     memset(&texDesc, 0, sizeof(texDesc));
-    texDesc.addressMode[0]   = cudaAddressModeClamp;
-    texDesc.addressMode[1]   = cudaAddressModeClamp;
+    texDesc.addressMode[0]   = cudaAddressModeBorder;
+    texDesc.addressMode[1]   = cudaAddressModeBorder;
     texDesc.filterMode       = cudaFilterModeLinear;
     texDesc.readMode         = cudaReadModeNormalizedFloat;
     texDesc.normalizedCoords = 0;
