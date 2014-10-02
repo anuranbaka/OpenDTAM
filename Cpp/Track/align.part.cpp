@@ -114,7 +114,7 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     tic();
     int levels=6; // 6 levels on a 640x480 image is 20x15
     int startlevel=0;
-    int endlevel=5;
+    int endlevel=6;
 
     Mat p=LieSub(pose,basePose);// the Lie parameters 
     cout<<"pose: "<<p<<endl;
@@ -151,16 +151,16 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
 //     cout<<"3D iteration:"<<endl;
     bool improved;
     for (level=startlevel; level<levels && level<endlevel; level++){
-        int iters=1;
+        int iters=3;
         for(int i=0;i<iters;i++){
-            float thr = (levels-level)>=2 ? .2 : .05; //more stringent matching on last two levels
+            float thr = (levels-level)>=2 ? .2 : .06; //more stringent matching on last two levels
             thr=(levels-level)>=3 ?.5:thr;
             thr=(levels-level)>=4 ?.7:thr;
             thr=(levels-level)>=5 ?.9:thr;
-            thr=(levels-level)>=6 ?1:thr;
-            thr=1;
+            thr=(levels-level)>=6 ? 1:thr;
+
             improved = align_level_largedef_gray_forward(   basePyr[level],//Total Mem cost ~185 load/stores of image
-                                                            depthPyr[level]*0+.005,
+                                                            depthPyr[level],
                                                             inPyr[level],
                                                             cameraMatrixPyr[level],//Mat_<double>
                                                             p,                //Mat_<double>

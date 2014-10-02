@@ -75,11 +75,9 @@ __global__ void globalWeightedBoundsCost(m34 p,float weight, CONSTT)
 //             del=0;
 //         }
 //         del=sqrt(del);
-//         del=fminf(del,.01f)*1.0f/.01f/*+.00001*del*/;
+        del=fminf(del,.01f)*1.0f/.01f/*+.00001*del*/;
         ns=c0*weight+(del)*(1-weight);
 //         ns=del;
-        if(c.x+c.y+c.z==0)
-            ns=c0;
         cdata[offset+z*layerStep]=ns;
         if (ns < minv) {
         minv = ns;

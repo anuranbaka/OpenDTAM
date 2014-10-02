@@ -19,7 +19,7 @@ void Optimizer::setDefaultParams(){
     float off=cv.layers/32;
     thetaStart =    200.0*off;
     thetaMin   =     0.1*off;
-    thetaStep  =      .95;
+    thetaStep  =      .98;
     epsilon    =       .1*off;
     lambda     =       .003/off;
 }
