@@ -2,6 +2,9 @@ OpenDTAM
 ========
 
 An open source implementation of DTAM
+
+Based on Newcombe, Richard A., Steven J. Lovegrove, and Andrew J. Davison's "DTAM: Dense tracking and mapping in real-time."
+
 On Ubuntu, you need the qtbase5-dev and libopencv-dev packages
 
 ## Build Instructions On Ubuntu 12.04 LTS
