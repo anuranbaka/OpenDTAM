@@ -31,7 +31,7 @@ private:
     //Alignment Functions
     
     //Large deformation, forward mapping, 6DoF
-    bool align_level_largedef_gray_forward(const cv::Mat& T,
+    int align_level_largedef_gray_forward(const cv::Mat& T,
                                            const cv::Mat& d,
                                            const cv::Mat& _I,
                                            const cv::Mat& cameraMatrix,//Mat_<double>

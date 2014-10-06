@@ -149,10 +149,10 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     }
     p=LieAdd(p2d,p);
 //     cout<<"3D iteration:"<<endl;
-    bool improved;
+    int improved; 
     for (level=startlevel; level<levels && level<endlevel; level++){
-        int iters=3;
-        for(int i=0;i<iters;i++){
+        int iters=10;
+        for(int i=0;i<iters||improved==2&&i<100;i++){
             float thr = (levels-level)>=2 ? .2 : .06; //more stringent matching on last two levels
             thr=(levels-level)>=3 ?.5:thr;
             thr=(levels-level)>=4 ?.7:thr;

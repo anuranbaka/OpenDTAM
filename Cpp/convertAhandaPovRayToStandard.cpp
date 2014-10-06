@@ -9,6 +9,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include"convertAhandaPovRayToStandard.h"
+
 using namespace cv;
 using namespace std;
 Vec3f direction;

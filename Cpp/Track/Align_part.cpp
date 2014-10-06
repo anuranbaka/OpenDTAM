@@ -11,6 +11,8 @@ using namespace std;
 #include "graphics.hpp"
 #include "Track.hpp"
 #include "stdio.h"
+#include <iomanip>
+#include <opencv2/core/core.hpp>
 
 
 //debug
@@ -135,7 +137,7 @@ static void Mask(const Mat& in,const Mat& m,Mat& out){
     out=out.mul(tmp/255);
 }
 
-bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 load/stores of image
+int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 load/stores of image
                           const Mat& d,
                           const Mat& _I,
                           const Mat& cameraMatrix,//Mat_<double>
@@ -145,7 +147,7 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
                           int numParams
                                       )
 {
-    bool ret=1;
+    int ret=1;
     int r=_I.rows;
     int rows=r;
     int c=_I.cols;
@@ -337,6 +339,30 @@ bool Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185
 //         if (deltaErr<0)
 //             return false;
 //     }
-    _p.colRange(0,numParams)+=dp;
+    Mat tmp=_p.clone()*0;
+    tmp.colRange(0,numParams)+=dp;
+    dp=tmp.clone();
+    float dmax=.5;//assume ~1 radian field of view
+    
+    tmp.colRange(3,6)*=.01;
+    double max;
+    tmp=tmp*cameraMatrix.at<double>(0,0);
+    cout<<fixed<<setprecision(8)<<"bound: "<<tmp<<endl;
+    minMaxLoc(abs(tmp),NULL,&max);
+    if(max>dmax){
+        dp/=max/dmax;
+        ret*=2;
+    }
+    tmp=_p.clone()*0;
+    tmp+=dp;
+    dp=tmp.clone();
+    
+    tmp.colRange(3,6)*=.01;
+    tmp=tmp*cameraMatrix.at<double>(0,0);
+    cout<<fixed<<setprecision(8)<<"bound: "<<tmp<<endl;
+    
+    _p+=dp;
+    
+    
     return ret;
 }
