@@ -58,7 +58,7 @@ int App_main( int argc, char** argv )
     rand();
     rand();
     cv::theRNG().state = rand();
-    int numImg=100;
+    int numImg=600;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -74,9 +74,10 @@ int App_main( int argc, char** argv )
     int inc=1;
     for(int i=0;i>0||inc>0;i+=inc){
         Mat tmp;
-        sprintf(filename,"../../Trajectory_30_seconds/scene_%03d.png",i+100);
+        int offset=0;
+        sprintf(filename,"../../Trajectory_30_seconds/scene_%03d.png",i+offset);
         convertAhandaPovRayToStandard("../../Trajectory_30_seconds",
-                                      i+100,
+                                      i+offset,
                                       cameraMatrix,
                                       R,
                                       T);
@@ -128,7 +129,7 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0);
     int layers=256;
     int desiredImagesPerCV=100;
-    int imagesPerCV=desiredImagesPerCV;
+    int imagesPerCV=20;
     int startAt=0;
 //     {//offset init
 //         Rs[startAt]=Rs[0].clone();
@@ -137,7 +138,7 @@ int App_main( int argc, char** argv )
 //         Ts[startAt+1]=Ts[1].clone();
 //     }
     
-    CostVolume cv(images[startAt],(FrameID)startAt,layers,0.015,0.0,Rs[startAt],Ts[startAt],cameraMatrix);
+    CostVolume cv(images[startAt],(FrameID)startAt,layers,0.03,0.0,Rs[startAt],Ts[startAt],cameraMatrix);
     
     //Old Way
     int imageNum=0;
@@ -261,9 +262,11 @@ int App_main( int argc, char** argv )
             tracker.depth=out;
 //             medianBlur(out,tracker.depth,3);
 //             if(imageNum>180)
-            imageNum=((imageNum-imagesPerCV)%numImg+numImg)%numImg;
+//             imageNum=((imageNum-imagesPerCV-2)%numImg+numImg)%numImg;
 //             else if (tcount>6)
-//                  imageNum=((imageNum-imagesPerCV*2/3)%numImg+numImg)%numImg;
+                 imageNum=((imageNum-imagesPerCV*2/3)%numImg+numImg)%numImg;
+                 tracker.thisFrame=images[imageNum];
+                 tracker.pose=RTToLie(Rs[imageNum],Ts[imageNum]);
 //                 if(imageNum<185)
 //                 imageNum=180;
             
@@ -278,10 +281,13 @@ int App_main( int argc, char** argv )
             sincefail++;
             
             for(int i0=0;i0<=imagesPerCV;i0++){
-                int i=(imageNum+i0)%numImg;
+                int i=((imageNum+i0)%numImg+numImg)%numImg;
                 tracker.addFrame(images[i]);
                 if(!tracker.align()){
-//                     imagesPerCV=max(i0-1,3);
+                    if(i0<4){
+                        pfShow("FAILED",images[i]);
+                    }
+                    imagesPerCV=max(i0-1,3);
 //                     if(i0==0&&sincefail>4){
 //                         cout<<"TRACKFAIL! RESTART RANDOM"<<endl;
 //                         sf=cv.near/.15;//failed so bad we need a new start
@@ -299,44 +305,50 @@ int App_main( int argc, char** argv )
                 }
                
                 LieToRT(tracker.pose,R,T);
+                if(tracker.quality>.75){
                 Rs[i]=R.clone();
                 Ts[i]=T.clone();
+                }else{
+                    tracker.pose=RTToLie(Rs[i],Ts[i]);
+                }
 
                 skip:
                 Mat p,tp;
                 p=tracker.pose;
                 tp=RTToLie(Rs0[i],Ts0[i]);
-//                 {//debug
-//                     cout << "True Pose: "<< tp << endl;
-//                     cout << "True Delta: "<< LieSub(tp,tracker.basePose) << endl;
-//                     cout << "Recovered Pose: "<< p << endl;
-//                     cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
-//                     cout << "Pose Error: "<< p-tp << endl;
+// //                 {//debug
+// //                     cout << "True Pose: "<< tp << endl;
+// //                     cout << "True Delta: "<< LieSub(tp,tracker.basePose) << endl;
+// //                     cout << "Recovered Pose: "<< p << endl;
+// //                     cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
+// //                     cout << "Pose Error: "<< p-tp << endl;
+// //                 }
+//                 cout<<i<<endl;
+// //                 Mat tran1=Mat::eye(4,4,CV_64FC1);
+// //                 ((Mat)(Mat_<double>(4,1) <<    0,0,-1.0/m,1)).copyTo(tran1.col(3));
+// //                 Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,-45,0)*3.1415/180.0));
+// //                 Mat tran2=Mat::eye(4,4,CV_64FC1);
+// //                 ((Mat)(Mat_<double>(4,1) <<    0,0,3/m,1)).copyTo(tran2.col(3));
+// //                 Mat view=tran2*rotor*tran1;
+//                 Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
+//                 Mat foundPose=make4x4(RTToP(R,T));
+// // //                 cout<<"view:\n"<< fixed << setprecision(3)<< view<<endl;
+//                 Mat view=reprojectCloud(images[i],images[cv.fid],tracker.depth,basePose,foundPose,cameraMatrix);
+//                 Mat viewc=reprojectCloud(images[i],images[cv.fid],tracker.depth,basePose,make4x4(RTToP(Rs0[i],Ts0[i])),cameraMatrix);
+//                 for(int j=0;j<5;j++){
+//                     Mat tmp;
+//                     pfShow("Predicted Image",view,0,Vec2d(0,1));
+//                     absdiff(images[i],view,tmp);
+//                     pfShow("difftrk",tmp,0,Vec2d(0,1));
+//                     if(tracker.quality<.75 &&i0==-1)
+//                         gpause();
+//                     pfShow("Predicted Image",viewc,0,Vec2d(0,1));
+//                     absdiff(images[i],viewc,tmp);
+//                     pfShow("difftrk",tmp,0,Vec2d(0,1));
+//                     if(tracker.quality<.75 &&i0==-1)
+//                         gpause();
 //                 }
-                cout<<i<<endl;
-//                 Mat tran1=Mat::eye(4,4,CV_64FC1);
-//                 ((Mat)(Mat_<double>(4,1) <<    0,0,-1.0/m,1)).copyTo(tran1.col(3));
-//                 Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,-45,0)*3.1415/180.0));
-//                 Mat tran2=Mat::eye(4,4,CV_64FC1);
-//                 ((Mat)(Mat_<double>(4,1) <<    0,0,3/m,1)).copyTo(tran2.col(3));
-//                 Mat view=tran2*rotor*tran1;
-                Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
-                Mat foundPose=make4x4(RTToP(Rs[i],Ts[i]));
-// //                 cout<<"view:\n"<< fixed << setprecision(3)<< view<<endl;
-                Mat view=reprojectCloud(images[i],images[cv.fid],tracker.depth,basePose,foundPose,cameraMatrix);
-                Mat viewc=reprojectCloud(images[i],images[cv.fid],tracker.depth,basePose,make4x4(RTToP(Rs0[i],Ts0[i])),cameraMatrix);
-                for(int j=0;j<5;j++){
-                    Mat tmp;
-                   pfShow("Predicted Image",view,0,Vec2d(0,1));
-                   absdiff(images[i],view,tmp);
-                   pfShow("difftrk",tmp,0,Vec2d(0,1));
-//                    gpause();
-                   pfShow("Predicted Image",viewc,0,Vec2d(0,1));
-                    absdiff(images[i],viewc,tmp);
-                   pfShow("difftrk",tmp,0,Vec2d(0,1));
-//                    gpause();
-                }
-//                 tracker.pose=tp;
+                tracker.pose=tp;
             }
             
 //             if (tcount>6&&imagesPerCV>20)

@@ -147,6 +147,10 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
                           int numParams
                                       )
 {
+//     Mat result;
+//     matchTemplate( _I, T(Range(5,10),Range(5,15)), result, 0 );
+//     
+//     pfShow("soln",result);
     int ret=1;
     int r=_I.rows;
     int rows=r;
@@ -212,8 +216,8 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
     double vis=cv::countNonZero(mask2)/(rows*cols*1.0f);
     double good=cv::countNonZero(mask)/(rows*cols*1.0f);
     double qual=good/vis;
-    cout<<"Visibility: "<<vis;
-    cout<<" Accepted: "<<good<<" Quality: "<<qual<<" r: "<<rows<<endl;
+//     cout<<"Visibility: "<<vis;
+//     cout<<" Accepted: "<<good<<" Quality: "<<qual<<" r: "<<rows<<endl;
     quality=qual;
     if(qual<FAIL_FRACTION){//tracking failed!
         ret=0;
@@ -221,16 +225,17 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
     
     Mat err=T-I;
     
-//     //debug
-//     {
-// 
-//         pfShow("Before iteration",_I,0,Vec2d(0,1));
-//             Mask(I,fit<threshold,I);
-//             pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
-// 
-//             pfShow("After Iteration",I,0,Vec2d(0,1));
-//             pfShow("To match",T);
-//     }
+    //debug
+    if (rows<60&&numParams==3){
+
+        pfShow("Before iteration",_I,0,Vec2d(0,1));
+            Mask(I,fit<threshold,I);
+            pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
+
+            pfShow("After Iteration",I,0,Vec2d(0,1));
+            pfShow("To match",T,0,Vec2d(0,1));
+//             gpause();
+    }
 
     
    
@@ -347,7 +352,7 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
     tmp.colRange(3,6)*=.01;
     double max;
     tmp=tmp*cameraMatrix.at<double>(0,0);
-    cout<<fixed<<setprecision(8)<<"bound: "<<tmp<<endl;
+//     cout<<fixed<<setprecision(8)<<"bound: "<<tmp<<endl;
     minMaxLoc(abs(tmp),NULL,&max);
     if(max>dmax){
         dp/=max/dmax;
@@ -359,7 +364,7 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
     
     tmp.colRange(3,6)*=.01;
     tmp=tmp*cameraMatrix.at<double>(0,0);
-    cout<<fixed<<setprecision(8)<<"bound: "<<tmp<<endl;
+//     cout<<fixed<<setprecision(8)<<"bound: "<<tmp<<endl;
     
     _p+=dp;
     
