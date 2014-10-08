@@ -134,7 +134,7 @@ static void Mask(const Mat& in,const Mat& m,Mat& out){
     Mat tmp;
     
     m.convertTo(tmp,in.type());
-    out=out.mul(tmp/255);
+    out=in.mul(tmp/255);
 }
 
 int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 load/stores of image
@@ -182,6 +182,46 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
         assert(baseMap.type()==CV_32FC2);
     }
     
+    {
+        //do z buffered occlusion test(approximate depth with original depth)
+        Mat xy;
+        baseMap.convertTo(xy,CV_32SC2);
+        Mat_<float> zmap(r,c,-1.0/0.0);
+        int* xyd=(int *)(xy.data);
+        float* dp=(float*) (d.data);
+        float* bp=(float*) (baseMap.data);
+        for(int i=0, offset=0;i<r;i++){
+            for(int j=0;j<c;j++,offset++){
+                int x=xyd[offset*2+0];
+                int y=xyd[offset*2+1];
+                if(x>=0&&y>=0&&x<c&&y<r){
+                    float oldz=zmap(y,x);
+                    float newz=dp[offset];
+                    if(newz>oldz){
+                        zmap(y,x)=newz;
+                    }
+                }
+            }
+        }
+        int fail=0;
+        for(int i=0, offset=0;i<r;i++){
+            for(int j=0;j<c;j++,offset++){
+                int x=xyd[offset*2+0];
+                int y=xyd[offset*2+1];
+                if(x>=0&&y>=0&&x<c&&y<r){
+                    float oldz=zmap(y,x);
+                    float newz=dp[offset];
+                    if(oldz-newz>0){
+                        bp[offset*2+0]=-10;
+                        bp[offset*2+1]=-10;
+                        fail++;
+                    }
+                }
+            }
+        }
+        occlusion=((double)fail)/(r*c);
+    }
+    
     
     // reproject the gradient and image at the same time (Mem cost >= 24)
     Mat gradI;
@@ -216,8 +256,11 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
     double vis=cv::countNonZero(mask2)/(rows*cols*1.0f);
     double good=cv::countNonZero(mask)/(rows*cols*1.0f);
     double qual=good/vis;
-//     cout<<"Visibility: "<<vis;
-//     cout<<" Accepted: "<<good<<" Quality: "<<qual<<" r: "<<rows<<endl;
+    if(verbose){
+    cout<<"Visibility: "<<vis;
+    cout<<" Accepted: "<<good<<" Quality: "<<qual<<" r: "<<rows<<endl;
+    }
+    coverage=vis;
     quality=qual;
     if(qual<FAIL_FRACTION){//tracking failed!
         ret=0;
@@ -226,15 +269,15 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
     Mat err=T-I;
     
     //debug
-    if (rows<60&&numParams==3){
+    if (verbose){
 
         pfShow("Before iteration",_I,0,Vec2d(0,1));
-            Mask(I,fit<threshold,I);
-            pfShow("Tracking Stabilized With Occlusion",I,0,Vec2d(0,1));
-
-            pfShow("After Iteration",I,0,Vec2d(0,1));
-            pfShow("To match",T,0,Vec2d(0,1));
-//             gpause();
+        pfShow("After Iteration",I,0,Vec2d(0,1));
+        Mat tmp;
+        Mask(I,fit<threshold,tmp);
+        pfShow("Tracking Stabilized With Occlusion",tmp,0,Vec2d(0,1));
+        pfShow("To match",T,0,Vec2d(0,1));
+        gpause();
     }
 
     

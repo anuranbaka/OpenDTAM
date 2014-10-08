@@ -20,7 +20,7 @@ Track::Track(CostVolume cost){
     cameraMatrix=Mat(cost.cameraMatrix);
     RTToLie(cost.R,cost.T,basePose);
     pose=basePose.clone();
-
+    verbose=0;
 }
 void Track::addFrame(cv::Mat frame){
     lastFrame=thisFrame;

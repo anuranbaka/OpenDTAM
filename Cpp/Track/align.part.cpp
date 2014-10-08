@@ -131,7 +131,7 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
         Mat _I=inPyr[0];
         Mat result,tmp;
         Scalar c=mean(T);
-        int move=T.rows*2/3;
+        int move=T.rows/2;
         copyMakeBorder(_I,tmp,move,move,move,move,BORDER_CONSTANT,c);
         matchTemplate( tmp, T, result, 0);
 //         matchTemplate( _I, T(Range(5,10),Range(5,15)), result, 0 );
@@ -181,9 +181,9 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
         int iters=10;
         for(int i=0;i<iters||improved==2&&i<100;i++){
             float thr = (levels-level)>=2 ? .2 : .06; //more stringent matching on last two levels
-            thr=(levels-level)>=3 ?.5:thr;
-            thr=(levels-level)>=4 ?.7:thr;
-            thr=(levels-level)>=5 ?.9:thr;
+//             thr=(levels-level)>=3 ?.5:thr;
+//             thr=(levels-level)>=4 ?.7:thr;
+//             thr=(levels-level)>=5 ?.9:thr;
             thr=(levels-level)>=6 ? 1:thr;
             if(levels-level==1)
                 iters=2;

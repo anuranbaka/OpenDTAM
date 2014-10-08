@@ -21,12 +21,14 @@ public:
     cv::Mat thisFrame;
     cv::Mat lastFrame;
     double quality;
+    double occlusion;
+    double coverage;
     Track(Cost cost);
     Track(CostVolume cost);
     void addFrame(cv::Mat frame);
     void ESM();
     void cacheDerivatives();
-
+    bool verbose;
 private:
     //Alignment Functions
     

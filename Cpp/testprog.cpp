@@ -67,6 +67,8 @@ int App_main( int argc, char** argv )
     char filename[500];
     Mat image, cameraMatrix, R, T;
     vector<Mat> images,Rs,Ts,Rs0,Ts0;
+    vector<float> key,qual,vis,occ;
+
     Mat ret;//a place to return downloaded images to
     
     ofstream file("outscale.csv");
@@ -95,6 +97,10 @@ int App_main( int argc, char** argv )
         }
         Rs.push_back(R.clone());
         Ts.push_back(T.clone());
+        key.push_back(0);
+        qual.push_back(0);
+        vis.push_back(0);
+        occ.push_back(0);
 //         Rs.push_back(Mat());
 //         Ts.push_back(Mat());
         Rs0.push_back(R.clone());
@@ -129,8 +135,8 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0);
     int layers=256;
     int desiredImagesPerCV=100;
-    int imagesPerCV=20;
-    int startAt=0;
+    int imagesPerCV=4;
+    int startAt=numImg-1;
 //     {//offset init
 //         Rs[startAt]=Rs[0].clone();
 //         Rs[startAt+1]=Rs[1].clone();
@@ -140,15 +146,13 @@ int App_main( int argc, char** argv )
     
     CostVolume cv(images[startAt],(FrameID)startAt,layers,0.03,0.0,Rs[startAt],Ts[startAt],cameraMatrix);
     
-    //Old Way
-    int imageNum=0;
-    
+ 
     
     cv::gpu::Stream s;
     double totalscale=1.0;
     int tcount=0;
     int sincefail=0;
-    for (int imageNum=startAt+1;imageNum<numImg;imageNum=(imageNum+1)%numImg){
+    for (int imageNum=(startAt+1)%numImg;imageNum<numImg;imageNum=(imageNum+1)%numImg){
         cout<<dec;
         T=Ts[imageNum].clone();
         R=Rs[imageNum].clone();
@@ -165,6 +169,14 @@ int App_main( int argc, char** argv )
 //             }
         }
         else{
+            
+            for(int i0=1;i0<=10-imagesPerCV;i0++){
+                int i=((cv.fid-i0)%numImg+numImg)%numImg;
+                cout<<"using: "<< i<<endl;
+                cv.updateCost(images[i], Rs[i], Ts[i]);
+                cudaDeviceSynchronize();
+            }
+            
             cudaDeviceSynchronize();
             //Attach optimizer
             Ptr<DepthmapDenoiseWeightedHuber> dp = createDepthmapDenoiseWeightedHuber(cv.baseImageGray,cv.cvStream);
@@ -264,7 +276,10 @@ int App_main( int argc, char** argv )
 //             if(imageNum>180)
 //             imageNum=((imageNum-imagesPerCV-2)%numImg+numImg)%numImg;
 //             else if (tcount>6)
-                 imageNum=((imageNum-imagesPerCV*2/3)%numImg+numImg)%numImg;
+            int ni=imagesPerCV;
+            ni=min(ni,imagesPerCV-3);
+            ni=max(ni,1);
+                 imageNum=((imageNum-imagesPerCV-1+ni)%numImg+numImg)%numImg;
                  tracker.thisFrame=images[imageNum];
                  tracker.pose=RTToLie(Rs[imageNum],Ts[imageNum]);
 //                 if(imageNum<185)
@@ -284,10 +299,17 @@ int App_main( int argc, char** argv )
                 int i=((imageNum+i0)%numImg+numImg)%numImg;
                 tracker.addFrame(images[i]);
                 if(!tracker.align()){
-                    if(i0<4){
+                    if(i0<2){
+                        cout<<"FAil: "<<i<<endl;
+//                         tracker.verbose=1;
+//                         tracker.pose=RTToLie(Rs0[i-1],Ts0[i-1]);
+//                         tracker.thisFrame=images[i-1];
+//                         tracker.addFrame(images[i]);
+//                         tracker.align();
+//                         tracker.verbose=0;
                         pfShow("FAILED",images[i]);
                     }
-                    imagesPerCV=max(i0-1,3);
+                    imagesPerCV=max(i0-1,1);
 //                     if(i0==0&&sincefail>4){
 //                         cout<<"TRACKFAIL! RESTART RANDOM"<<endl;
 //                         sf=cv.near/.15;//failed so bad we need a new start
@@ -305,10 +327,14 @@ int App_main( int argc, char** argv )
                 }
                
                 LieToRT(tracker.pose,R,T);
-                if(tracker.quality>.75){
+                if(tracker.quality>qual[i]){
                 Rs[i]=R.clone();
                 Ts[i]=T.clone();
+                qual[i]=tracker.quality;
+                vis[i]=tracker.coverage;
+                occ[i]=tracker.occlusion;
                 }else{
+                    
                     tracker.pose=RTToLie(Rs[i],Ts[i]);
                 }
 
@@ -348,7 +374,7 @@ int App_main( int argc, char** argv )
 //                     if(tracker.quality<.75 &&i0==-1)
 //                         gpause();
 //                 }
-                tracker.pose=tp;
+//                 tracker.pose=tp;
             }
             
 //             if (tcount>6&&imagesPerCV>20)
@@ -374,6 +400,11 @@ int App_main( int argc, char** argv )
 //             reprojectCloud(images[imageNum],images[cv.fid],tracker.depth,basePose,view,cameraMatrix);
 //             }
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs0[imageNum],Ts0[imageNum],cameraMatrix);
+            key[imageNum]=tcount;
+            if(cv.fid>600)
+                goto exit;
+            
+            
             totalscale*=sf;
             file<<imageNum<<", "<<sf<<", "<<imagesPerCV<<endl;
 //             file.sync_with_stdio();
@@ -393,6 +424,13 @@ int App_main( int argc, char** argv )
         s.waitForCompletion();// so we don't lock the whole system up forever
     }
     exit:
+    file<<"Key_is_keyframes"<<endl;
+    file<<"Occlusion_is_frac_lost_by_occlusion"<<endl;
+    file<<"Coverage_is_frac_not_lost_by_occlusion_or_out_of_frame"<<endl;
+    file<<"Quality_is_frac_of_covered_that_matches"<<endl;
+    file<<"Key,Quality,Coverage,Occlusion"<<endl;
+    for(int i=0;i<numImg;i++)
+        file<<key[i]<<","<<qual[i]<<","<<vis[i]<<","<<occ[i]<<endl;
     s.waitForCompletion();
     Stream::Null().waitForCompletion();
     return 0;
