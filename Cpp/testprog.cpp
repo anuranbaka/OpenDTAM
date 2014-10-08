@@ -133,7 +133,7 @@ int App_main( int argc, char** argv )
     cameraMatrix-=(Mat)(Mat_<double>(3,3) <<    0.0,0.0,0.5,
                                                 0.0,0.0,0.5,
                                                 0.0,0.0,0);
-    int layers=256;
+    int layers=32;
     int desiredImagesPerCV=600;
     int imagesPerCV=100;
     int startAt=numImg-1;
@@ -144,7 +144,7 @@ int App_main( int argc, char** argv )
 //         Ts[startAt+1]=Ts[1].clone();
 //     }
     
-    CostVolume cv(images[startAt],(FrameID)startAt,layers,0.03,0.0,Rs[startAt],Ts[startAt],cameraMatrix);
+    CostVolume cv(images[startAt],(FrameID)startAt,layers,0.015,0.0,Rs[startAt],Ts[startAt],cameraMatrix);
     
  
     
