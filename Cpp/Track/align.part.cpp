@@ -114,7 +114,7 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     tic();
     int levels=6; // 6 levels on a 640x480 image is 20x15
     int startlevel=0;
-    int endlevel=6;
+    int endlevel=5;
 
     Mat p=LieSub(pose,basePose);// the Lie parameters 
 //     cout<<"pose: "<<p<<endl;
@@ -178,15 +178,14 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
 //     cout<<"3D iteration:"<<endl;
     
     for (level=startlevel; level<levels && level<endlevel; level++){
-        int iters=10;
-        for(int i=0;i<iters||improved==2&&i<100;i++){
-            float thr = (levels-level)>=2 ? .2 : .06; //more stringent matching on last two levels
-//             thr=(levels-level)>=3 ?.5:thr;
-//             thr=(levels-level)>=4 ?.7:thr;
-//             thr=(levels-level)>=5 ?.9:thr;
-            thr=(levels-level)>=6 ? 1:thr;
-            if(levels-level==1)
-                iters=2;
+        int iters=1;
+        for(int i=0;i<iters||improved==2&&i<10;i++){
+            float thr = 1;
+            thr = (endlevel-level)>=3 ? .2 : .06; //more stringent matching on last two levels
+//             thr=(endlevel-level)>=3 ?.5:thr;
+//             thr=(endlevel-level)>=4 ?.7:thr;
+//             thr=(endlevel-level)>=5 ?.9:thr;
+            thr=(endlevel-level)>=5 ? 1:thr;
             improved = align_level_largedef_gray_forward(   basePyr[level],//Total Mem cost ~185 load/stores of image
                                                             depthPyr[level],
                                                             inPyr[level],
