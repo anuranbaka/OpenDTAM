@@ -135,7 +135,7 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0);
     int layers=256;
     int desiredImagesPerCV=100;
-    int imagesPerCV=4;
+    int imagesPerCV=100;
     int startAt=numImg-1;
 //     {//offset init
 //         Rs[startAt]=Rs[0].clone();
@@ -279,9 +279,11 @@ int App_main( int argc, char** argv )
             int ni=imagesPerCV;
             ni=min(ni,imagesPerCV-3);
             ni=max(ni,1);
-                 imageNum=((imageNum-imagesPerCV-1+ni)%numImg+numImg)%numImg;
-                 tracker.thisFrame=images[imageNum];
-                 tracker.pose=RTToLie(Rs[imageNum],Ts[imageNum]);
+            if(tcount==0)
+                ni=1;
+            imageNum=((imageNum-imagesPerCV-1+ni)%numImg+numImg)%numImg;
+            tracker.thisFrame=images[imageNum];
+            tracker.pose=RTToLie(Rs[imageNum],Ts[imageNum]);
 //                 if(imageNum<185)
 //                 imageNum=180;
             
@@ -399,7 +401,7 @@ int App_main( int argc, char** argv )
 //             Mat foundPose=make4x4(RTToP(Rs[imageNum],Ts[imageNum]));
 //             reprojectCloud(images[imageNum],images[cv.fid],tracker.depth,basePose,view,cameraMatrix);
 //             }
-            cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs0[imageNum],Ts0[imageNum],cameraMatrix);
+            cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             key[imageNum]=tcount;
             if(cv.fid>600)
                 goto exit;
