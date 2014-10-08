@@ -134,7 +134,7 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0.5,
                                                 0.0,0.0,0);
     int layers=256;
-    int desiredImagesPerCV=100;
+    int desiredImagesPerCV=600;
     int imagesPerCV=100;
     int startAt=numImg-1;
 //     {//offset init
@@ -291,8 +291,8 @@ int App_main( int argc, char** argv )
             assert(imageNum>=0);
 //             if (imageNum>5)
 //                 if(imagesPerCV==1)
-            if (tcount>2)
-                    imagesPerCV=desiredImagesPerCV;
+            
+            imagesPerCV=desiredImagesPerCV;
 //                 else
 //                     imagesPerCV=1;
             sincefail++;
