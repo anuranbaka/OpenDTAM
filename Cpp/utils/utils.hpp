@@ -5,21 +5,6 @@
 #define DTAM_UTILS_HPP
 using namespace cv;
 
-/*
-CudaMem rgba8(Mat im)
-{
-    float* in=(float*)im.data;
-    float* end=(float*)im.dataend;
-    for(;in<dataend;in+=3){
-        float r,g,b;
-        b=in
-    }
-    cBuffer.create(_image.rows,_image.cols,CV_8UC4);
-}*/
-// static void print(string s){
-//     cout<<s<<endl;
-// }
-    
 static Mat  makeGray(Mat image){
     if (image.channels()!=1) {
         cvtColor(image, image, CV_BGR2GRAY);

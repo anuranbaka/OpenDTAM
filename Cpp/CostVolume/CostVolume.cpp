@@ -14,7 +14,7 @@
 #include "utils/tinyMat.hpp"
 #include "graphics.hpp"
 #include <iostream>
-#include "tictoc.h"
+
 
 using namespace std;
 using namespace cv;
@@ -171,7 +171,6 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
     //
     // make sure we modify the cameraMatrix to take into account the texture coordinates
     //
-    tic();
     Mat image;
     {
     image=_image;//no copy
@@ -209,7 +208,6 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
         }
         CV_Assert(image.type()==CV_8UC4);
     }
-    toc();
     //change input image to a texture
     //ArrayTexture tex(image, cvStream);
     simpleTex(image,cvStream);

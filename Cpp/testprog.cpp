@@ -58,7 +58,7 @@ int App_main( int argc, char** argv )
     rand();
     rand();
     cv::theRNG().state = rand();
-    int numImg=50;
+    int numImg=600;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -134,8 +134,8 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0.5,
                                                 0.0,0.0,0);
     int layers=32;
-    int desiredImagesPerCV=10;
-    int imagesPerCV=10;
+    int desiredImagesPerCV=600;
+    int imagesPerCV=100;
     int startAt=numImg-1;
 //     {//offset init
 //         Rs[startAt]=Rs[0].clone();
@@ -157,7 +157,7 @@ int App_main( int argc, char** argv )
         T=Ts[imageNum].clone();
         R=Rs[imageNum].clone();
         image=images[imageNum];
-        toc();
+
         if(cv.count<imagesPerCV){
             cout<<"using: "<< imageNum<<endl;
             cv.updateCost(image, R, T);
@@ -176,7 +176,7 @@ int App_main( int argc, char** argv )
                 cv.updateCost(images[i], Rs[i], Ts[i]);
                 cudaDeviceSynchronize();
             }
-            toc();
+            
             cudaDeviceSynchronize();
             //Attach optimizer
             Ptr<DepthmapDenoiseWeightedHuber> dp = createDepthmapDenoiseWeightedHuber(cv.baseImageGray,cv.cvStream);
@@ -232,21 +232,19 @@ int App_main( int argc, char** argv )
 //             optimizer.theta=10000;
 //             optimizer.optimizeA(a,a);
             optimizer.cvStream.waitForCompletion();
-            
-//             cv.loInd.download(ret);
-//             pfShow("loInd", ret, 0, cv::Vec2d(0, layers));
-//             a.download(ret);
-//             pfShow("A function loose", ret, 0, cv::Vec2d(0, layers));
-//             Mat diff=ret.clone();
-//             cv.loInd.download(ret);
-//             diff-=ret;
-//             pfShow("difference by reg", diff, 0, cv::Vec2d(-layers, layers));
+             cv.loInd.download(ret);
+            pfShow("loInd", ret, 0, cv::Vec2d(0, layers));
+            a.download(ret);
+            pfShow("A function loose", ret, 0, cv::Vec2d(0, layers));
+            Mat diff=ret.clone();
+            cv.loInd.download(ret);
+            diff-=ret;
+            pfShow("difference by reg", diff, 0, cv::Vec2d(-layers, layers));
 //                gpause();
-            
 //             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
 //             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
 //             imwrite("outz.png",ret);
-            tic();
+
             Track tracker(cv);
             Mat out=optimizer.depthMap();
             
@@ -260,9 +258,9 @@ int App_main( int argc, char** argv )
 //             if (tcount==3){
 //                 out=cv.near-out;
 //             }
-//             double m;
-//             minMaxLoc(out,NULL,&m);
-//             m=mean(out)[0];
+            double m;
+            minMaxLoc(out,NULL,&m);
+            m=mean(out)[0];
             
                 
             double sf=1;//(.25*cv.near/m);
@@ -285,7 +283,6 @@ int App_main( int argc, char** argv )
                 ni=1;
             imageNum=((imageNum-imagesPerCV-1+ni)%numImg+numImg)%numImg;
             tracker.thisFrame=makeGray(images[imageNum]);
-            
             tracker.pose=RTToLie(Rs[imageNum],Ts[imageNum]);
 //                 if(imageNum<185)
 //                 imageNum=180;
@@ -299,14 +296,10 @@ int App_main( int argc, char** argv )
 //                 else
 //                     imagesPerCV=1;
             sincefail++;
-            cout<<"setup"<<endl;
-            toc();
             
             for(int i0=0;i0<=imagesPerCV;i0++){
-                tic();
                 int i=((imageNum+i0)%numImg+numImg)%numImg;
                 tracker.addFrame(images[i]);
-                toc();
                 if(!tracker.align()){
                     if(i0<2){
                         cout<<"FAil: "<<i<<endl;
@@ -334,7 +327,7 @@ int App_main( int argc, char** argv )
 // //                         goto skip;
 //                     }
                 }
-               toc();
+               
                 LieToRT(tracker.pose,R,T);
                 if(tracker.quality>qual[i]){
                 Rs[i]=R.clone();
@@ -384,8 +377,6 @@ int App_main( int argc, char** argv )
 //                         gpause();
 //                 }
 //                 tracker.pose=tp;
-                cout<<"track:"<<endl;
-            toc();
             }
             
 //             if (tcount>6&&imagesPerCV>20)
@@ -409,13 +400,11 @@ int App_main( int argc, char** argv )
 //             Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
 //             Mat foundPose=make4x4(RTToP(Rs[imageNum],Ts[imageNum]));
 //             reprojectCloud(images[imageNum],images[cv.fid],tracker.depth,basePose,view,cameraMatrix);
-//             }    
-            tic();
-            if(imageNum>numImg/2)
-                goto exit;
+//             }
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             key[imageNum]=tcount;
-            
+            if(cv.fid>600)
+                goto exit;
             
             
             totalscale*=sf;
@@ -426,12 +415,11 @@ int App_main( int argc, char** argv )
             }
             tcount++;
             cout<<"CV #: "<<tcount<<" Total Scale: "<<totalscale<<endl;
-
+            s=optimizer.cvStream;
 //             for (int imageNum=0;imageNum<numImg;imageNum=imageNum+1){
 //                 reprojectCloud(images[imageNum],images[0],optimizer.depthMap(),RTToP(Rs[0],Ts[0]),RTToP(Rs[imageNum],Ts[imageNum]),cameraMatrix);
 //             }
-            cout<<"make cv:"<<endl;
-            toc();
+            
             
         }
         s.waitForCompletion();// so we don't lock the whole system up forever
