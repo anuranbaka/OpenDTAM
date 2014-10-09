@@ -61,13 +61,6 @@ static Mat paramsToProjection(const Mat & p,const Mat& _cameraMatrix){
     return proj;
 }
 
-static Mat&  makeGray(Mat& image){
-    if (image.channels()!=1) {
-        cvtColor(image, image, CV_BGR2GRAY);
-    }
-    return image;
-}
-
 static void getGradient(const Mat& image,Mat & grad){
     //Image gradients for alignment
     //Note that these gradients have theoretical problems under the sudden 
@@ -151,6 +144,7 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
 //     matchTemplate( _I, T(Range(5,10),Range(5,15)), result, 0 );
 //     
 //     pfShow("soln",result);
+//     tic();
     int ret=1;
     int r=_I.rows;
     int rows=r;
@@ -181,7 +175,9 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
         perspectiveTransform(idMap3,baseMap,baseProj);
         assert(baseMap.type()==CV_32FC2);
     }
-    
+    cout<<"base maps"<<endl;
+    toc();
+//     tic();
     {
         //do z buffered occlusion test(approximate depth with original depth)
         Mat xy;
@@ -221,8 +217,9 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
         }
         occlusion=((double)fail)/(r*c);
     }
-    
-    
+    cout<<"zbuffer"<<endl;
+    toc();
+//     tic();
     // reproject the gradient and image at the same time (Mem cost >= 24)
     Mat gradI;
     Mat I(r,c,CV_32FC1);
@@ -243,11 +240,11 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
         Mat dst[2]={I,gradI};
         
         mixChannels(src,1,dst,2,from_to,3);// extract the image and the resampled gradient //(Mem cost: min 3 load, 3 store :6)
-        
-        
-        
     }
+    cout<<"gradient"<<endl;
+    toc();
     
+//     tic();
     // Calculate the differences and build mask for operations (Mem cost ~ 8)
     Mat fit;
     absdiff(T,I,fit);
@@ -265,8 +262,8 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
     if(qual<FAIL_FRACTION){//tracking failed!
         ret=0;
     }
-    
-    Mat err=T-I;
+    cout<<"qual check"<<endl;
+    toc();
     
     //debug
     if (verbose){
@@ -279,11 +276,9 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
         pfShow("To match",T,0,Vec2d(0,1));
         gpause();
     }
-
     
-   
-    
-    
+//     tic();
+    Mat err=T-I;
     
     // Build Jacobians:
     Mat Jsmall;
@@ -397,10 +392,10 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
     tmp=tmp*cameraMatrix.at<double>(0,0);
 //     cout<<fixed<<setprecision(8)<<"bound: "<<tmp<<endl;
     minMaxLoc(abs(tmp),NULL,&max);
-    if(max>dmax){
-        dp/=max/dmax;
-        ret*=2;
-    }
+//     if(max>dmax){
+//         dp/=max/dmax;
+//         ret*=2;
+//     }
     tmp=_p.clone()*0;
     tmp+=dp;
     dp=tmp.clone();
@@ -410,7 +405,10 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
 //     cout<<fixed<<setprecision(8)<<"bound: "<<tmp<<endl;
     
     _p+=dp;
-    
+    if(rows==240){
+    cout<<"track Core"<<endl;
+    toc();
+    }
     
     return ret;
 }

@@ -106,11 +106,13 @@ bool Track::align(){
 };
 
 bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
+    tic();
     Mat input,base,lastFrameGray;
     input=makeGray(_input);
     base=makeGray(_base);
     lastFrameGray=makeGray(lastFrame)  ;
-    
+    cout<<"makegray"<<endl;
+    toc();
     tic();
     int levels=6; // 6 levels on a 640x480 image is 20x15
     int startlevel=0;
@@ -124,7 +126,8 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     
     vector<Mat> lfPyr;
     createPyramid(lastFrameGray,lfPyr,levels);
-    
+    toc();
+    tic();
     Mat mm;
     {
         Mat T=lfPyr[0];
@@ -142,9 +145,12 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
         Point2d moff=minLoc;
         mm=(Mat)moff;
         mm-=move;
+        if(verbose){
         pfShow("soln",result);
+        }
     }
-
+    toc();
+    tic();
     int improved; 
     int level=startlevel;
     Mat p2d=Mat::zeros(1,6,CV_64FC1);
@@ -176,7 +182,7 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
 //         gpause();
 //     }
 //     cout<<"3D iteration:"<<endl;
-    
+    toc();
     for (level=startlevel; level<levels && level<endlevel; level++){
         int iters=1;
         for(int i=0;i<iters||improved==2&&i<10;i++){
