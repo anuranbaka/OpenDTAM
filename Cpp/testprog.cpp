@@ -401,10 +401,11 @@ int App_main( int argc, char** argv )
 //             Mat foundPose=make4x4(RTToP(Rs[imageNum],Ts[imageNum]));
 //             reprojectCloud(images[imageNum],images[cv.fid],tracker.depth,basePose,view,cameraMatrix);
 //             }
+            if(imageNum>numImg/2+1)
+                goto exit;
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             key[imageNum]=tcount;
-            if(cv.fid>600)
-                goto exit;
+            
             
             
             totalscale*=sf;
