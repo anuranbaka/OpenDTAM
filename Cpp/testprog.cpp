@@ -170,7 +170,7 @@ int App_main( int argc, char** argv )
         }
         else{
             
-            for(int i0=1;i0<=10-imagesPerCV;i0++){
+            for(int i0=1;i0<=50-imagesPerCV;i0++){
                 int i=((cv.fid-i0)%numImg+numImg)%numImg;
                 cout<<"using: "<< i<<endl;
                 cv.updateCost(images[i], Rs[i], Ts[i]);
@@ -303,12 +303,12 @@ int App_main( int argc, char** argv )
                 if(!tracker.align()){
                     if(i0<2){
                         cout<<"FAil: "<<i<<endl;
-//                         tracker.verbose=1;
-//                         tracker.pose=RTToLie(Rs0[i-1],Ts0[i-1]);
-//                         tracker.thisFrame=images[i-1];
-//                         tracker.addFrame(images[i]);
-//                         tracker.align();
-//                         tracker.verbose=0;
+                        tracker.verbose=1;
+                        tracker.pose=RTToLie(Rs0[i-1],Ts0[i-1]);
+                        tracker.thisFrame=images[i-1];
+                        tracker.addFrame(images[i]);
+                        tracker.align();
+                        tracker.verbose=0;
                         pfShow("FAILED",images[i]);
                     }
                     imagesPerCV=max(i0-1,1);
@@ -401,8 +401,10 @@ int App_main( int argc, char** argv )
 //             Mat foundPose=make4x4(RTToP(Rs[imageNum],Ts[imageNum]));
 //             reprojectCloud(images[imageNum],images[cv.fid],tracker.depth,basePose,view,cameraMatrix);
 //             }
-            if(imageNum>numImg/2+1)
-                goto exit;
+
+//             if(imageNum>numImg/2+1)
+//                 goto exit;
+
             cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
             key[imageNum]=tcount;
             

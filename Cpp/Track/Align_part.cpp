@@ -252,7 +252,7 @@ int Track::align_level_largedef_gray_forward(const Mat& T,//Total Mem cost ~185 
     }
     coverage=vis;
     quality=qual;
-    if(qual<FAIL_FRACTION){//tracking failed!
+    if(!(qual>=FAIL_FRACTION)||!(vis>=.3)){//tracking failed!
         ret=0;
     }
     
