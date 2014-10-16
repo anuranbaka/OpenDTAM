@@ -131,7 +131,7 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
         Mat _I=inPyr[0];
         Mat result,tmp;
         Scalar c=mean(T);
-        int move=T.rows/2;
+        int move=T.rows/2-1;
         copyMakeBorder(_I,tmp,move,move,move,move,BORDER_CONSTANT,c);
         matchTemplate( tmp, T, result, 0);
 //         matchTemplate( _I, T(Range(5,10),Range(5,15)), result, 0 );

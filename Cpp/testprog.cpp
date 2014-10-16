@@ -170,7 +170,7 @@ int App_main( int argc, char** argv )
         }
         else{
             
-            for(int i0=1;i0<=50-imagesPerCV;i0++){
+            for(int i0=1;i0<=10-imagesPerCV;i0++){
                 int i=((cv.fid-i0)%numImg+numImg)%numImg;
                 cout<<"using: "<< i<<endl;
                 cv.updateCost(images[i], Rs[i], Ts[i]);
@@ -301,14 +301,15 @@ int App_main( int argc, char** argv )
                 int i=((imageNum+i0)%numImg+numImg)%numImg;
                 tracker.addFrame(images[i]);
                 if(!tracker.align()){
-                    if(i0<2){
-                        cout<<"FAil: "<<i<<endl;
-                        tracker.verbose=1;
-                        tracker.pose=RTToLie(Rs0[i-1],Ts0[i-1]);
-                        tracker.thisFrame=images[i-1];
-                        tracker.addFrame(images[i]);
-                        tracker.align();
-                        tracker.verbose=0;
+                    int neg=((i-1)%numImg+numImg)%numImg;
+                    if(i0<2 && ((i-cv.fid)%numImg+numImg)%numImg==1){//failed to align the next image and at limit on frames
+                        cout<<"FAil: "<<i<<" on: "<<cv.fid<<endl;
+//                         tracker.verbose=1;
+//                         tracker.pose=RTToLie(Rs[neg],Ts[neg]);
+//                         tracker.thisFrame=images[neg];
+//                         tracker.addFrame(images[i]);
+//                         tracker.align();
+//                         tracker.verbose=0;
                         pfShow("FAILED",images[i]);
                     }
                     imagesPerCV=max(i0-1,1);
