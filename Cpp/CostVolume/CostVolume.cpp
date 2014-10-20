@@ -90,8 +90,8 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
     cvStream.enqueueMemSet(loInd,0.0);
     cvStream.enqueueMemSet(dataContainer,initialCost);
     data = (float*) dataContainer.data;
-    //hitContainer.create(layers, rows * cols, CV_32FC1);
-    //hitContainer = initialWeight;
+    hitContainer.create(layers, rows * cols, CV_32FC1);
+    hitContainer = initialWeight;
     hits = (float*) hitContainer.data;
     count = 0;
     
@@ -271,7 +271,7 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
     float w=count+++initialWeight;//fun parse
     w/=(w+1); 
     assert(localStream);
-    globalWeightedBoundsCostCaller(persp,w,CONST_ARGS);
+    weightedBoundsCostCaller(persp,w,CONST_ARGS);
 
 }
 
