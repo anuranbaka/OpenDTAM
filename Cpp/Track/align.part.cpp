@@ -180,7 +180,7 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
 //     cout<<"3D iteration:"<<endl;
     
     for (level=startlevel; level<levels && level<endlevel; level++){
-        int iters=1;
+        int iters=4;
         for(int i=0;i<iters||improved==2&&i<10;i++){
             float thr = 1;
             thr = (endlevel-level)>=3 ? .2 : .06; //more stringent matching on last two levels
@@ -188,6 +188,7 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
 //             thr=(endlevel-level)>=4 ?.7:thr;
 //             thr=(endlevel-level)>=5 ?.9:thr;
             thr=(endlevel-level)>=5 ? 1:thr;
+
             improved = align_level_largedef_gray_forward(   basePyr[level],//Total Mem cost ~185 load/stores of image
                                                             depthPyr[level],
                                                             inPyr[level],
@@ -196,7 +197,7 @@ bool Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
                                                             CV_DTAM_FWD,
                                                             thr,
                                                             6);
-            
+
 //             if(tocq()>.5){
 //                 cout<<"completed up to level: "<<level-startlevel+1<<"   iter: "<<i+1<<endl;
 //                 goto loopend;//olny sactioned use of goto, the double break

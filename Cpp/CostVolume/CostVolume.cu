@@ -157,7 +157,7 @@ __global__ void weightedBoundsCost(m34 p,float weight, CONSTT)
 //             del=0;
 //         }
 //         del=sqrt(del);
-        del=fminf(del,.1f)*1.0f/*/.1f+/*.0005*del*/;
+        del=fminf(del,.05f)*1.0f/.05f/*.0005*del*/;
         
         if(c.x+c.y+c.z!=0){
         ns=(c0*w+del)/(w+1);

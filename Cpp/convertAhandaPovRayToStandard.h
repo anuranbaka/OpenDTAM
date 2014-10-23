@@ -3,7 +3,6 @@
 
 #include <opencv2/opencv.hpp>
 void convertAhandaPovRayToStandard(const char * filepath,
-                                   int imageNumber,
                                    cv::Mat& cameraMatrix,
                                    cv::Mat& R,
                                    cv::Mat& T);

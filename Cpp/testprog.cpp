@@ -8,7 +8,7 @@
 
 
 //Mine
-#include "convertAhandaPovRayToStandard.h"
+#include "fileLoader.hpp"
 #include "CostVolume/utils/reproject.hpp"
 #include "CostVolume/utils/reprojectCloud.hpp"
 #include "CostVolume/Cost.h"
@@ -66,45 +66,53 @@ int App_main( int argc, char** argv )
 
     char filename[500];
     Mat image, cameraMatrix, R, T;
-    vector<Mat> images,Rs,Ts,Rs0,Ts0;
+    vector<Mat> images,Rs,ds,Ts,Rs0,Ts0;
     vector<float> key,qual,vis,occ;
 
     Mat ret;//a place to return downloaded images to
     
     ofstream file("outscale.csv");
+    
     double reconstructionScale=5/5.;
     int inc=1;
     for(int i=0;i>0||inc>0;i+=inc){
-        Mat tmp;
+        Mat tmp,d,image;
         int offset=0;
-        sprintf(filename,"../../Trajectory_30_seconds/scene_%03d.png",i+offset);
-        convertAhandaPovRayToStandard("../../Trajectory_30_seconds",
-                                      i+offset,
-                                      cameraMatrix,
-                                      R,
-                                      T);
-        Mat image;
-        cout<<"Opening: "<< filename << endl;
         if(inc>0){
-        imread(filename, -1).convertTo(image,CV_32FC3,1.0/65535.0);
+        loadAhanda("../../Trajectory_30_seconds",
+                   i+offset,
+                   image,
+                   d,
+                   cameraMatrix,
+                   R,
+                   T);
+
+
         resize(image,image,Size(),reconstructionScale,reconstructionScale);
-        
         images.push_back(image.clone());
+        Rs.push_back(R.clone());
+        Ts.push_back(T.clone());
+        ds.push_back(d.clone());
+        Rs0.push_back(R.clone());
+        Ts0.push_back(T.clone());
         }
         else
         {
             images.push_back(images[i]);
+            Rs.push_back(Rs[i]);
+            Ts.push_back(Ts[i]);
+            ds.push_back(ds[i]);
+            Rs0.push_back(Rs0[i]);
+            Ts0.push_back(Ts0[i]);
         }
-        Rs.push_back(R.clone());
-        Ts.push_back(T.clone());
+        
         key.push_back(0);
         qual.push_back(0);
         vis.push_back(0);
         occ.push_back(0);
 //         Rs.push_back(Mat());
 //         Ts.push_back(Mat());
-        Rs0.push_back(R.clone());
-        Ts0.push_back(T.clone());
+        
         if(i==numImg-1)
             inc=-1;
     }
@@ -353,30 +361,30 @@ int App_main( int argc, char** argv )
 // //                     cout << "Pose Error: "<< p-tp << endl;
 // //                 }
 //                 cout<<i<<endl;
-// //                 Mat tran1=Mat::eye(4,4,CV_64FC1);
-// //                 ((Mat)(Mat_<double>(4,1) <<    0,0,-1.0/m,1)).copyTo(tran1.col(3));
-// //                 Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,-45,0)*3.1415/180.0));
-// //                 Mat tran2=Mat::eye(4,4,CV_64FC1);
-// //                 ((Mat)(Mat_<double>(4,1) <<    0,0,3/m,1)).copyTo(tran2.col(3));
-// //                 Mat view=tran2*rotor*tran1;
-//                 Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
-//                 Mat foundPose=make4x4(RTToP(R,T));
-// // //                 cout<<"view:\n"<< fixed << setprecision(3)<< view<<endl;
-//                 Mat view=reprojectCloud(images[i],images[cv.fid],tracker.depth,basePose,foundPose,cameraMatrix);
-//                 Mat viewc=reprojectCloud(images[i],images[cv.fid],tracker.depth,basePose,make4x4(RTToP(Rs0[i],Ts0[i])),cameraMatrix);
-//                 for(int j=0;j<5;j++){
-//                     Mat tmp;
-//                     pfShow("Predicted Image",view,0,Vec2d(0,1));
-//                     absdiff(images[i],view,tmp);
-//                     pfShow("difftrk",tmp,0,Vec2d(0,1));
-//                     if(tracker.quality<.75 &&i0==-1)
-//                         gpause();
-//                     pfShow("Predicted Image",viewc,0,Vec2d(0,1));
-//                     absdiff(images[i],viewc,tmp);
-//                     pfShow("difftrk",tmp,0,Vec2d(0,1));
-//                     if(tracker.quality<.75 &&i0==-1)
-//                         gpause();
-//                 }
+//                 Mat tran1=Mat::eye(4,4,CV_64FC1);
+//                 ((Mat)(Mat_<double>(4,1) <<    0,0,-1.0/m,1)).copyTo(tran1.col(3));
+//                 Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,-45,0)*3.1415/180.0));
+//                 Mat tran2=Mat::eye(4,4,CV_64FC1);
+//                 ((Mat)(Mat_<double>(4,1) <<    0,0,3/m,1)).copyTo(tran2.col(3));
+//                 Mat view=tran2*rotor*tran1;
+                Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
+                Mat foundPose=make4x4(RTToP(R,T));
+// //                 cout<<"view:\n"<< fixed << setprecision(3)<< view<<endl;
+                Mat view=reprojectCloud(images[i],images[cv.fid],tracker.depth,basePose,foundPose,cameraMatrix);
+                Mat viewc=reprojectCloud(images[i],images[cv.fid],tracker.depth,basePose,make4x4(RTToP(Rs0[i],Ts0[i])),cameraMatrix);
+                for(int j=0;j<5;j++){
+                    Mat tmp;
+                    pfShow("Predicted Image",view,0,Vec2d(0,1));
+                    absdiff(images[i],view,tmp);
+                    pfShow("difftrk",tmp,0,Vec2d(0,1));
+                    if(tracker.quality<.75 &&i0==-1)
+                        gpause();
+                    pfShow("Predicted Image",viewc,0,Vec2d(0,1));
+                    absdiff(images[i],viewc,tmp);
+                    pfShow("difftrk",tmp,0,Vec2d(0,1));
+                    if(tracker.quality<.75 &&i0==-1)
+                        gpause();
+                }
 //                 tracker.pose=tp;
             }
             
