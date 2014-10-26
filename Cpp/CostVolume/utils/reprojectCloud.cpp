@@ -146,10 +146,11 @@ Mat diagnosticInfo(const Mat comparison,const Mat _im, const Mat _depth, const M
     xyout=xyout.reshape(3,im.rows);
     pfShow("xyout",xyout);
     absdiff(xyout,xyin,tmp);
-    pfShow("delta xyout",tmp,0,Vec2d(0,1));
-    resize(xyout,xy,Size(),2,2);
-    xy.convertTo(xy,CV_32SC3);//rounds! 
+    pfShow("delta xyout",tmp,0,Vec2d(0,20));
+    resize(xyout,tmp,Size(),2,2);
+    tmp.convertTo(xy,CV_32SC3);//rounds! 
     int* xyd=(int *)(xy.data);
+    float* xydf=(float *)(tmp.data);
     Mat_<float> xmap(im.rows,im.cols,-9999.9);//9999.9's are to guarantee that pixels are invalid 
     Mat_<float> ymap(im.rows,im.cols,-9999.9);//9999.9's are to guarantee that pixels are invalid 
     Mat_<float> zmap(im.rows,im.cols,-1.0/0.0);//9999.9's are to guarantee that pixels are invalid 
@@ -157,9 +158,9 @@ Mat diagnosticInfo(const Mat comparison,const Mat _im, const Mat _depth, const M
     float* ym=(float*)(ymap.data);
 
     for(float i=-.25;i<im.rows-.5;i+=.5){
-        for(float j=-.25;j<im.cols-.5;j+=.5,xyd+=3){
+        for(float j=-.25;j<im.cols-.5;j+=.5,xyd+=3,xydf+=3){
             if(xyd[1]<im.rows && xyd[1]>=0 && xyd[0]>=0 && xyd[0]<im.cols){
-                if (zmap(xyd[1],xyd[0])<=xyd[2]){
+                if (zmap(xyd[1],xyd[0])<=xydf[2]){
                     float oldx,oldy,oldz;
                     oldx=xmap(xyd[1],xyd[0]);
                     oldy=ymap(xyd[1],xyd[0]);
@@ -167,11 +168,11 @@ Mat diagnosticInfo(const Mat comparison,const Mat _im, const Mat _depth, const M
                     if(fabsf(j-oldx)<1&&fabsf(i-oldy)<1&&fabsf(xyd[2]-oldz)<.0005){
                         xmap(xyd[1],xyd[0])=(j+oldx)/2.f;
                         ymap(xyd[1],xyd[0])=(i+oldy)/2.f;
-                        zmap(xyd[1],xyd[0])=(xyd[2]+oldz)/2.f;
+                        zmap(xyd[1],xyd[0])=(xydf[2]+oldz)/2.f;
                     }else{
                         xmap(xyd[1],xyd[0])=j;
                         ymap(xyd[1],xyd[0])=i;
-                        zmap(xyd[1],xyd[0])=xyd[2];
+                        zmap(xyd[1],xyd[0])=xydf[2];
                     }
                 }
             }
@@ -183,6 +184,8 @@ Mat diagnosticInfo(const Mat comparison,const Mat _im, const Mat _depth, const M
     split(xyout,xyLayers);
     xyLayers[0]=xyLayers[0].reshape(1,im.rows);
     xyLayers[1]=xyLayers[1].reshape(1,im.rows);
+    xyLayers[2]=xyLayers[2].reshape(1,im.rows);
+
     Mat pullback;
     Mat occluded(im.rows,im.cols,CV_8UC1);
      Mat depthPullback;
@@ -290,7 +293,7 @@ MapInfo3d reprojectCloud(const Mat _depth, const Mat _oldPose, const Mat _newPos
     tmp=proj.rowRange(2,4).clone();
     tmp.row(0).copyTo(proj.row(3));
     tmp.row(1).copyTo(proj.row(2));
-    proj.row(2)*=100000;//HACK: need to blow up z values for the buffer
+    
 //     proj=proj.rowRange(0,3).clone();
 //     cout<<"Proj: "<<"\n"<< proj<< endl;
 
