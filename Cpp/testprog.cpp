@@ -58,7 +58,7 @@ int App_main( int argc, char** argv )
     rand();
     rand();
     cv::theRNG().state = rand();
-    int numImg=600;
+    int numImg=10;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -134,8 +134,8 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0.5,
                                                 0.0,0.0,0);
     int layers=32;
-    int desiredImagesPerCV=600;
-    int imagesPerCV=100;
+    int desiredImagesPerCV=1;
+    int imagesPerCV=1;
     int startAt=numImg-1;
 //     {//offset init
 //         Rs[startAt]=Rs[0].clone();
@@ -170,12 +170,12 @@ int App_main( int argc, char** argv )
         }
         else{
             
-            for(int i0=1;i0<=10-imagesPerCV;i0++){
-                int i=((cv.fid-i0)%numImg+numImg)%numImg;
-                cout<<"using: "<< i<<endl;
-                cv.updateCost(images[i], Rs[i], Ts[i]);
-                cudaDeviceSynchronize();
-            }
+//             for(int i0=1;i0<=10-imagesPerCV;i0++){
+//                 int i=((cv.fid-i0)%numImg+numImg)%numImg;
+//                 cout<<"using: "<< i<<endl;
+//                 cv.updateCost(images[i], Rs[i], Ts[i]);
+//                 cudaDeviceSynchronize();
+//             }
             
             cudaDeviceSynchronize();
             //Attach optimizer
@@ -276,8 +276,9 @@ int App_main( int argc, char** argv )
 //             if(imageNum>180)
 //             imageNum=((imageNum-imagesPerCV-2)%numImg+numImg)%numImg;
 //             else if (tcount>6)
-            int ni=imagesPerCV;
-            ni=min(ni,imagesPerCV-3);
+            int ni=0;
+//             ni=imagesPerCV;
+//             ni=min(ni,imagesPerCV-3);
             ni=max(ni,1);
             if(tcount==0)
                 ni=1;
@@ -352,18 +353,20 @@ int App_main( int argc, char** argv )
 // //                     cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
 // //                     cout << "Pose Error: "<< p-tp << endl;
 // //                 }
-//                 cout<<i<<endl;
-// //                 Mat tran1=Mat::eye(4,4,CV_64FC1);
-// //                 ((Mat)(Mat_<double>(4,1) <<    0,0,-1.0/m,1)).copyTo(tran1.col(3));
-// //                 Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,-45,0)*3.1415/180.0));
-// //                 Mat tran2=Mat::eye(4,4,CV_64FC1);
-// //                 ((Mat)(Mat_<double>(4,1) <<    0,0,3/m,1)).copyTo(tran2.col(3));
-// //                 Mat view=tran2*rotor*tran1;
-//                 Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
-//                 Mat foundPose=make4x4(RTToP(R,T));
-// // //                 cout<<"view:\n"<< fixed << setprecision(3)<< view<<endl;
-//                 Mat view=reprojectCloud(images[i],images[cv.fid],tracker.depth,basePose,foundPose,cameraMatrix);
-//                 Mat viewc=reprojectCloud(images[i],images[cv.fid],tracker.depth,basePose,make4x4(RTToP(Rs0[i],Ts0[i])),cameraMatrix);
+                
+                cout<<i<<endl;
+//                 Mat tran1=Mat::eye(4,4,CV_64FC1);
+//                 ((Mat)(Mat_<double>(4,1) <<    0,0,-1.0/m,1)).copyTo(tran1.col(3));
+//                 Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,-45,0)*3.1415/180.0));
+//                 Mat tran2=Mat::eye(4,4,CV_64FC1);
+//                 ((Mat)(Mat_<double>(4,1) <<    0,0,3/m,1)).copyTo(tran2.col(3));
+//                 Mat view=tran2*rotor*tran1;
+                Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
+                Mat basePose0=make4x4(RTToP(Rs0[cv.fid],Ts0[cv.fid]));
+                Mat foundPose=make4x4(RTToP(R,T));
+// //                 cout<<"view:\n"<< fixed << setprecision(3)<< view<<endl;
+//                 Mat view=diagnosticInfo(images[i],images[cv.fid],tracker.depth,basePose,foundPose,cameraMatrix);
+                Mat viewc=diagnosticInfo(images[i],images[cv.fid],tracker.depth,basePose0,make4x4(RTToP(Rs0[i],Ts0[i])),cameraMatrix);
 //                 for(int j=0;j<5;j++){
 //                     Mat tmp;
 //                     pfShow("Predicted Image",view,0,Vec2d(0,1));
@@ -400,7 +403,7 @@ int App_main( int argc, char** argv )
 //             Mat view=tran2*rotor*tran1;
 //             Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
 //             Mat foundPose=make4x4(RTToP(Rs[imageNum],Ts[imageNum]));
-//             reprojectCloud(images[imageNum],images[cv.fid],tracker.depth,basePose,view,cameraMatrix);
+//             diagnosticInfo(images[imageNum],images[cv.fid],tracker.depth,basePose,view,cameraMatrix);
 //             }
 
 //             if(imageNum>numImg/2+1)
