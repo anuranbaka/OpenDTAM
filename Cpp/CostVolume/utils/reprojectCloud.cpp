@@ -77,69 +77,76 @@
 using namespace cv;
 using namespace std;
 
-Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const Mat _oldPose, const Mat _newPose, const Mat _cameraMatrix){
+Mat diagnosticInfo(const Mat comparison,const Mat _im, const Mat _depth, const Mat _oldPose, const Mat _newPose, const Mat _cameraMatrix){
 
     Mat im=_im;
     Mat_<float> depth=_depth;
-    Mat oldPose=make4x4(_oldPose);
-    Mat newPose=make4x4(_newPose);
-    Mat cameraMatrix=make4x4(_cameraMatrix);
-    Mat  proj(4,4,CV_64FC1);
-    Mat_<Vec3f> xyin(im.rows,im.cols);
-    Mat_<Vec3f> xyout(im.rows,im.cols);
-
-//     cout<<cameraMatrix<<endl;
-//     cout<<newPose<<endl;
-//     cout<<oldPose<<endl;
-
-    proj=cameraMatrix*newPose*oldPose.inv()*cameraMatrix.inv();
-//     cout<<"True Mapping:"<<endl;
-//     cout<<proj<<endl;
+//     Mat oldPose=make4x4(_oldPose);
+//     Mat newPose=make4x4(_newPose);
+//     Mat cameraMatrix=make4x4(_cameraMatrix);
+//     Mat  proj(4,4,CV_64FC1);
+//     Mat_<Vec3f> xyin(im.rows,im.cols);
+//     Mat_<Vec3f> xyout(im.rows,im.cols);
+// 
+// //     cout<<cameraMatrix<<endl;
+// //     cout<<newPose<<endl;
+// //     cout<<oldPose<<endl;
+// 
+//     proj=cameraMatrix*newPose*oldPose.inv()*cameraMatrix.inv();
+// //     cout<<"True Mapping:"<<endl;
+// //     cout<<proj<<endl;
+//     
+// //     cout<<proj*(Mat_<double>(4,1)<<5,3,1,4)<<endl;
+// //     cout<<(_cameraMatrix.inv()*(Mat_<double>(3,1)<<5,3,1))/.25<<endl;
+// //     cout<<newPose*oldPose.inv()*(Mat_<double>(4,1)<<-2.614297589359934,  -1.970833333333333,4,1)<<endl;
+// //     cout<<_cameraMatrix*(Mat_<double>(3,1)<<-4.386563809008884,    -4.192947124058795,4.065032570174338)/4.065032570174338<<endl;
+// //     cout<<proj*(Mat_<double>(4,1)<<5,3,.25,1)/  1.016258142543584    <<endl;//should match on image 2
+//     
+//     
+//     
+//     
+//     
+//     
+// //     cout<<"This should be affine:"<<endl;
+// //     cout<<proj<<endl;
+//     Mat tmp=proj.colRange(2,4).clone();
+//     tmp.col(1).copyTo(proj.col(2));
+//     tmp.col(0).copyTo(proj.col(3));
+//     
+//     tmp=proj.rowRange(2,4).clone();
+//     tmp.row(0).copyTo(proj.row(3));
+//     tmp.row(1).copyTo(proj.row(2));
+//     proj.row(2)*=100000;//HACK: need to blow up z values for the buffer
+// //     proj=proj.rowRange(0,3).clone();
+// //     cout<<"Proj: "<<"\n"<< proj<< endl;
+// 
+//     
+// //      //Check if conversions are rounded or truncated
+// //     tmp=(Mat_<double>(4,1)<<5,3,.7,1);
+// //     tmp.convertTo(tmp,CV_32SC1);
+// //     cout<<tmp<<endl;
+// 
+//     float* pt=(float*) (xyin.data);
+//     float* d=(float*) (depth.data);
+//     for(int i=0;i<im.rows;i++){
+//         for(int j=0;j<im.cols;j++,pt+=3,d++){
+//             pt[0]=j;
+//             pt[1]=i;
+//             pt[2]=*d;
+//         }
+//     }
+// 
+//     perspectiveTransform(xyin,xyout,proj);
     
-//     cout<<proj*(Mat_<double>(4,1)<<5,3,1,4)<<endl;
-//     cout<<(_cameraMatrix.inv()*(Mat_<double>(3,1)<<5,3,1))/.25<<endl;
-//     cout<<newPose*oldPose.inv()*(Mat_<double>(4,1)<<-2.614297589359934,  -1.970833333333333,4,1)<<endl;
-//     cout<<_cameraMatrix*(Mat_<double>(3,1)<<-4.386563809008884,    -4.192947124058795,4.065032570174338)/4.065032570174338<<endl;
-//     cout<<proj*(Mat_<double>(4,1)<<5,3,.25,1)/  1.016258142543584    <<endl;//should match on image 2
+    MapInfo3d info = reprojectCloud( _depth, _oldPose,  _newPose, _cameraMatrix);
+    Mat_<Vec3f> xyin=info.xyin;
+    Mat_<Vec3f> xyout=info.xyout;
     
-    
-    
-    
-    
-    
-//     cout<<"This should be affine:"<<endl;
-//     cout<<proj<<endl;
-    Mat tmp=proj.colRange(2,4).clone();
-    tmp.col(1).copyTo(proj.col(2));
-    tmp.col(0).copyTo(proj.col(3));
-    
-    tmp=proj.rowRange(2,4).clone();
-    tmp.row(0).copyTo(proj.row(3));
-    tmp.row(1).copyTo(proj.row(2));
-    proj.row(2)*=100000;//HACK: need to blow up z values for the buffer
-//     proj=proj.rowRange(0,3).clone();
-//     cout<<"Proj: "<<"\n"<< proj<< endl;
-
-    
-//      //Check if conversions are rounded or truncated
-//     tmp=(Mat_<double>(4,1)<<5,3,.7,1);
-//     tmp.convertTo(tmp,CV_32SC1);
-//     cout<<tmp<<endl;
-
-    float* pt=(float*) (xyin.data);
-    float* d=(float*) (depth.data);
-    for(int i=0;i<im.rows;i++){
-        for(int j=0;j<im.cols;j++,pt+=3,d++){
-            pt[0]=j;
-            pt[1]=i;
-            pt[2]=*d;
-        }
-    }
-
-    perspectiveTransform(xyin,xyout,proj);
-    Mat xy;
+    Mat xy,tmp;
     xyout=xyout.reshape(3,im.rows);
     pfShow("xyout",xyout);
+    absdiff(xyout,xyin,tmp);
+    pfShow("delta xyout",tmp,0,Vec2d(0,1));
     resize(xyout,xy,Size(),2,2);
     xy.convertTo(xy,CV_32SC3);//rounds! 
     int* xyd=(int *)(xy.data);
@@ -242,5 +249,74 @@ Mat reprojectCloud(const Mat comparison,const Mat _im, const Mat _depth, const M
 
     return fwdp;
     
+}
+
+MapInfo3d reprojectCloud(const Mat _depth, const Mat _oldPose, const Mat _newPose, const Mat _cameraMatrix){
+
+
+    Mat_<float> depth=_depth;
+    Mat oldPose=make4x4(_oldPose);
+    Mat newPose=make4x4(_newPose);
+    Mat cameraMatrix=make4x4(_cameraMatrix);
+    Mat  proj(4,4,CV_64FC1);
+    Mat_<Vec3f> xyin(_depth.rows,_depth.cols);
+    Mat_<Vec3f> xyout(_depth.rows,_depth.cols);
+
+//     cout<<cameraMatrix<<endl;
+//     cout<<newPose<<endl;
+//     cout<<oldPose<<endl;
+
+    proj=cameraMatrix*newPose*oldPose.inv()*cameraMatrix.inv();
+//     cout<<"True Mapping:"<<endl;
+//     cout<<proj<<endl;
+    
+//     cout<<proj*(Mat_<double>(4,1)<<5,3,1,4)<<endl;
+//     cout<<(_cameraMatrix.inv()*(Mat_<double>(3,1)<<5,3,1))/.25<<endl;
+//     cout<<newPose*oldPose.inv()*(Mat_<double>(4,1)<<-2.614297589359934,  -1.970833333333333,4,1)<<endl;
+//     cout<<_cameraMatrix*(Mat_<double>(3,1)<<-4.386563809008884,    -4.192947124058795,4.065032570174338)/4.065032570174338<<endl;
+//     cout<<proj*(Mat_<double>(4,1)<<5,3,.25,1)/  1.016258142543584    <<endl;//should match on image 2
+    
+    
+    
+    
+    
+    
+//     cout<<"This should be affine:"<<endl;
+//     cout<<proj<<endl;
+    Mat tmp=proj.colRange(2,4).clone();
+    tmp.col(1).copyTo(proj.col(2));
+    tmp.col(0).copyTo(proj.col(3));
+    
+    tmp=proj.rowRange(2,4).clone();
+    tmp.row(0).copyTo(proj.row(3));
+    tmp.row(1).copyTo(proj.row(2));
+    proj.row(2)*=100000;//HACK: need to blow up z values for the buffer
+//     proj=proj.rowRange(0,3).clone();
+//     cout<<"Proj: "<<"\n"<< proj<< endl;
+
+    
+//      //Check if conversions are rounded or truncated
+//     tmp=(Mat_<double>(4,1)<<5,3,.7,1);
+//     tmp.convertTo(tmp,CV_32SC1);
+//     cout<<tmp<<endl;
+
+    float* pt=(float*) (xyin.data);
+    float* d=(float*) (depth.data);
+    for(int i=0;i<_depth.rows;i++){
+        for(int j=0;j<_depth.cols;j++,pt+=3,d++){
+            pt[0]=j;
+            pt[1]=i;
+            pt[2]=*d;
+        }
+    }
+
+    perspectiveTransform(xyin,xyout,proj);
+    Mat xy;
+    xyout=xyout.reshape(3,_depth.rows);
+    
+    MapInfo3d ret;
+    ret.xyout=xyout;
+    ret.xyin=xyin;
+    return ret;
 }
 
