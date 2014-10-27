@@ -271,6 +271,7 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
     float w=count+++initialWeight;//fun parse
     w/=(w+1); 
     assert(localStream);
+//     globalWeightedBoundsCostCaller(persp,w,CONST_ARGS);
     weightedBoundsCostCaller(persp,w,CONST_ARGS);
 
 }
