@@ -157,14 +157,17 @@ __global__ void weightedBoundsCost(m34 p,float weight, CONSTT)
 //             del=0;
 //         }
 //         del=sqrt(del);
-        del=fminf(del,.05f)*1.0f/.05f/*.0005*del*/;
+        const float thresh=.3f;
+        del=fminf(del,thresh)*1.0f/thresh/*.0005*del*/;
         
         if(c.x+c.y+c.z!=0){
         ns=(c0*w+del)/(w+1);
         cdata[offset+z*layerStep]=ns;
         hdata[offset+z*layerStep]=w+1;
         }else{
-            ns=c0;
+            ns=(c0*w+del*.25)/(w+.25);
+            cdata[offset+z*layerStep]=ns;
+            hdata[offset+z*layerStep]=w+.25;
         }
         
 //         ns=del;

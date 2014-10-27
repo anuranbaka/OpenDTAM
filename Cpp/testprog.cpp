@@ -55,7 +55,7 @@ int main( int argc, char** argv ){
 int App_main( int argc, char** argv )
 {
     volatile int debug=0; 
-    srand(time(NULL));
+    srand(314159);
     rand();
     rand();
     cv::theRNG().state = rand();
@@ -88,9 +88,9 @@ int App_main( int argc, char** argv )
                    cameraMatrix,
                    R,
                    T);
-
-
-        resize(image,image,Size(),reconstructionScale,reconstructionScale);
+        tmp=Mat::zeros(image.rows,image.cols,CV_32FC3);
+        randu(tmp,0,1);
+        resize(image+tmp/255,image,Size(),reconstructionScale,reconstructionScale);
         images.push_back(image.clone());
         Rs.push_back(R.clone());
         Ts.push_back(T.clone());
@@ -173,10 +173,10 @@ int App_main( int argc, char** argv )
             cv.updateCost(image, R, T);
             cudaDeviceSynchronize();
 //             gpause();
-//             for( int i=0;i<layers;i++){
-//                 pfShow("layer",cv.downloadOldStyle(i), 0, cv::Vec2d(0, .5));
+            for( int i=0;i<layers;i++){
+                pfShow("layer",cv.downloadOldStyle(i), 0, cv::Vec2d(0, 1));
 //                 usleep(1000000);
-//             }
+            }
         }
         else{
             
