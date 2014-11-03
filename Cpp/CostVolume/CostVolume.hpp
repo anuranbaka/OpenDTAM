@@ -58,6 +58,17 @@ public:
         return cost;
     }
 
+    std::vector<cv::Mat> download( ){
+        cv::Mat out;
+        std::vector<cv::Mat>  all;
+        dataContainer.download(out);
+        out=out.t();
+        out=out.reshape(0,rows);
+        for(int i=0;i<rows;i++){
+            all.push_back(out.rowRange(i,i+1).clone().reshape(0,cols));
+        }
+        return all;
+    }
 private:
     void solveProjection(const cv::Mat& R, const cv::Mat& T);
     void checkInputs(const cv::Mat& R, const cv::Mat& T,
