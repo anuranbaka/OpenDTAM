@@ -96,6 +96,96 @@ __global__ void globalWeightedBoundsCost(m34 p,float weight, CONSTT)
     hi[offset]=maxv;
 }
 
+__global__ void globalWeightedBoundsCost2(m34 p,m34 p2,float weight, CONSTT,cudaTextureObject_t tex2);
+void globalWeightedBoundsCostCaller2(m34 p,m34 p2,float weight,CONSTT,cudaTextureObject_t tex2){
+   dim3 dimBlock(BLOCK_X,BLOCK_Y);
+   dim3 dimGrid((cols  + dimBlock.x - 1) / dimBlock.x,
+                (rows + dimBlock.y - 1) / dimBlock.y);
+   globalWeightedBoundsCost2<<<dimGrid, dimBlock, 0, localStream>>>(p,p2, weight,CONSTS,tex2);
+   assert(localStream);
+   cudaSafeCall( cudaGetLastError() );
+}
+
+
+__global__ void globalWeightedBoundsCost2(m34 p,m34 p2,float weight, CONSTT,cudaTextureObject_t tex2)
+{
+    //float*bf=(float*)base;
+    unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+//    //unsigned int topleft=3*blockDim.x * blockIdx.x + 3*cols*blockDim.y*blockIdx.y;
+//    //unsigned int loff=threadIdx.x+3*cols*threadIdx.y;
+//    unsigned int sooff=threadIdx.x+threadIdx.y*blockDim.x;
+//    //unsigned int sioff=threadIdx.x+3*threadIdx.y*blockDim.x;
+//    unsigned int sioff=3*sooff-2*threadIdx.x;
+    unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+    //unsigned int gindex=topleft+loff;
+
+    float xf=x;
+    float yf=y;
+    unsigned int offset=x+y*cols;
+//    unsigned int gindex=offset*3-2*threadIdx.x;
+//    const unsigned int mul=BLOCK_X;
+//    __shared__ float buff[BLOCK_X*BLOCK_Y*3];
+//
+//
+//    buff[sioff] = bf[gindex];
+//    buff[sioff+mul] = bf[gindex+mul];
+//    buff[sioff+mul*2] = bf[gindex+mul*2];
+//    //__syncthreads();
+//    float3 B =((float3*)buff)[sooff];
+
+
+    float wi = p.data[8]*xf + p.data[9]*yf + p.data[11];
+    float xi = (p.data[0]*xf + p.data[1]*yf + p.data[3]);
+    float yi = (p.data[4]*xf + p.data[5]*yf + p.data[7]);
+    
+    float wi2 = p2.data[8]*xf + p2.data[9]*yf + p2.data[11];
+    float xi2 = (p2.data[0]*xf + p2.data[1]*yf + p2.data[3]);
+    float yi2 = (p2.data[4]*xf + p2.data[5]*yf + p2.data[7]);
+    float minv=1000.0,maxv=0.0;
+    float mini=0;
+    for(unsigned int z=0;z<layers;z++){
+        float c0=cdata[offset+z*layerStep];
+        float wiz = wi+p.data[10]*z;
+        float xiz = xi+p.data[2] *z;
+        float yiz = yi+p.data[6] *z;
+        float wiz2 = wi2+p2.data[10]*z;
+        float xiz2 = xi2+p2.data[2] *z;
+        float yiz2 = yi2+p2.data[6] *z;
+        float4 c = tex2D<float4>(tex, xiz/wiz, yiz/wiz);
+        float4 c2 = tex2D<float4>(tex2, xiz2/wiz2, yiz2/wiz2);
+
+        float v1 = fabsf(c.x - c2.x);
+        float v2 = fabsf(c.y - c2.y);
+        float v3 = fabsf(c.z - c2.z);
+        float del=v1+v2+v3;
+        float ns;
+//         if(del>.03){
+//             del=0;
+//         }
+//         del=sqrt(del);
+        del=fminf(del,.1f)*1.0f/.1f/*+.00001*del*/;
+        
+        if(c.x+c.y+c.z==0){
+            del=1;
+        }
+        ns=c0*weight+(del)*(1-weight);
+//         }else{
+//             ns=c0;
+//         }
+        
+//         ns=del;
+        cdata[offset+z*layerStep]=ns;
+        if (ns < minv) {
+        minv = ns;
+        mini = z;
+        }
+        maxv=fmaxf(ns,maxv);
+    }
+    lo[offset]=minv;
+    loInd[offset]=mini;
+    hi[offset]=maxv;
+}
+
 __global__ void weightedBoundsCost(m34 p,float weight, CONSTT);
 void weightedBoundsCostCaller(m34 p,float weight,CONSTT){
    dim3 dimBlock(BLOCK_X,BLOCK_Y);
@@ -168,6 +258,98 @@ __global__ void weightedBoundsCost(m34 p,float weight, CONSTT)
             ns=(c0*w+del*.25)/(w+.25);
             cdata[offset+z*layerStep]=ns;
             hdata[offset+z*layerStep]=w+.25;
+        }
+        
+//         ns=del;
+        
+        if (ns < minv) {
+        minv = ns;
+        mini = z;
+        }
+        maxv=fmaxf(ns,maxv);
+    }
+    lo[offset]=minv;
+    loInd[offset]=mini;
+    hi[offset]=maxv;
+}
+
+__global__ void weightedBoundsCost2(m34 p, m34 p2, float weight, CONSTT,cudaTextureObject_t tex2);
+void weightedBoundsCostCaller2(m34 p, m34 p2, float weight,CONSTT,cudaTextureObject_t tex2){
+   dim3 dimBlock(BLOCK_X,BLOCK_Y);
+   dim3 dimGrid((cols  + dimBlock.x - 1) / dimBlock.x,
+                (rows + dimBlock.y - 1) / dimBlock.y);
+   weightedBoundsCost2<<<dimGrid, dimBlock, 0, localStream>>>(p,p2, weight,CONSTS,tex2);
+   assert(localStream);
+   cudaSafeCall( cudaGetLastError() );
+}
+
+
+__global__ void weightedBoundsCost2(m34 p,m34 p2,float weight, CONSTT,cudaTextureObject_t tex2)
+{
+    //float*bf=(float*)base;
+    unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+//    //unsigned int topleft=3*blockDim.x * blockIdx.x + 3*cols*blockDim.y*blockIdx.y;
+//    //unsigned int loff=threadIdx.x+3*cols*threadIdx.y;
+//    unsigned int sooff=threadIdx.x+threadIdx.y*blockDim.x;
+//    //unsigned int sioff=threadIdx.x+3*threadIdx.y*blockDim.x;
+//    unsigned int sioff=3*sooff-2*threadIdx.x;
+    unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+    //unsigned int gindex=topleft+loff;
+
+    float xf=x;
+    float yf=y;
+    unsigned int offset=x+y*cols;
+//    unsigned int gindex=offset*3-2*threadIdx.x;
+//    const unsigned int mul=BLOCK_X;
+//    __shared__ float buff[BLOCK_X*BLOCK_Y*3];
+//
+//
+//    buff[sioff] = bf[gindex];
+//    buff[sioff+mul] = bf[gindex+mul];
+//    buff[sioff+mul*2] = bf[gindex+mul*2];
+//    //__syncthreads();
+//    float3 B =((float3*)buff)[sooff];
+
+
+//     float3 B = base[x+y*cols];//Known bug:this requires 12 loads instead of 4 because of stupid memory addressing, can't really fix
+    float wi = p.data[8]*xf + p.data[9]*yf + p.data[11];
+    float xi = (p.data[0]*xf + p.data[1]*yf + p.data[3]);
+    float yi = (p.data[4]*xf + p.data[5]*yf + p.data[7]);
+    float wi2 = p2.data[8]*xf + p2.data[9]*yf + p2.data[11];
+    float xi2 = (p2.data[0]*xf + p2.data[1]*yf + p2.data[3]);
+    float yi2 = (p2.data[4]*xf + p2.data[5]*yf + p2.data[7]);
+    float minv=1000.0,maxv=0.0;
+    float mini=0;
+    for(unsigned int z=0;z<layers;z++){
+        float c0=cdata[offset+z*layerStep];
+        float w=hdata[offset+z*layerStep];
+        float wiz = wi+p.data[10]*z;
+        float xiz = xi+p.data[2] *z;
+        float yiz = yi+p.data[6] *z;
+        float wiz2 = wi2+p2.data[10]*z;
+        float xiz2 = xi2+p2.data[2] *z;
+        float yiz2 = yi2+p2.data[6] *z;
+        float4 c = tex2D<float4>(tex, xiz/wiz, yiz/wiz);
+        float4 c2 = tex2D<float4>(tex2, xiz2/wiz2, yiz2/wiz2);
+
+        float v1 = fabsf(c.x - c2.x);
+        float v2 = fabsf(c.y - c2.y);
+        float v3 = fabsf(c.z - c2.z);
+        float del=v1+v2+v3;
+        float ns;
+//         if(del>.03){
+//             del=0;
+//         }
+//         del=sqrt(del);
+        const float thresh=.3f;
+        del=fminf(del,thresh)*1.0f/thresh/*.0005*del*/;
+        
+        if(c.x+c.y+c.z!=0 && c2.x+c2.y+c2.z!=0){
+            ns=(c0*w+del)/(w+1);
+            cdata[offset+z*layerStep]=ns;
+            hdata[offset+z*layerStep]=w+1;
+        }else{
+            ns=c0;
         }
         
 //         ns=del;

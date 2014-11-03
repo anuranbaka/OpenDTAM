@@ -18,6 +18,8 @@ namespace cv { namespace gpu { namespace device { namespace dtam_updateCost{
     void simpleCostCaller(m34 p, float weight, uint  rows, uint  cols, uint  layers, uint layerStep, float* hdata, float* cdata, float* lo, float* hi, float* loInd, float3* base,  float* bf, cudaTextureObject_t tex);
     void globalWeightedCostCaller(m34 p, float weight, uint  rows, uint  cols, uint  layers, uint layerStep, float* hdata, float* cdata, float* lo, float* hi, float* loInd, float3* base,  float* bf, cudaTextureObject_t tex);
     void globalWeightedBoundsCostCaller(m34 p,float weight,uint  rows, uint  cols, uint  layers, uint layerStep, float* hdata, float* cdata, float* lo, float* hi, float* loInd, float3* base,  float* bf, cudaTextureObject_t tex);
+    void globalWeightedBoundsCostCaller2(m34 p,m34 p2,float weight,uint  rows, uint  cols, uint  layers, uint layerStep, float* hdata, float* cdata, float* lo, float* hi, float* loInd, float3* base,  float* bf, cudaTextureObject_t tex,cudaTextureObject_t tex2);
     void weightedBoundsCostCaller(m34 p,float weight,uint  rows, uint  cols, uint  layers, uint layerStep, float* hdata, float* cdata, float* lo, float* hi, float* loInd, float3* base,  float* bf, cudaTextureObject_t tex);
+    void weightedBoundsCostCaller2(m34 p,m34 p2,float weight,uint  rows, uint  cols, uint  layers, uint layerStep, float* hdata, float* cdata, float* lo, float* hi, float* loInd, float3* base,  float* bf, cudaTextureObject_t tex,cudaTextureObject_t tex2);
 }}}}
 #endif

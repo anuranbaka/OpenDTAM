@@ -98,8 +98,12 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
     //messy way to disguise cuda objects
     _cuArray=Ptr<char>((char*)(new cudaArray_t));
     *((cudaArray**)(char*)_cuArray)=0;
+    _cuArray2=Ptr<char>((char*)(new cudaArray_t));
+    *((cudaArray**)(char*)_cuArray2)=0;
     _texObj=Ptr<char>((char*)(new cudaTextureObject_t));
     *((cudaTextureObject_t*)(char*)_texObj)=0;
+    _texObj2=Ptr<char>((char*)(new cudaTextureObject_t));
+    *((cudaTextureObject_t*)(char*)_texObj2)=0;
     ref=Ptr<char>(new char);
 }
 
@@ -108,7 +112,15 @@ CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
 
 void CostVolume::simpleTex(const Mat& image,Stream cvStream){
     cudaArray_t& cuArray=*((cudaArray_t*)(char*)_cuArray);
+    cudaArray_t& cuArray2=*((cudaArray_t*)(char*)_cuArray2);
     cudaTextureObject_t& texObj=*((cudaTextureObject_t*)(char*)_texObj);
+    cudaTextureObject_t& texObj2=*((cudaTextureObject_t*)(char*)_texObj2);
+    cudaArray_t tmp=cuArray2;
+    cuArray2=cuArray;
+    cuArray=tmp;
+    cudaTextureObject_t tmp2=texObj2;
+    texObj2=texObj;
+    texObj=tmp2;
     
 //     cudaArray*& cuArray=*((cudaArray**)((char*)_cuArray));
 //     if(!_texObj){
@@ -212,6 +224,7 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
     //ArrayTexture tex(image, cvStream);
     simpleTex(image,cvStream);
     cudaTextureObject_t& texObj=*((cudaTextureObject_t*)(char*)_texObj);
+    cudaTextureObject_t& texObj2=*((cudaTextureObject_t*)(char*)_texObj2);
 //     cudaTextureObject_t texObj=simpleTex(image,cvStream);
 //     cudaSafeCall( cudaDeviceSynchronize() );
 
@@ -271,8 +284,11 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
     float w=count+++initialWeight;//fun parse
     w/=(w+1); 
     assert(localStream);
-//     globalWeightedBoundsCostCaller(persp,w,CONST_ARGS);
-    weightedBoundsCostCaller(persp,w,CONST_ARGS);
+    if(texObj2)
+        weightedBoundsCostCaller2(persp,*(m34*)&p2,w,CONST_ARGS,texObj2);
+//     else
+//         weightedBoundsCostCaller(persp,w,CONST_ARGS);
+    p2=*(m34c*)&persp;
 
 }
 

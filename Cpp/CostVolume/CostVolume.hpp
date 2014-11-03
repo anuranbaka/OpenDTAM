@@ -68,8 +68,15 @@ private:
     //temp variables ("static" containers)
     cv::Ptr<char> _cuArray;//Ptr<cudaArray*> really
     cv::Ptr<char> _texObj;//Ptr<cudaTextureObject_t> really
+    cv::Ptr<char> _cuArray2;//Ptr<cudaArray*> really
+    cv::Ptr<char> _texObj2;//Ptr<cudaTextureObject_t> really
     cv::Mat cBuffer;//Must be pagable
     cv::Ptr<char> ref;
+    
+    struct m34c{//for storing the old perspective matrix
+            float data[12];
+        };
+    m34c p2;
 };
 
 #endif // COSTVOLUME_HPP
