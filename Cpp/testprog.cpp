@@ -60,7 +60,7 @@ int App_main( int argc, char** argv )
     rand();
     cv::theRNG().state = rand();
     int numImg=50;
-    int numFiles=600;
+    int numFiles=515;
 
 #if !defined WIN32 && !defined _WIN32 && !defined WINCE && defined __linux__ && !defined ANDROID
     pthread_setname_np(pthread_self(),"App_main");
@@ -68,7 +68,7 @@ int App_main( int argc, char** argv )
 
     char filename[500];
     Mat image, cameraMatrix, R, T;
-    vector<Mat> images,Rs,ds,Ts,Rs0,Ts0;
+    vector<Mat> images,Rs,ds,Ts,Rs0,Ts0,D0;
     vector<float> key,qual,vis,occ;
 
     Mat ret;//a place to return downloaded images to
@@ -79,9 +79,12 @@ int App_main( int argc, char** argv )
     int inc=1;
     for(int i=0;i>0||inc>0;i+=inc){
         Mat tmp,d,image;
-        int offset=230;
+        int offset=0;
         if(inc>0){
-        loadAhanda("../../Trajectory_30_seconds",
+            
+        loadAhanda("/home/paulf/Downloads/60fps_images_archieve/",
+//         loadAhanda("/home/paulf/Downloads/traj_over_table/",
+                   65535,
                    i+offset,
                    image,
                    d,
@@ -97,6 +100,9 @@ int App_main( int argc, char** argv )
         ds.push_back(d.clone());
         Rs0.push_back(R.clone());
         Ts0.push_back(T.clone());
+        D0.push_back(1/d);
+//         pfShow("load",image,0,Vec2d(0,1));
+//          pfShow("depth",1/d*50,0,Vec2d(0,1));
         }
         else
         {
@@ -106,6 +112,7 @@ int App_main( int argc, char** argv )
             ds.push_back(ds[i]);
             Rs0.push_back(Rs0[i]);
             Ts0.push_back(Ts0[i]);
+            D0.push_back(D0[i]);
         }
         
         key.push_back(0);
@@ -145,8 +152,10 @@ int App_main( int argc, char** argv )
                                                 0.0,0.0,0);
     int layers=128;
     int desiredImagesPerCV=50;
-    int imagesPerCV=3;
+    int imagesPerCV=50;
     int startAt=0;
+    float occlusionThreshold=.05;
+    Norm norm=L1T;
 //     {//offset init
 //         Rs[startAt]=Rs[0].clone();
 //         Rs[startAt+1]=Rs[1].clone();
@@ -154,7 +163,7 @@ int App_main( int argc, char** argv )
 //         Ts[startAt+1]=Ts[1].clone();
 //     }
     
-    CostVolume cv(images[startAt],(FrameID)startAt,layers,0.015,0.0,Rs[startAt],Ts[startAt],cameraMatrix);
+    CostVolume cv(images[startAt],(FrameID)startAt,layers,0.015,0.0,Rs[startAt],Ts[startAt],cameraMatrix,occlusionThreshold,norm);
     
  
     
@@ -173,10 +182,21 @@ int App_main( int argc, char** argv )
             cv.updateCost(image, R, T);
             cudaDeviceSynchronize();
 //             gpause();
-            for( int i=0;i<layers;i++){
-                pfShow("layer",cv.downloadOldStyle(i), 0, cv::Vec2d(0, 1));
-//                 usleep(1000000);
-            }
+//             for( int i=0;i<layers;i++){
+//                 pfShow("layer",cv.downloadOldStyle(i), 0, cv::Vec2d(0, 1));
+// //                 usleep(1000000);
+//             }
+
+//             volatile int keep=1;
+// //             while(cv.count==190&&keep){
+//                 vector<Mat> slices=cv.download();
+//                 for( int i=0;i<cv.rows;i++){
+//                     pfShow("cross Section",slices[i],0, cv::Vec2d(0, 1));
+// //                     usleep(10000);
+// //                     if(cv.count>50||cv.count<3)
+// //                         gpause();
+// //                 }
+//             }
         }
         else{
             
@@ -242,14 +262,24 @@ int App_main( int argc, char** argv )
 //             optimizer.theta=10000;
 //             optimizer.optimizeA(a,a);
             optimizer.cvStream.waitForCompletion();
+             cv.lo.download(ret);
+            pfShow("loVal", ret, 0, cv::Vec2d(0, 3));
              cv.loInd.download(ret);
             pfShow("loInd", ret, 0, cv::Vec2d(0, layers));
+             medianBlur(ret,ret,3);
+             medianBlur(ret,ret,3);
+            pfShow("loIndMed",ret, 0, cv::Vec2d(0, layers));
+            
             a.download(ret);
             pfShow("A function loose", ret, 0, cv::Vec2d(0, layers));
             Mat diff=ret.clone();
             cv.loInd.download(ret);
             diff-=ret;
             pfShow("difference by reg", diff, 0, cv::Vec2d(-layers, layers));
+            pfShow("true Depth", D0[cv.fid], 0, cv::Vec2d(0, cv.near));
+            pfShow("diff", D0[cv.fid]-optimizer.depthMap(), 0, cv::Vec2d(-.005,.005));
+            cout<<"diff:"<<sum(abs(D0[cv.fid]-optimizer.depthMap()))<<endl;
+            cout<<"diffMed:"<<median(abs(D0[cv.fid]-optimizer.depthMap()))<<endl;
 //                gpause();
 //             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
 //             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
@@ -309,89 +339,89 @@ int App_main( int argc, char** argv )
 //                     imagesPerCV=1;
             sincefail++;
             
-            for(int i0=0;i0<=imagesPerCV;i0++){
-                int i=((imageNum+i0)%numImg+numImg)%numImg;
-                tracker.addFrame(images[i]);
-                if(!tracker.align()){
-                    int neg=((i-1)%numImg+numImg)%numImg;
-                    if(i0<2 && ((i-cv.fid)%numImg+numImg)%numImg==1){//failed to align the next image and at limit on frames
-                        cout<<"FAil: "<<i<<" on: "<<cv.fid<<endl;
-//                         tracker.verbose=1;
-//                         tracker.pose=RTToLie(Rs[neg],Ts[neg]);
-//                         tracker.thisFrame=images[neg];
-//                         tracker.addFrame(images[i]);
-//                         tracker.align();
-//                         tracker.verbose=0;
-                        pfShow("FAILED",images[i]);
-                    }
-                    imagesPerCV=max(i0-1,1);
-//                     if(i0==0&&sincefail>4){
-//                         cout<<"TRACKFAIL! RESTART RANDOM"<<endl;
-//                         sf=cv.near/.15;//failed so bad we need a new start
-// //                         randu(tracker.depth ,Scalar(0),Scalar(.15));
-//                         tracker.depth=.10;
-//                         tracker.pose=RTToLie(Rs[i-1],Ts[i-1]);
-//                         tracker.align();
-//                         sincefail=0;
-//                         Ts[i]=Ts[(i-1+numImg)%numImg].clone();
-//                         randu(Ts[i] ,Scalar(-1),Scalar(1));
-//                         Ts[i]=Ts[(i-1+numImg)%numImg]+Ts[i];
-//                         Rs[i]=Rs[(i-1+numImg)%numImg].clone();
-// //                         goto skip;
+//             for(int i0=0;i0<=imagesPerCV;i0++){
+//                 int i=((imageNum+i0)%numImg+numImg)%numImg;
+//                 tracker.addFrame(images[i]);
+//                 if(!tracker.align()){
+//                     int neg=((i-1)%numImg+numImg)%numImg;
+//                     if(i0<2 && ((i-cv.fid)%numImg+numImg)%numImg==1){//failed to align the next image and at limit on frames
+//                         cout<<"FAil: "<<i<<" on: "<<cv.fid<<endl;
+// //                         tracker.verbose=1;
+// //                         tracker.pose=RTToLie(Rs[neg],Ts[neg]);
+// //                         tracker.thisFrame=images[neg];
+// //                         tracker.addFrame(images[i]);
+// //                         tracker.align();
+// //                         tracker.verbose=0;
+//                         pfShow("FAILED",images[i]);
 //                     }
-                }
-               
-                LieToRT(tracker.pose,R,T);
-                if(tracker.quality>qual[i]){
-                    Rs[i]=R.clone();
-                    Ts[i]=T.clone();
-                    qual[i]=tracker.quality;
-                    vis[i]=tracker.coverage;
-                    occ[i]=tracker.occlusion;
-                }else{
-                    tracker.pose=RTToLie(Rs[i],Ts[i]);
-                }
-
-                skip:
-                Mat p,tp;
-                p=tracker.pose;
-                tp=RTToLie(Rs0[i],Ts0[i]);
-// //                 {//debug
-// //                     cout << "True Pose: "<< tp << endl;
-// //                     cout << "True Delta: "<< LieSub(tp,tracker.basePose) << endl;
-                    cout << "Recovered Pose: "<< p << endl;
-// //                     cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
-// //                     cout << "Pose Error: "<< p-tp << endl;
-// //                 }
-                
-                cout<<"<"<<cv.fid<<", "<<i<<">"<<endl;
-//                 Mat tran1=Mat::eye(4,4,CV_64FC1);
-//                 ((Mat)(Mat_<double>(4,1) <<    0,0,-1.0/m,1)).copyTo(tran1.col(3));
-//                 Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,-45,0)*3.1415/180.0));
-//                 Mat tran2=Mat::eye(4,4,CV_64FC1);
-//                 ((Mat)(Mat_<double>(4,1) <<    0,0,3/m,1)).copyTo(tran2.col(3));
-//                 Mat view=tran2*rotor*tran1;
-                Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
-                Mat basePose0=make4x4(RTToP(Rs0[cv.fid],Ts0[cv.fid]));
-                Mat foundPose=make4x4(RTToP(R,T));
-// //                 cout<<"view:\n"<< fixed << setprecision(3)<< view<<endl;
-                Mat view=diagnosticInfo(images[i],images[cv.fid],tracker.depth,basePose,foundPose,cameraMatrix);
-//                 Mat viewc=diagnosticInfo(images[i],images[cv.fid],tracker.depth,basePose0,make4x4(RTToP(Rs0[i],Ts0[i])),cameraMatrix);
-//                 for(int j=0;j<5;j++){
-//                     Mat tmp;
-//                     pfShow("Predicted Image",view,0,Vec2d(0,1));
-//                     absdiff(images[i],view,tmp);
-//                     pfShow("difftrk",tmp,0,Vec2d(0,1));
-//                     if(tracker.quality<.75 &&i0==-1)
-//                         gpause();
-//                     pfShow("Predicted Image",viewc,0,Vec2d(0,1));
-//                     absdiff(images[i],viewc,tmp);
-//                     pfShow("difftrk",tmp,0,Vec2d(0,1));
-//                     if(tracker.quality<.75 &&i0==-1)
-//                         gpause();
+//                     imagesPerCV=max(i0-1,1);
+// //                     if(i0==0&&sincefail>4){
+// //                         cout<<"TRACKFAIL! RESTART RANDOM"<<endl;
+// //                         sf=cv.near/.15;//failed so bad we need a new start
+// // //                         randu(tracker.depth ,Scalar(0),Scalar(.15));
+// //                         tracker.depth=.10;
+// //                         tracker.pose=RTToLie(Rs[i-1],Ts[i-1]);
+// //                         tracker.align();
+// //                         sincefail=0;
+// //                         Ts[i]=Ts[(i-1+numImg)%numImg].clone();
+// //                         randu(Ts[i] ,Scalar(-1),Scalar(1));
+// //                         Ts[i]=Ts[(i-1+numImg)%numImg]+Ts[i];
+// //                         Rs[i]=Rs[(i-1+numImg)%numImg].clone();
+// // //                         goto skip;
+// //                     }
 //                 }
-//                 tracker.pose=tp;
-            }
+//                
+//                 LieToRT(tracker.pose,R,T);
+//                 if(tracker.quality>qual[i]){
+//                     Rs[i]=R.clone();
+//                     Ts[i]=T.clone();
+//                     qual[i]=tracker.quality;
+//                     vis[i]=tracker.coverage;
+//                     occ[i]=tracker.occlusion;
+//                 }else{
+//                     tracker.pose=RTToLie(Rs[i],Ts[i]);
+//                 }
+// 
+//                 skip:
+//                 Mat p,tp;
+//                 p=tracker.pose;
+//                 tp=RTToLie(Rs0[i],Ts0[i]);
+// // //                 {//debug
+// // //                     cout << "True Pose: "<< tp << endl;
+// // //                     cout << "True Delta: "<< LieSub(tp,tracker.basePose) << endl;
+//                     cout << "Recovered Pose: "<< p << endl;
+// // //                     cout << "Recovered Delta: "<< LieSub(p,tracker.basePose) << endl;
+// // //                     cout << "Pose Error: "<< p-tp << endl;
+// // //                 }
+//                 
+//                 cout<<"<"<<cv.fid<<", "<<i<<">"<<endl;
+// //                 Mat tran1=Mat::eye(4,4,CV_64FC1);
+// //                 ((Mat)(Mat_<double>(4,1) <<    0,0,-1.0/m,1)).copyTo(tran1.col(3));
+// //                 Mat rotor=make4x4(rodrigues((Mat)(Mat_<double>(3,1) << 0,-45,0)*3.1415/180.0));
+// //                 Mat tran2=Mat::eye(4,4,CV_64FC1);
+// //                 ((Mat)(Mat_<double>(4,1) <<    0,0,3/m,1)).copyTo(tran2.col(3));
+// //                 Mat view=tran2*rotor*tran1;
+//                 Mat basePose=make4x4(RTToP(Rs[cv.fid],Ts[cv.fid]));
+//                 Mat basePose0=make4x4(RTToP(Rs0[cv.fid],Ts0[cv.fid]));
+//                 Mat foundPose=make4x4(RTToP(R,T));
+// // //                 cout<<"view:\n"<< fixed << setprecision(3)<< view<<endl;
+//                 Mat view=diagnosticInfo(images[i],images[cv.fid],tracker.depth,basePose,foundPose,cameraMatrix);
+// //                 Mat viewc=diagnosticInfo(images[i],images[cv.fid],tracker.depth,basePose0,make4x4(RTToP(Rs0[i],Ts0[i])),cameraMatrix);
+// //                 for(int j=0;j<5;j++){
+// //                     Mat tmp;
+// //                     pfShow("Predicted Image",view,0,Vec2d(0,1));
+// //                     absdiff(images[i],view,tmp);
+// //                     pfShow("difftrk",tmp,0,Vec2d(0,1));
+// //                     if(tracker.quality<.75 &&i0==-1)
+// //                         gpause();
+// //                     pfShow("Predicted Image",viewc,0,Vec2d(0,1));
+// //                     absdiff(images[i],viewc,tmp);
+// //                     pfShow("difftrk",tmp,0,Vec2d(0,1));
+// //                     if(tracker.quality<.75 &&i0==-1)
+// //                         gpause();
+// //                 }
+// //                 tracker.pose=tp;
+//             }
             
 //             if (tcount>6&&imagesPerCV>20)
 //             {
@@ -419,7 +449,7 @@ int App_main( int argc, char** argv )
 //             if(imageNum>numImg/2+1)
 //                 goto exit;
 
-            cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix);
+            cv=CostVolume(images[imageNum],(FrameID)imageNum,layers,cv.near/sf,0.0,Rs[imageNum],Ts[imageNum],cameraMatrix,occlusionThreshold,norm);
             key[imageNum]=tcount;
             
             
@@ -437,7 +467,7 @@ int App_main( int argc, char** argv )
 //                 reprojectCloud(images[imageNum],images[0],optimizer.depthMap(),RTToP(Rs[0],Ts[0]),RTToP(Rs[imageNum],Ts[imageNum]),cameraMatrix);
 //             }
             
-            
+//             gpause();
         }
         s.waitForCompletion();// so we don't lock the whole system up forever
     }

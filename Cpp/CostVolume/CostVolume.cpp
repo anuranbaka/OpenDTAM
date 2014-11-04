@@ -60,8 +60,10 @@ void CostVolume::checkInputs(const cv::Mat& R, const cv::Mat& T,
 #define FLATUP(src,dst){GpuMat tmp;tmp.upload(src);dst.create(1,rows*cols, src.type());dst=dst.reshape(0,rows);}
 #define FLATALLOC(n) n.create(1,rows*cols, CV_32FC1);n=n.reshape(0,rows)
 CostVolume::CostVolume(Mat image, FrameID _fid, int _layers, float _near,
-        float _far, cv::Mat R, cv::Mat T, cv::Mat _cameraMatrix,
-        float initialCost, float initialWeight): R(R),T(T),initialWeight(initialWeight),_cuArray(0) {
+        float _far, cv::Mat R, cv::Mat T, cv::Mat _cameraMatrix,float occlusionThreshold,
+        Norm norm, float initialCost, float initialWeight)
+        : 
+        R(R),T(T),occlusionThreshold(occlusionThreshold),norm(norm),initialWeight(initialWeight),_cuArray(0) {
 
     //For performance reasons, OpenDTAM only supports multiple of 32 image sizes with cols >= 64
     CV_Assert(image.rows % 32 == 0 && image.cols % 32 == 0 && image.cols >= 64);
@@ -284,10 +286,13 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
     float w=count+++initialWeight;//fun parse
     w/=(w+1); 
     assert(localStream);
-    if(texObj2)
-        weightedBoundsCostCaller2(persp,*(m34*)&p2,w,CONST_ARGS,texObj2);
+//     if(texObj2){
+//         weightedBoundsCostCaller2(persp,*(m34*)&p2,w,CONST_ARGS,texObj2);
+// //         weightedBoundsCostCaller(persp,w,CONST_ARGS);
+//     }
 //     else
-//         weightedBoundsCostCaller(persp,w,CONST_ARGS);
+    
+        weightedBoundsCostCaller(persp,occlusionThreshold,CONST_ARGS,norm);
     p2=*(m34c*)&persp;
 
 }

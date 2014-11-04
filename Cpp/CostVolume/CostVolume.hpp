@@ -9,10 +9,12 @@
 
 #include <opencv2/gpu/gpu.hpp>
 #include <opencv2/gpu/stream_accessor.hpp>
+#include "CostVolume.cuh"
 typedef  int FrameID;
 
 class CostVolume
 {
+    
 public:
     FrameID fid;
     int rows;
@@ -22,9 +24,12 @@ public:
     float far;  //inverse depth of center of voxels in layer 0
     float depthStep;
     float initialWeight;
-    cv::Mat cameraMatrix;//Note! should be in OpenCV format
     cv::Mat R;
     cv::Mat T;
+    cv::Mat cameraMatrix;//Note! should be in OpenCV format
+    float occlusionThreshold;
+    Norm norm;
+    
     cv::Mat projection;//projects world coordinates (x,y,z) into (rows,cols,layers)
 
     cv::gpu::GpuMat baseImage;
@@ -47,7 +52,8 @@ public:
     CostVolume(){}
     ~CostVolume();
     CostVolume(cv::Mat image, FrameID _fid, int _layers, float _near, float _far,
-            cv::Mat R, cv::Mat T, cv::Mat _cameraMatrix, float initialCost=3.0, float initialWeight=.001);
+            cv::Mat R, cv::Mat T, cv::Mat _cameraMatrix, float occlusionThreshold,
+            Norm norm, float initialCost=3.0, float initialWeight=.001);
 
     //HACK: remove this function in release
     cv::Mat downloadOldStyle( int layer){

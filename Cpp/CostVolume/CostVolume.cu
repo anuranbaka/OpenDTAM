@@ -186,17 +186,30 @@ __global__ void globalWeightedBoundsCost2(m34 p,m34 p2,float weight, CONSTT,cuda
     hi[offset]=maxv;
 }
 
+
+template<Norm norm>
 __global__ void weightedBoundsCost(m34 p,float weight, CONSTT);
-void weightedBoundsCostCaller(m34 p,float weight,CONSTT){
+
+void weightedBoundsCostCaller(m34 p,float weight,CONSTT,Norm norm){
    dim3 dimBlock(BLOCK_X,BLOCK_Y);
    dim3 dimGrid((cols  + dimBlock.x - 1) / dimBlock.x,
                 (rows + dimBlock.y - 1) / dimBlock.y);
-   weightedBoundsCost<<<dimGrid, dimBlock, 0, localStream>>>(p, weight,CONSTS);
+        switch(norm){    
+            case L1T:
+                weightedBoundsCost<L1T><<<dimGrid, dimBlock, 0, localStream>>>(p, weight,CONSTS);
+                break;
+            case L1N:
+                weightedBoundsCost<L1N><<<dimGrid, dimBlock, 0, localStream>>>(p, weight,CONSTS);
+                break;
+            case L2N:
+                weightedBoundsCost<L2N><<<dimGrid, dimBlock, 0, localStream>>>(p, weight,CONSTS);
+                break;
+        }
    assert(localStream);
    cudaSafeCall( cudaGetLastError() );
 }
 
-
+template<Norm norm>
 __global__ void weightedBoundsCost(m34 p,float weight, CONSTT)
 {
     //float*bf=(float*)base;
@@ -238,26 +251,62 @@ __global__ void weightedBoundsCost(m34 p,float weight, CONSTT)
         float yiz = yi+p.data[6] *z;
         float4 c = tex2D<float4>(tex, xiz/wiz, yiz/wiz);
 
-        float v1 = fabsf(c.x - B.x);
-        float v2 = fabsf(c.y - B.y);
-        float v3 = fabsf(c.z - B.z);
-        float del=v1+v2+v3;
-        float ns;
-//         if(del>.03){
-//             del=0;
-//         }
-//         del=sqrt(del);
-        const float thresh=.3f;
-        del=fminf(del,thresh)*1.0f/thresh/*.0005*del*/;
-        
-        if(c.x+c.y+c.z!=0){
-        ns=(c0*w+del)/(w+1);
-        cdata[offset+z*layerStep]=ns;
-        hdata[offset+z*layerStep]=w+1;
-        }else{
-            ns=(c0*w+del*.25)/(w+.25);
-            cdata[offset+z*layerStep]=ns;
-            hdata[offset+z*layerStep]=w+.25;
+        float v1,v2,v3,del,ns;
+        const float thresh=weight;
+        switch(norm){
+            case L1T:
+                v1 = fabsf(c.x - B.x);
+                v2 = fabsf(c.y - B.y);
+                v3 = fabsf(c.z - B.z);
+                del=v1+v2+v3;
+                
+        //         if(del>.03){
+        //             del=0;
+        //         }
+        //         del=sqrt(del);
+                
+                del=fminf(del,thresh)*3.0f/thresh/*.0005*del*/;
+                
+                if(c.x+c.y+c.z!=0){
+                ns=(c0*w+del)/(w+1);
+                cdata[offset+z*layerStep]=ns;
+                hdata[offset+z*layerStep]=w+1;
+                }else{
+                    ns=c0;
+        //             ns=(c0*w+del)/(w+.25);
+        //             cdata[offset+z*layerStep]=ns;
+        //             hdata[offset+z*layerStep]=w+.25;
+                }
+                break;
+            case L1N:
+                v1 = fabsf(c.x - B.x);
+                v2 = fabsf(c.y - B.y);
+                v3 = fabsf(c.z - B.z);
+                del=v1+v2+v3;
+                
+                if(c.x+c.y+c.z!=0){
+                    ns=(c0*w+del)/(w+1);
+                    cdata[offset+z*layerStep]=ns;
+                    hdata[offset+z*layerStep]=w+1;
+                }else{
+                    ns=c0;
+                }
+                break;
+            case L2N:
+                v1 = (c.x - B.x);
+                v2 = (c.y - B.y);
+                v3 = (c.z - B.z);
+                del=v1*v1+v2*v2+v3*v3;
+                del*=5;
+                
+                if(c.x+c.y+c.z!=0){
+                    ns=(c0*w+del)/(w+1);
+                    cdata[offset+z*layerStep]=ns;
+                    hdata[offset+z*layerStep]=w+1;
+                }else{
+                    ns=c0;
+                }
+                break;
         }
         
 //         ns=del;
@@ -275,12 +324,12 @@ __global__ void weightedBoundsCost(m34 p,float weight, CONSTT)
 
 __global__ void weightedBoundsCost2(m34 p, m34 p2, float weight, CONSTT,cudaTextureObject_t tex2);
 void weightedBoundsCostCaller2(m34 p, m34 p2, float weight,CONSTT,cudaTextureObject_t tex2){
-   dim3 dimBlock(BLOCK_X,BLOCK_Y);
-   dim3 dimGrid((cols  + dimBlock.x - 1) / dimBlock.x,
+    dim3 dimBlock(BLOCK_X,BLOCK_Y);
+    dim3 dimGrid((cols  + dimBlock.x - 1) / dimBlock.x,
                 (rows + dimBlock.y - 1) / dimBlock.y);
-   weightedBoundsCost2<<<dimGrid, dimBlock, 0, localStream>>>(p,p2, weight,CONSTS,tex2);
-   assert(localStream);
-   cudaSafeCall( cudaGetLastError() );
+    weightedBoundsCost2<<<dimGrid, dimBlock, 0, localStream>>>(p,p2, weight,CONSTS,tex2);
+    assert(localStream);
+    cudaSafeCall( cudaGetLastError() );
 }
 
 
@@ -344,15 +393,16 @@ __global__ void weightedBoundsCost2(m34 p,m34 p2,float weight, CONSTT,cudaTextur
         const float thresh=.3f;
         del=fminf(del,thresh)*1.0f/thresh/*.0005*del*/;
         
-        if(c.x+c.y+c.z!=0 && c2.x+c2.y+c2.z!=0){
+//         if(c.x+c.y+c.z!=0 && c2.x+c2.y+c2.z!=0){
             ns=(c0*w+del)/(w+1);
+                    ns=del;
             cdata[offset+z*layerStep]=ns;
             hdata[offset+z*layerStep]=w+1;
-        }else{
-            ns=c0;
-        }
+//         }else{
+//             ns=c0;
+//         }
         
-//         ns=del;
+
         
         if (ns < minv) {
         minv = ns;
