@@ -250,8 +250,13 @@ int App_main( int argc, char** argv )
 //                    pfShow("Q function:x direction", ret, 0, cv::Vec2d(-1, 1));
 //                    denoiser._qy.download(ret);
 //                    pfShow("Q function:y direction", ret, 0, cv::Vec2d(-1, 1));
-                   d.download(ret);
-                   pfShow("D function", ret, 0, cv::Vec2d(0, layers));
+//                     d.download(ret);
+//                     pfShow("D function", ret, 0, cv::Vec2d(0, layers));
+//                     gpause();
+//                     if(QDcount<2){
+//                         medianBlur(ret,ret,3);
+//                         d.upload(ret);
+//                     }
                 }
                 doneOptimizing=optimizer.optimizeA(d,a);
                 Acount++;
@@ -266,10 +271,13 @@ int App_main( int argc, char** argv )
             pfShow("loVal", ret, 0, cv::Vec2d(0, 3));
              cv.loInd.download(ret);
             pfShow("loInd", ret, 0, cv::Vec2d(0, layers));
-             medianBlur(ret,ret,3);
-             medianBlur(ret,ret,3);
+            cout<<"diffN0:"<<sum(abs(D0[cv.fid]-(ret*cv.depthStep+cv.far)))<<endl;
+            cout<<"diffN0Med:"<<median(abs(D0[cv.fid]-(ret*cv.depthStep+cv.far)))<<endl;
+            medianBlur(ret,ret,3);
+            medianBlur(ret,ret,3);
             pfShow("loIndMed",ret, 0, cv::Vec2d(0, layers));
-            
+            cout<<"diffMedN0:"<<sum(abs(D0[cv.fid]-(ret*cv.depthStep+cv.far)))<<endl;
+            cout<<"diffMedN0Med:"<<median(abs(D0[cv.fid]-(ret*cv.depthStep+cv.far)))<<endl;
             a.download(ret);
             pfShow("A function loose", ret, 0, cv::Vec2d(0, layers));
             Mat diff=ret.clone();
@@ -280,42 +288,43 @@ int App_main( int argc, char** argv )
             pfShow("diff", D0[cv.fid]-optimizer.depthMap(), 0, cv::Vec2d(-.005,.005));
             cout<<"diff:"<<sum(abs(D0[cv.fid]-optimizer.depthMap()))<<endl;
             cout<<"diffMed:"<<median(abs(D0[cv.fid]-optimizer.depthMap()))<<endl;
+            
 //                gpause();
 //             cout<<"A iterations: "<< Acount<< "  QD iterations: "<<QDcount<<endl;
 //             pfShow("Depth Solution", optimizer.depthMap(), 0, cv::Vec2d(cv.far, cv.near));
 //             imwrite("outz.png",ret);
 
-            Track tracker(cv);
-            Mat out=optimizer.depthMap();
-            
-//             sprintf(filename,"/groundtruth/depth_%03d.png",cv.fid);
-//             Mat out16;
-//             out16=1/out;
-//             out16.convertTo(out16,CV_16UC3,10);
-//             cout<<"Mean:"<<mean(out16)[0]<<endl;
-//             imwrite(filename,out16);
-            
-//             if (tcount==3){
-//                 out=cv.near-out;
-//             }
-            double m;
-            minMaxLoc(out,NULL,&m);
-            m=mean(out)[0];
-            
-                
+//             Track tracker(cv);
+//             Mat out=optimizer.depthMap();
+//             
+// //             sprintf(filename,"/groundtruth/depth_%03d.png",cv.fid);
+// //             Mat out16;
+// //             out16=1/out;
+// //             out16.convertTo(out16,CV_16UC3,10);
+// //             cout<<"Mean:"<<mean(out16)[0]<<endl;
+// //             imwrite(filename,out16);
+//             
+// //             if (tcount==3){
+// //                 out=cv.near-out;
+// //             }
+//             double m;
+//             minMaxLoc(out,NULL,&m);
+//             m=mean(out)[0];
+//             
+//                 
             double sf=1;//(.25*cv.near/m);
-            if(!(sf<100&&sf>.001)){
-//                 file<<sf<<", fail!, "<<endl;
-                cout<<"FAIL CV #: "<<tcount<<" sf: "<<sf<<endl;
-                if(sf>100||sf<.001)
-                    sf=1.0+.1-.2*(sf<1.0);
-//                 gpause();
-            }
-            tracker.depth=out;
-//             medianBlur(out,tracker.depth,3);
-//             if(imageNum>180)
-//             imageNum=((imageNum-imagesPerCV-2)%numImg+numImg)%numImg;
-//             else if (tcount>6)
+//             if(!(sf<100&&sf>.001)){
+// //                 file<<sf<<", fail!, "<<endl;
+//                 cout<<"FAIL CV #: "<<tcount<<" sf: "<<sf<<endl;
+//                 if(sf>100||sf<.001)
+//                     sf=1.0+.1-.2*(sf<1.0);
+// //                 gpause();
+//             }
+//             tracker.depth=out;
+// //             medianBlur(out,tracker.depth,3);
+// //             if(imageNum>180)
+// //             imageNum=((imageNum-imagesPerCV-2)%numImg+numImg)%numImg;
+// //             else if (tcount>6)
             int ni=0;
 //             ni=imagesPerCV;
 //             ni=min(ni,imagesPerCV-3);
@@ -323,21 +332,21 @@ int App_main( int argc, char** argv )
             if(tcount==0)
                 ni=1;
             imageNum=((imageNum-imagesPerCV-1+ni)%numImg+numImg)%numImg;
-            tracker.thisFrame=makeGray(images[imageNum]);
-            tracker.pose=RTToLie(Rs[cv.fid],Ts[cv.fid]);
+//             tracker.thisFrame=makeGray(images[imageNum]);
+//             tracker.pose=RTToLie(Rs[cv.fid],Ts[cv.fid]);
 //             tracker.pose=RTToLie(Rs[imageNum],Ts[imageNum]);
 //                 if(imageNum<185)
 //                 imageNum=180;
             
 //             imageNum=30;
-            assert(imageNum>=0);
-//             if (imageNum>5)
-//                 if(imagesPerCV==1)
-            
-            imagesPerCV=desiredImagesPerCV;
-//                 else
-//                     imagesPerCV=1;
-            sincefail++;
+//             assert(imageNum>=0);
+// //             if (imageNum>5)
+// //                 if(imagesPerCV==1)
+//             
+//             imagesPerCV=desiredImagesPerCV;
+// //                 else
+// //                     imagesPerCV=1;
+//             sincefail++;
             
 //             for(int i0=0;i0<=imagesPerCV;i0++){
 //                 int i=((imageNum+i0)%numImg+numImg)%numImg;
