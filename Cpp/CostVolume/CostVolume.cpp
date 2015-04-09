@@ -27,19 +27,37 @@ using namespace cv::gpu;
 void CostVolume::solveProjection(const cv::Mat& R, const cv::Mat& T) {
     Mat P;
     RTToP(R, T, P);
+    //P:4x4 rigid transformation taking points from world to the camera frame
+    //Camera:
+    //fx 0  cx 
+    //0  fy cy 
+    //0  0  1  
     projection.create(4, 4, CV_64FC1);
     projection=0.0;
     projection(Range(0, 2), Range(0, 3)) += cameraMatrix.rowRange(0, 2);
+    //Projection:
+    //fx 0  cx 0
+    //0  fy cy 0
+    //0  0  0  0
+    //0  0  0  0
 
     projection.at<double>(2,3)=1.0;
     projection.at<double>(3,2)=1.0;
-//    {//debug
-//        cout<<"Augmented Camera Matrix:\n"<<projection<<endl;
-//    }
     
-    projection=projection*P;//projection now goes x_world,y_world,z_world -->x_cv_px, y_cv_px , 1/z_from_camera_center
-    projection.at<double>(2,2)=-far;//put the origin at 1/z_from_camera_center=near
-    projection.row(2)/=depthStep;//stretch inverse depth so now x_world,y_world,z_world -->x_cv_px, y_cv_px , 1/z_cv_px
+    //Projection: Takes camera coordinates to pixel coordinates:x_px,y_px,1/zc
+    //fx 0  cx 0
+    //0  fy cy 0
+    //0  0  0  1
+    //0  0  1  0
+    
+    originShift=(Mat)(Mat_<double>(4,4) <<    1.0, 0. , 0. , 0. ,
+                                              0. , 1.0, 0. , 0. ,
+                                              0. , 0. , 1.0,-far,
+                                              0. , 0. , 0. , 1.0   );
+    
+    projection=originShift*projection;//put the origin at 1/z_from_camera_center = far
+    projection.row(2)/=depthStep;//stretch inverse depth so now x_cam,y_cam,z_cam-->x_cv_px, y_cv_px , [1/z_from_camera_center - far]_px
+    projection=projection*P;//projection now goes x_world,y_world,z_world -->x_cv_px, y_cv_px , [1/z_from_camera_center - far]_px
     
    // exit(0);
 }
