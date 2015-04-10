@@ -6,7 +6,7 @@
 #include "Optimizer.hpp"
 #include "Optimizer.cuh"
 #include <opencv2/core/cuda_stream_accessor.hpp>
-#include <opencv2/core.hpp>
+#include <opencv2/core/core.hpp>
 #include <iostream>
 
 using namespace std;
@@ -15,8 +15,10 @@ using namespace cuda;
 static void memZero(GpuMat& in,Stream& cvStream);
 
 void Optimizer::setDefaultParams(){
-    thetaStart =    20.0;
-    thetaMin   =     1.0;
+    
+    float off=cv.layers;
+    thetaStart =    200.0;
+    thetaMin   =     0.1;
     thetaStep  =      .97;
     epsilon    =       .1;
     lambda     =       .01;
@@ -52,12 +54,11 @@ void Optimizer::initOptimization(){
 }
 
 void Optimizer::initA() {
-//     cv.loInd.copyTo(_a);
     cv.loInd.copyTo(_a,cvStream);
 }
 
 bool Optimizer::optimizeA(const cv::cuda::GpuMat _d,cv::cuda::GpuMat _a){
-    using namespace cv::cuda::device::dtam_optimizer;
+    using namespace cv::cuda::dtam_optimizer;
     localStream = cv::cuda::StreamAccessor::getStream(cvStream);
     this->_a=_a;
 
@@ -75,6 +76,7 @@ bool Optimizer::optimizeA(const cv::cuda::GpuMat _d,cv::cuda::GpuMat _a){
         stableDepthReady=Ptr<char>((char*)(new cudaEvent_t));
         cudaEventCreate((cudaEvent_t*)(char*)stableDepthReady,cudaEventBlockingSync);
         _a.convertTo(stableDepth,CV_32FC1,cv.depthStep,cv.far,cvStream);
+        // cvStream.enqueueConvert(_a,stableDepth,CV_32FC1,cv.depthStep,cv.far);
         cudaEventRecord(*(cudaEvent_t*)(char*)stableDepthReady,localStream);
         stableDepthEnqueued = 1;
     }
@@ -88,13 +90,15 @@ const cv::Mat Optimizer::depthMap(){
     // Currently depth is just a constant multiple of the index, so
     // infinite depth is always represented. This is likely to change.
     Mat tmp(cv.rows,cv.cols,CV_32FC1);
-    cv::cuda::Stream str=Stream::Null();
+    cv::cuda::Stream str;
     if(stableDepthEnqueued){
         cudaEventSynchronize(*(cudaEvent_t*)(char*)stableDepthReady);
         stableDepth.download(tmp,str);
+        // str.enqueueDownload(stableDepth,tmp);
         str.waitForCompletion();
     }else{
         _a.download(tmp,str);
+        // str.enqueueDownload(_a,tmp);
         str.waitForCompletion();
         tmp = tmp * cv.depthStep + cv.far;
     }

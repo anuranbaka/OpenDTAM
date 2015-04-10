@@ -2,7 +2,7 @@
 #ifndef COSTVOLUME_CUH
 #define COSTVOLUME_CUH
 #include <opencv2/core/cuda/common.hpp>//for cudaStream_t
-namespace cv { namespace cuda { namespace device { namespace dtam_denoise{
+namespace cv { namespace cuda { namespace dtam_denoise{
     struct m33{
             float data[9];
         };
@@ -18,5 +18,5 @@ namespace cv { namespace cuda { namespace device { namespace dtam_denoise{
                     float *gxpt, float *gypt, int cols, float sigma_q, float sigma_d, float epsilon,
                     float theta);
     extern cudaStream_t localStream;
-}}}}
+}}}
 #endif

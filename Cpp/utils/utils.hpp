@@ -1,10 +1,9 @@
-#include <opencv2/core.hpp>
-#include <opencv2/calib3d.hpp>
-
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 #ifndef DTAM_UTILS_HPP
 #define DTAM_UTILS_HPP
 using namespace cv;
-
 static Mat make4x4(const Mat& mat){
     
     if (mat.rows!=4||mat.cols!=4){
@@ -48,7 +47,7 @@ static void RTToLie(InputArray _R, InputArray _T, OutputArray Lie ){
     Lie.create(1,6,T.type());
     
     Mat p = Lie.getMat(); 
-    CV_Assert(p.size()==Size(6,1));
+    assert(p.size()==Size(6,1));
     p=p.reshape(1,6);
     if(T.rows==1){
         T = T.t();
@@ -56,7 +55,7 @@ static void RTToLie(InputArray _R, InputArray _T, OutputArray Lie ){
     
     rodrigues(R).copyTo(p.rowRange(Range(0,3)));
     T.copyTo(p.rowRange(Range(3,6)));
-    CV_Assert(Lie.size()==Size(6,1));
+    assert(Lie.size()==Size(6,1));
 }
 static Mat RTToLie(InputArray _R, InputArray _T){
 
@@ -67,11 +66,11 @@ static Mat RTToLie(InputArray _R, InputArray _T){
 static void PToLie(InputArray _P, OutputArray Lie){
 
     Mat P = _P.getMat();
-    CV_Assert(P.cols == P.rows && P.rows == 4);
+    assert(P.cols == P.rows && P.rows == 4);
     Mat R = P(Range(0,3),Range(0,3));
     Mat T = P(Range(0,3),Range(3,4));
     RTToLie(R,T,Lie);
-    CV_Assert(Lie.size()==Size(6,1));
+    assert(Lie.size()==Size(6,1));
 }
 static void RTToP(InputArray _R, InputArray _T, OutputArray _P ){
     
@@ -115,7 +114,7 @@ static Mat LieSub(Mat A, Mat B){
     LieToP(A,Pa);
     LieToP(B,Pb);
     Mat out;
-    CV_Assert(A.size()==Size(6,1) && B.size()==Size(6,1));
+    assert(A.size()==Size(6,1) && B.size()==Size(6,1));
     PToLie(Pa*Pb.inv(),out);
     return out;
 }

@@ -1,5 +1,10 @@
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
+// <<<<<<< HEAD
+// #include <opencv2/core.hpp>
+// #include <opencv2/imgproc.hpp>
+// =======
+#include <opencv2/core/core.hpp>
+#include <opencv2/opencv.hpp>
+// >>>>>>> 3.0.0
 #include <iostream>
 #include "reproject.hpp"
 #include "tictoc.h"
@@ -16,7 +21,7 @@ void reproject( const Mat& src,
                 Mat& mask){
     Mat cameraAffinePoseBase=cameraAffinePoseBaseIn.clone();
     Mat cameraAffinePoseAlternate=cameraAffinePoseAlternateIn.clone();
-    CV_Assert(cameraMatrix.rows==3 && cameraMatrix.cols==3);
+    assert(cameraMatrix.rows==3 && cameraMatrix.cols==3);
     if (cameraAffinePoseBase.rows==3)
         vconcat(cameraAffinePoseBase,Mat()=(Mat_<double>(1,4) << 0,0,0,1),cameraAffinePoseBase);
     if (cameraAffinePoseAlternate.rows==3)

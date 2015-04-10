@@ -1,8 +1,8 @@
-#include <opencv2/core/cuda/common.hpp>//for cudaSafeCall,CV_Assert
-
+#include <opencv2/core/cuda/common.hpp>
+#include <opencv2/core/core.hpp>//for CV_Assert
 #include "DepthmapDenoiseWeightedHuber.cuh"
 
-namespace cv { namespace cuda { namespace device {
+namespace cv { namespace cuda {
     namespace dtam_denoise{
 
 
@@ -21,7 +21,7 @@ const int BLOCKX2D=32;
 const int BLOCKY2D=32;
 #define GENERATE_CUDA_FUNC2D(funcName,arglist,notypes)                                     \
 static __global__ void funcName arglist;                                                        \
-void funcName##Caller arglist{                                                           \
+void funcName##Caller arglisGENERATE_CUDA_FUNC2Dt{                                                           \
    dim3 dimBlock(BLOCKX2D,BLOCKY2D);                                                                  \
    dim3 dimGrid((acols  + dimBlock.x - 1) / dimBlock.x,                                  \
                 (arows + dimBlock.y - 1) / dimBlock.y);                                  \
@@ -60,7 +60,7 @@ void computeGCaller  (float* pp, float* g1p, float* gxp, float* gyp, int cols){
 GENERATE_CUDA_FUNC2DROWS(computeG1,
                      (float* pp, float* g1p, float* gxp, float* gyp, int cols),
                      (pp, g1p, gxp, gyp, cols)) {
-    #if __CUDA_ARCH__>300
+    #if __CUDA_ARCH__>=300
 //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
 
 //Original pseudocode for this function:
@@ -174,7 +174,7 @@ GENERATE_CUDA_FUNC2DROWS(computeG1,
 GENERATE_CUDA_FUNC2DROWS(computeG2,
                      (float* pp, float* g1p, float* gxp, float* gyp, int cols),
                      (pp, g1p, gxp, gyp, cols)) {
-    #if __CUDA_ARCH__>300
+    #if __CUDA_ARCH__>=300
     int x = threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     int dnoff=(y<gridDim.y*blockDim.y-1)*cols;
@@ -251,7 +251,7 @@ GENERATE_CUDA_FUNC2DROWS(computeG2,
 GENERATE_CUDA_FUNC2DROWS(computeGunsafe,
                      (float* pp, float* g1p, float* gxp, float* gyp, int cols),
                      (pp, g1p, gxp, gyp, cols)) {
-    #if __CUDA_ARCH__>300
+    #if __CUDA_ARCH__>=300
 //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
 //TODO: rerun kernel on lines with y%32==31 or y%32==0 to fix stitch lines
 
@@ -685,7 +685,7 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
 //        dpt[pt]=d;
 //    }
 //}
-#if __CUDA_ARCH__>300
+#if __CUDA_ARCH__>=300
     __shared__ float s[32*BLOCKY2D];
     int x = threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -734,7 +734,8 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
             qx = gqx/gx;
             //qx+=(gx*(dr-dh)-epsilon*qx)*.5f;//simplified step
             qx = (qx+sigma_q*gx*(dr-dh))/(1+sigma_q*epsilon);//basic spring force equation f=k(x-x0)
-            gqx = saturate(gx*qx);//spring saturates (with cached multiply), saturation force proportional to prob. of not an edge.
+            gqx = gx*saturate(qx);
+//             gqx = saturate(gx*qx);//spring saturates (with cached multiply), saturation force proportional to prob. of not an edge.
             gqxpt[pt]=gqx;
         }
 
@@ -757,7 +758,8 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
             qy = gqy/gy;
             //qy+=(gy*(dd-dh)-epsilon*qy)*.5f;//simplified step
             qy = (qy+sigma_q*gy*(dd-dh))/(1+sigma_q*epsilon);
-            gqy = saturate(gy*qy);
+            gqy = gy*saturate(qy);
+//             gqy = saturate(gy*qy);
 
             gqypt[pt]=gqy;
         }
@@ -772,7 +774,7 @@ GENERATE_CUDA_FUNC2DROWS(updateD,
                 float theta),
                 ( gqxpt, gqypt, dpt, apt,
                         gxpt, gypt, cols, sigma_q, sigma_d, epsilon, theta)) {
-    #if __CUDA_ARCH__>300
+    #if __CUDA_ARCH__>=300
     //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
 
     //Original pseudocode for this function:
@@ -886,4 +888,4 @@ GENERATE_CUDA_FUNC2DROWS(updateD,
 }
 
 
-}}}}
+}}}

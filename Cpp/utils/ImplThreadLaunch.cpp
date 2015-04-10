@@ -30,7 +30,7 @@ namespace ImplThread{
         cout<<" Thread Start: "<< p->second<< endl;
         func(p->second);
         
-    }
+    };
     unsigned int startThread(void (*_func)(int*) , const std::string& _name,int affinity){
         mutex.lock();
         int* stopp=new int(0);

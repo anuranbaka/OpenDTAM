@@ -29,10 +29,9 @@ public:
     cv::cuda::GpuMat _d,_a;
     cv::cuda::GpuMat stableDepth;
     float getTheta(){return theta;}
-private:
+// private:
     void allocate();
     void initA();
-
 
     //internal parameter values
     float theta,sigma_d,sigma_q;

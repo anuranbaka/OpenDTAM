@@ -7,6 +7,7 @@
 //debugs
 #include <iostream>
 #include <algorithm>
+#include <opencv2/highgui/highgui.hpp>
 #include "tictoc.h"
 #include "graphics.hpp"
 // #define DTAM_COST_DEBUG
@@ -207,7 +208,7 @@ void Cost::updateCostL2(const cv::Mat& image,
     }
     else{
         std::cout<<"Error, Unsupported Type!"<<std::endl;
-        CV_Assert(false);
+        assert(false);
     }
 }
 

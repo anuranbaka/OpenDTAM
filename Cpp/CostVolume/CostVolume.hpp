@@ -8,6 +8,7 @@
 
 
 #include <opencv2/core/cuda.hpp>
+#include <opencv2/core/cuda_stream_accessor.hpp>
 
 typedef  int FrameID;
 
@@ -18,8 +19,8 @@ public:
     int rows;
     int cols;
     int layers;
-    float near;
-    float far;
+    float near; //inverse depth of center of voxels in layer layers-1
+    float far;  //inverse depth of center of voxels in layer 0
     float depthStep;
     float initialWeight;
     cv::Mat cameraMatrix;//Note! should be in OpenCV format
@@ -68,8 +69,8 @@ private:
     //temp variables ("static" containers)
     cv::Ptr<char> _cuArray;//Ptr<cudaArray*> really
     cv::Ptr<char> _texObj;//Ptr<cudaTextureObject_t> really
-    cv::Mat cBuffer;
-    
+    cv::Mat cBuffer;//Must be pagable
+    cv::Ptr<char> ref;
 };
 
 #endif // COSTVOLUME_HPP

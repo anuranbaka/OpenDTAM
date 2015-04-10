@@ -1,12 +1,9 @@
 #include <assert.h>
 #include <iostream>
-#include <opencv2/core.hpp>
+#include <opencv2/core/core.hpp>
 #include "CostVolume.cuh"
 
-
-
-namespace cv { namespace cuda { namespace device {
-    namespace dtam_updateCost{
+namespace cv { namespace cuda { namespace dtam_updateCost {
 
 cudaStream_t localStream;
 
@@ -15,6 +12,7 @@ cudaStream_t localStream;
 
 #define BLOCK_X 64
 #define BLOCK_Y 4
+
 __global__ void globalWeightedBoundsCost(m34 p,float weight, CONSTT);
 void globalWeightedBoundsCostCaller(m34 p,float weight,CONSTT){
    dim3 dimBlock(BLOCK_X,BLOCK_Y);
@@ -68,7 +66,15 @@ __global__ void globalWeightedBoundsCost(m34 p,float weight, CONSTT)
         float v1 = fabsf(c.x - B.x);
         float v2 = fabsf(c.y - B.y);
         float v3 = fabsf(c.z - B.z);
-        float ns=c0*weight+(v1+v2+v3)*(1-weight);
+        float del=v1+v2+v3;
+        float ns;
+//         if(del>.03){
+//             del=0;
+//         }
+//         del=sqrt(del);
+        del=.0001*del + fminf(del,.01f)*1.0f/.01f;
+        ns=c0*weight+(del)*(1-weight);
+//         ns=del;
         cdata[offset+z*layerStep]=ns;
         if (ns < minv) {
         minv = ns;
@@ -354,7 +360,7 @@ __global__ void globalWeightedBoundsCost(m34 p,float weight, CONSTT)
 
 
 
-}}}}
+}}}
 
 
 

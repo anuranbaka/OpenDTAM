@@ -1,6 +1,6 @@
 #ifndef TRACK_HPP
 #define TRACK_HPP
-
+#include <opencv2/opencv.hpp>
 #include <CostVolume/Cost.h>
 #include <CostVolume/CostVolume.hpp>
 #include <DepthmapDenoiseWeightedHuber/DepthmapDenoiseWeightedHuber.hpp>

@@ -1,4 +1,4 @@
-#include <opencv2/highgui.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include <boost/thread/mutex.hpp>
 #include <queue>
 #include <string>
@@ -31,7 +31,7 @@ void gcheck(){
 }
 
 void pfShow(const string name,const Mat& _mat,int defaultscale, Vec2d autoscale){
-    CV_Assert(_mat.rows>0 && _mat.cols>0);
+    assert(_mat.rows>0 && _mat.cols>0);
 
     if (defaultscale==1){
         autoscale=Vec2d(-1,-1);
@@ -42,7 +42,7 @@ void pfShow(const string name,const Mat& _mat,int defaultscale, Vec2d autoscale)
     toShow.push(_mat.clone());
     autoScale.push(autoscale);
     ready++;
-    CV_Assert(nameShow.size()==ready);
+    assert(nameShow.size()==ready);
     
     Gmux.unlock();
     while(nameShow.size()>5||pausing){
@@ -87,7 +87,7 @@ void guiLoop(int* die){
         }
         if (ready){//deal with imshows
             Gmux.lock();
-            CV_Assert(nameShow.size()>0);
+            assert(nameShow.size()>0);
             mat=take(toShow);
             string name=take(nameShow);
             Vec2d autoscale=take(autoScale);
@@ -99,24 +99,22 @@ void guiLoop(int* die){
                 cv::minMaxIdx(mat, &min, &max);
                 float scale = 1.0/ (max-min);
                 mat.convertTo(mat,CV_MAKETYPE(CV_32F,mat.channels()), scale, -min*scale);
-
-                
-                mat.convertTo(mat,CV_MAKETYPE(CV_8U,mat.channels()), 255.0);//use 8 bit so we can have the nice mouse over
 //                 cout<<name<<": view scale: "<<max-min<<endl;
 //                 cout<<name<<": min: "<<min<<"  max: "<< max<<endl;
             }else if (autoscale[0]!=autoscale[1]){
                 double scale= 1.0/(autoscale[1]-autoscale[0]);
                 mat.convertTo(mat,CV_MAKETYPE(mat.type(),mat.channels()),scale,-autoscale[0]*scale);
             }
+            mat.convertTo(mat,CV_MAKETYPE(CV_8U,mat.channels()), 255.0);//use 8 bit so we can have the nice mouse over
             if(mat.rows<250){
                 name+=":small";
-                namedWindow(name, WINDOW_KEEPRATIO | WINDOW_NORMAL);
+                namedWindow(name, CV_WINDOW_KEEPRATIO | CV_GUI_NORMAL);
             }
             imshow( name, mat);
             waitKey(1);//waitkey must occur here so matrix doesn't fall out of scope because imshow is dumb that way :(
 //            cout<<name<<" queue:"<<ready<<endl;
         }else if(pausing){
-            namedWindow("control",WINDOW_NORMAL);
+            namedWindow("control",CV_WINDOW_KEEPRATIO);
             cout<<"Paused: Space (in GUI window) to continue"<<endl;
             while(waitKey()!=' ');
             

@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <iostream>
-#include <opencv2/core.hpp>
+#include <opencv2/core/core.hpp>
 #include "Optimizer.cuh"
 
 
@@ -16,8 +16,8 @@
 
 
 
-namespace cv { namespace cuda { namespace device {
-    namespace dtam_optimizer{
+namespace cv { namespace cuda { namespace dtam_optimizer {
+
 
 static unsigned int arows,acols;
 
@@ -1066,8 +1066,4 @@ GENERATE_CUDA_FUNC2DROWS(updateD,
     }
 }
 
-}}}}
-
-
-
-
+}}}

@@ -11,6 +11,7 @@
 #include "Track.hpp"
 #include "Align_part.cpp"
 #include "tictoc.h"
+#include <opencv2/opencv.hpp>
 #include <vector>
 #include <algorithm>
 //needs: 
@@ -59,7 +60,7 @@ void createPyramid(const Mat& image,vector<Mat>& pyramid,int& levels){
     if(levels==0){//auto size to end at >=15px tall (use height because shortest dim usually)
         for (float scale=1.0; scale>=15.0/image.rows; scale/=2, levels++);
     }
-    CV_Assert(levels>0);
+    assert(levels>0);
     int l2=levels-1;
     pyramid.resize(levels);
     pyramid[l2--]=in;
@@ -68,7 +69,7 @@ void createPyramid(const Mat& image,vector<Mat>& pyramid,int& levels){
         Mat out;
 
         
-        resize(in,out,Size(),.5,.5,INTER_AREA);
+        resize(in,out,Size(),.5,.5,CV_INTER_AREA);
         pyramid[l2]=out;
         in=out;
     }
@@ -102,7 +103,7 @@ static void createPyramids(const Mat& base,
 }
 void Track::align(){
     align_gray(baseImage, depth, thisFrame);
-}
+};
 
 void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     Mat input,base,lastFrameGray;
@@ -113,7 +114,7 @@ void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     tic();
     int levels=6; // 6 levels on a 640x480 image is 20x15
     int startlevel=0;
-    int endlevel=4;
+    int endlevel=6;
 
     Mat p=LieSub(pose,basePose);// the Lie parameters 
     cout<<"pose: "<<p<<endl;
@@ -142,14 +143,14 @@ void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
                                                 CV_DTAM_FWD,
                                                 1,
                                                 3);
-            if(tocq()>.01)
-                break;
+//             if(tocq()>.01)
+//                 break;
         }
     }
     p=LieAdd(p2d,p);
 //     cout<<"3D iteration:"<<endl;
     for (level=startlevel; level<levels && level<endlevel; level++){
-        int iters=3;
+        int iters=1;
         for(int i=0;i<iters;i++){
             float thr = (levels-level)>=2 ? .05 : .2; //more stringent matching on last two levels 
             bool improved;
@@ -161,10 +162,11 @@ void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
                                                             CV_DTAM_FWD,
                                                             thr,
                                                             6);
-            if(tocq()>.5){
-                cout<<"completed up to level: "<<level-startlevel+1<<"   iter: "<<i+1<<endl;
-                goto loopend;//olny sactioned use of goto, the double break
-            }
+            
+//             if(tocq()>.5){
+//                 cout<<"completed up to level: "<<level-startlevel+1<<"   iter: "<<i+1<<endl;
+//                 goto loopend;//olny sactioned use of goto, the double break
+//             }
 //             if(!improved){
 //                 break;
 //             }
@@ -174,7 +176,7 @@ void Track::align_gray(Mat& _base, Mat& depth, Mat& _input){
     
     pose=LieAdd(p,basePose);
     static int runs=0;
-    //CV_Assert(runs++<2);
+    //assert(runs++<2);
     toc();
     
 }
