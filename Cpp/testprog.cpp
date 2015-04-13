@@ -104,7 +104,6 @@ int App_main( int argc, char** argv )
     CostVolume cv(images[0],(FrameID)0,layers,0.010,0.0,Rs[0],Ts[0],cameraMatrix);;
     
     
-
     int imageNum=0;
     cv::cuda::Stream s;
     for (int imageNum=0;imageNum<numImg;imageNum++){
@@ -134,7 +133,6 @@ int App_main( int argc, char** argv )
 //                pfShow("A", ret, 0, cv::Vec2d(0, layers));
 //                waitKey(0);
 //                gpause();
-            
             
              gpause();
             bool doneOptimizing; int Acount=0; int QDcount=0;

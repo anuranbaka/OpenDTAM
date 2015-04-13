@@ -23,7 +23,10 @@ static inline float fastabs(const float& foo){
 void Cost::updateCostL1(const cv::Mat& image,
                                      const cv::Matx44d& currentCameraPose)
 {
+    std::cout << "Updating Cost L1, imageNum == " << imageNum << std::endl; 
+
     imageNum++;
+
     cv::Mat newLo(rows,cols,CV_32FC1,1000.0);
     newLo=1000.0;
 
