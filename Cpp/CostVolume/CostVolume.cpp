@@ -317,26 +317,29 @@ void CostVolume::updateCost(const Mat& _image, const cv::Mat& R, const cv::Mat& 
 
 
 CostVolume::~CostVolume(){
+    //TODO: make this not free stuff when we are simply doing a copy operation
     cudaArray_t& cuArray=*((cudaArray_t*)(char*)_cuArray);
     cudaTextureObject_t& texObj=*((cudaTextureObject_t*)(char*)_texObj);
-    //copy the Ptr without adding to refcount
-    Ptr<char>* R=(Ptr<char>*)malloc(sizeof(Ptr<char>));
-    memcpy(R,&ref,sizeof(Ptr<char>));
-    int* rc=(((int**)(&ref))[1]);
-    ref.release();
-    if(*rc<=0){//no one else has a copy of the cv, so we must clean up
-        assert(cuArray);
-        assert(_cuArray);
-        if (cuArray){
-            cudaFreeArray(cuArray);
-            cuArray=0;
-        }
-        if (texObj){
-            cudaDestroyTextureObject(texObj);
-            texObj=0;
-        }
-    }else{//put the reference back so the destructor doesn't double free
+
+    if (cuArray){
+        cudaFreeArray(cuArray);
+        cuArray=0;
     }
-    free(R);
+    if (texObj){
+        cudaDestroyTextureObject(texObj);
+        texObj=0;
+    }
+        
+    cudaArray_t& cuArray2=*((cudaArray_t*)(char*)_cuArray2);
+    cudaTextureObject_t& texObj2=*((cudaTextureObject_t*)(char*)_texObj2);
+
+    if (cuArray2){
+        cudaFreeArray(cuArray2);
+        cuArray2=0;
+    }
+    if (texObj2){
+        cudaDestroyTextureObject(texObj2);
+        texObj2=0;
+    }
 }
 
