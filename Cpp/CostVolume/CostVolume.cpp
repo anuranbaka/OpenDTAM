@@ -50,10 +50,10 @@ void CostVolume::solveProjection(const cv::Mat& R, const cv::Mat& T) {
     //0  0  0  1
     //0  0  1  0
     
-    originShift=(Mat)(Mat_<double>(4,4) <<    1.0, 0. , 0. , 0. ,
-                                              0. , 1.0, 0. , 0. ,
-                                              0. , 0. , 1.0,-far,
-                                              0. , 0. , 0. , 1.0   );
+    Mat originShift=(Mat)(Mat_<double>(4,4) <<    1.0, 0. , 0. , 0. ,
+                                                  0. , 1.0, 0. , 0. ,
+                                                  0. , 0. , 1.0,-far,
+                                                  0. , 0. , 0. , 1.0   );
     
     projection=originShift*projection;//put the origin at 1/z_from_camera_center = far
     projection.row(2)/=depthStep;//stretch inverse depth so now x_cam,y_cam,z_cam-->x_cv_px, y_cv_px , [1/z_from_camera_center - far]_px
