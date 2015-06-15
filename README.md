@@ -32,6 +32,7 @@ For building `OpenDTAM`, here is a brief instruction on Ubuntu 12.04 LTS.
 
     cd OpenDTAM/Cpp
     mkdir Build
+    cd Build
     cmake ..
     make
 
