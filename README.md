@@ -3,12 +3,9 @@ OpenDTAM
 
 An open source implementation of DTAM
 On Ubuntu, you need the qtbase5-dev and libopencv-dev packages
+This project is no longer currently active, but I will try to provide suggestions as possible. I would love to get back to it, but my life is currently quite busy. 
 
 ## Build Instructions On Ubuntu 12.04 LTS
-
-*Notice:* From now until 8/18/14 I will be attempting to get this code to compile on OpenCV 3.0.0
-Getting this to build from the latest commits will therefore be nigh impossible.
-Instead try commit a5f91d0cd58c3353ef56a3694648375f1c053082 on the main branch and use OpenCV 2.4.something
 
 For building `OpenDTAM`, here is a brief instruction on Ubuntu 12.04 LTS.
 
