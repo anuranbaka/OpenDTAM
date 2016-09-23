@@ -1,0 +1,20 @@
+From the code:
+"// Free for non-commercial, non-military, and non-critical
+// use unless incorporated in OpenCV.
+// Inherits OpenCV Licence if in OpenCV."
+
+As of Sept. 23, 2016, the denoising core is pulled into OpenCV, so you can consider any of 
+the DepthMapDenoiseWeightedHuber directory and the CostVolume directory to be BSD.
+
+The Track folder and root were not pulled into OpenCV, so they are effectively CC BY-NC with military use excluded.
+
+There seems to be some confusion on the non-military part: By that I mean that it cannot be used by 
+the military (From Wikipedia: "The military are forces authorized to use deadly force, 
+and weapons, to support the interests of the state and some or all of its citizens.") and cannot be used for military 
+purposes (ex. mercenaries, contractors developing weapons, logistical support for drones, etc.). 
+
+In short if you build it into a product, ask yourself:
+1."Am I or my employer part of the military?"
+2."Is the primary user of this product or the things that it makes expected to be military?"
+3."Will this product enable the deliberate killing of people?"
+If you answer no to all of those, your use is not military.
